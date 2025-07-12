@@ -112,6 +112,49 @@ Here's what we're looking for:
 
 Click all boxes as you complete them and add detailed comments below. If you're behind schedule or facing major challenges, reach out in Slack - we're here to help you succeed!`,
     phase: "Phase 2"
+  },
+  PHASE_3: {
+    title: "Third Check-in - Almost Feature Complete & Demo Prep",
+    body: `We're in the home stretch! Your solution should be feature-complete with most core functionality implemented and tested. Time to focus on polishing the user experience, fixing major bugs, and preparing your demo presentation and documentation for the final submission.
+
+Here's what we need to see:
+
+- [ ] **Feature-Complete Solution**: All core features are implemented and working. List what's fully functional vs. what still needs polish
+- [ ] **User Experience Polish**: Clean, intuitive interface that your nonprofit partner could actually use. Include screenshots or demo video of the polished UI
+- [ ] **Bug Fixes & Testing**: Major bugs resolved, edge cases handled, and basic testing completed. Document any known issues and workarounds
+- [ ] **DevPost Project**: Your DevPost project should be started. If you see "Add DevPost Project" on the teams page, click that link to add yours. It just needs to be a rough draft for now. Remember, this is how you'll showcase your work and impact to future employers and judges
+- [ ] **Presentation Preparation**: Start practicing your final presentation. What story will you tell about the impact you're creating? This will go into your 4-minute demo video.  It should not be theoretical, but show the real-world impact of your solution. Focus on the problem, your solution, and the impact it will have - look at the [judging criteria](https://www.ohack.dev/about/judges)
+- [ ] **Demo Video**: Start thinking about your 4-minute (maximum) demo video showing your solution in action. Focus on the problem, your solution, and the impact it will have - look at the judging criteria.  Don't spend longer than 10 seconds introducing the team and spend about 1 minute on the problem, 1 minute on your solution, and 2 minutes addressing the judging criteria
+- [ ] **Documentation**: README with setup instructions, API docs (if applicable), and user guide. Make it easy for others to understand and use your solution
+- [ ] **Deployment**: Your solution should be deployed and accessible for testing. Include live links or clear deployment instructions
+- [ ] **Mentor Feedback**: Reach out to mentors for feedback on your GitHub repo, DevPost project, presentation approach, and MVP. Their insights are invaluable!
+
+**Focus Areas**: User experience, demonstration readiness, and compelling storytelling about your impact.
+
+Click all boxes as you complete them and add detailed updates in the comments. We're here to help you shine in the final stretch!`,
+    phase: "Phase 3"
+  },
+  PHASE_4: {
+    title: "Final Check-in - Submission Ready",
+    body: `This is it - your final check-in before submission! Your project should be deployment-ready with complete documentation, demo video, and DevPost materials prepared. Use this time to address any last-minute issues and get feedback on your final presentation.
+
+Final submission checklist:
+
+- [ ] **Deployment-Ready Solution**: Your application is fully deployed, stable, and accessible for judging. Include all necessary links and access instructions
+- [ ] **Complete Documentation**: README, setup guides, API documentation, user manuals - everything needed for judges and future users to understand your solution
+- [ ] **Polished Demo Video**: 4-minute maximum demo video that clearly shows your solution's impact. Practice your narrative and make it compelling!
+- [ ] **DevPost Submission**: Your DevPost project is complete with all required materials, compelling description, and proper categorization
+- [ ] **GitHub Repository**: Clean, well-organized code with clear commit history, proper README, and all sensitive data removed
+- [ ] **Impact Story**: Clear articulation of the problem you solved, your solution, and the real-world impact for nonprofits
+- [ ] **Technical Handoff**: Instructions for Opportunity Hack and nonprofits to continue using/maintaining the solution after the hackathon
+- [ ] **Team Reflection**: Document what you learned, challenges overcome, and how you grew as a team throughout this experience - add this to your README
+- [ ] **Final Testing**: One last round of testing to ensure everything works smoothly for the judges
+- [ ] **Submission Deadlines**: Double-check all submission requirements and deadlines. Don't wait until the last minute!
+
+**Remember**: You've built something amazing that will help nonprofits create more impact. Be proud of your work and tell that story confidently! You also have a portfolio piece that you can share with future employers.
+
+This is your moment to shine. Check off these items, add final comments, and get ready to show the world the incredible solution you've created!`,
+    phase: "Phase 4"
   }
 };
 
