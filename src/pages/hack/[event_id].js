@@ -289,30 +289,44 @@ export default function HackathonEvent({ eventData }) {
     );
   }
 
-  // Create a more concise but informative description
-  const metaDescription = event
-    ? `Join ${event.title} in ${event.location} from ${event.start_date} to ${event.end_date}. Build technology solutions for nonprofits, meet fellow developers, and make a positive impact through coding. ${event.description?.substring(0, 100)}...`
-    : "Join us for an exciting Opportunity Hack event! Build technology solutions for nonprofits, meet fellow developers, and make a positive impact through coding.";
+  // Enhanced meta title and description with better fallbacks
+  const eventTitle = event.title || `Hackathon Event ${event_id}`;
+  const eventLocation = event.location || "Virtual/TBA";
+  const eventStartDate = event.start_date ? new Date(event.start_date).toLocaleDateString() : "TBA";
+  const eventEndDate = event.end_date ? new Date(event.end_date).toLocaleDateString() : "TBA";
+  
+  const metaTitle = `${eventTitle} - ${eventLocation} | Opportunity Hack`;
+  const metaDescription = `Join ${eventTitle} hackathon in ${eventLocation} from ${eventStartDate} to ${eventEndDate}. Apply as a hacker, volunteer, mentor, judge, or sponsor. Build technology solutions for nonprofits and make a positive impact. Register now!`;
   
   const metaImage = event?.image_url || "https://cdn.ohack.dev/ohack.dev/2023_hackathon_4.webp";
-  const metaTitle = event ? `${event.title} - Opportunity Hack Hackathon Event` : "Opportunity Hack Hackathon Event";
   
-  // Memoize structured data to avoid recomputation
-  const eventStructuredData = event ? {
+  // Application URLs for structured data and SEO
+  const applicationUrls = {
+    hacker: `https://ohack.dev/hack/${event_id}/hacker-application`,
+    judge: `https://ohack.dev/hack/${event_id}/judge-application`,
+    sponsor: `https://ohack.dev/hack/${event_id}/sponsor-application`,
+    mentor: `https://ohack.dev/hack/${event_id}/mentor-application`,
+    volunteer: `https://ohack.dev/hack/${event_id}/volunteer-application`
+  };
+
+  // Enhanced structured data with application links
+  const eventStructuredData = {
     "@context": "http://schema.org",
     "@type": "Event",
-    "name": event.title,
-    "description": event.description,
+    "name": eventTitle,
+    "description": event.description || metaDescription,
     "startDate": event.start_date,
     "endDate": event.end_date,
     "eventStatus": "https://schema.org/EventScheduled",
-    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "eventAttendanceMode": event.location?.toLowerCase().includes('virtual') ? 
+      "https://schema.org/OnlineEventAttendanceMode" : 
+      "https://schema.org/OfflineEventAttendanceMode",
     "location": {
       "@type": "Place",
-      "name": event.location,
+      "name": eventLocation,
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": event.location
+        "addressLocality": eventLocation
       }
     },
     "image": [metaImage],
@@ -320,7 +334,8 @@ export default function HackathonEvent({ eventData }) {
     "organizer": {
       "@type": "Organization",
       "name": "Opportunity Hack",
-      "url": "https://ohack.dev"
+      "url": "https://ohack.dev",
+      "logo": "https://cdn.ohack.dev/ohack.dev/logo.png"
     },
     "offers": {
       "@type": "Offer",
@@ -329,8 +344,80 @@ export default function HackathonEvent({ eventData }) {
       "priceCurrency": "USD",
       "availability": "https://schema.org/InStock"
     },
-    "keywords": ["hackathon", "nonprofit", "coding", "volunteers", "tech for good", event.location, "opportunity hack", "social impact"]
-  } : null;
+    "keywords": [
+      "hackathon", 
+      "nonprofit", 
+      "coding", 
+      "volunteers", 
+      "tech for good", 
+      eventLocation, 
+      "opportunity hack", 
+      "social impact",
+      "hacker application",
+      "judge application", 
+      "mentor application",
+      "volunteer application",
+      "sponsor application"
+    ],
+    "subEvent": [
+      {
+        "@type": "Event",
+        "name": "Hacker Registration",
+        "url": applicationUrls.hacker,
+        "description": "Apply to participate as a hacker and build solutions for nonprofits"
+      },
+      {
+        "@type": "Event", 
+        "name": "Judge Registration",
+        "url": applicationUrls.judge,
+        "description": "Apply to judge hackathon projects and mentor participants"
+      },
+      {
+        "@type": "Event",
+        "name": "Mentor Registration", 
+        "url": applicationUrls.mentor,
+        "description": "Apply to mentor teams and share your expertise"
+      },
+      {
+        "@type": "Event",
+        "name": "Volunteer Registration",
+        "url": applicationUrls.volunteer, 
+        "description": "Apply to volunteer and help make the event successful"
+      },
+      {
+        "@type": "Event",
+        "name": "Sponsor Registration",
+        "url": applicationUrls.sponsor,
+        "description": "Apply to sponsor the event and support tech for good"
+      }
+    ]
+  };
+
+  // Breadcrumb structured data for better SEO
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://ohack.dev"
+      },
+      {
+        "@type": "ListItem", 
+        "position": 2,
+        "name": "Hackathons",
+        "item": "https://ohack.dev/hack"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": eventTitle,
+        "item": `https://ohack.dev/hack/${event_id}`
+      }
+    ]
+  };
 
   // FAQ structured data for better search results - only generate if FAQ data is loaded
   const faqStructuredData = faqData ? {
@@ -354,52 +441,42 @@ export default function HackathonEvent({ eventData }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta charSet="UTF-8" />
 
-        {/* Open Graph tags for social media sharing */}
+        {/* Enhanced Open Graph tags */}
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:type" content="website" />
-        <meta
-          property="og:url"
-          content={`https://ohack.dev/hack/${event_id}`}
-        />
+        <meta property="og:url" content={`https://ohack.dev/hack/${event_id}`} />
         <meta property="og:image" content={metaImage} />
-        <meta
-          property="og:image:alt"
-          content={`${event?.title || "Opportunity Hack"} event banner`}
-        />
+        <meta property="og:image:alt" content={`${eventTitle} hackathon event banner`} />
         <meta property="og:site_name" content="Opportunity Hack" />
         <meta property="og:locale" content="en_US" />
         <meta property="og:updated_time" content={new Date().toISOString()} />
 
-        {/* Twitter Card tags */}
+        {/* Enhanced Twitter Card tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@OpportunityHack" />
         <meta name="twitter:creator" content="@OpportunityHack" />
         <meta name="twitter:title" content={metaTitle} />
         <meta name="twitter:description" content={metaDescription} />
         <meta name="twitter:image" content={metaImage} />
-        <meta
-          name="twitter:image:alt"
-          content={`${event?.title || "Opportunity Hack"} event banner`}
-        />
+        <meta name="twitter:image:alt" content={`${eventTitle} hackathon event banner`} />
 
-        {/* Additional SEO-friendly meta tags */}
+        {/* Enhanced keywords with application-specific terms */}
         <meta
           name="keywords"
-          content={`hackathon, ${event?.title || "opportunity hack"}, nonprofit, technology, volunteering, coding, programming, tech for good, ${event?.location || "various locations"}, social impact, software development, community service`}
+          content={`${eventTitle}, hackathon registration, hacker application, judge application, mentor application, volunteer application, sponsor application, ${eventLocation} hackathon, nonprofit technology, tech for good, coding competition, software development, community service, social impact, opportunity hack, hackathon ${eventStartDate}`}
         />
         <meta name="author" content="Opportunity Hack" />
-        <meta
-          name="robots"
-          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-        />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         <meta name="language" content="English" />
         <meta name="application-name" content="Opportunity Hack" />
         <meta name="theme-color" content="#3f51b5" />
 
-        {/* Performance-related meta tags */}
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="format-detection" content="telephone=no" />
+        {/* Event-specific meta tags */}
+        <meta name="event:start_date" content={event.start_date} />
+        <meta name="event:end_date" content={event.end_date} />
+        <meta name="event:location" content={eventLocation} />
+        <meta name="event:type" content="hackathon" />
 
         {/* Preconnect to essential domains */}
         <link
@@ -423,17 +500,31 @@ export default function HackathonEvent({ eventData }) {
 
         {/* Canonical URL */}
         <link rel="canonical" href={`https://ohack.dev/hack/${event_id}`} />
+
+        {/* Alternate URLs for applications */}
+        <link rel="alternate" href={applicationUrls.hacker} title="Hacker Application" />
+        <link rel="alternate" href={applicationUrls.judge} title="Judge Application" />
+        <link rel="alternate" href={applicationUrls.mentor} title="Mentor Application" />
+        <link rel="alternate" href={applicationUrls.volunteer} title="Volunteer Application" />
+        <link rel="alternate" href={applicationUrls.sponsor} title="Sponsor Application" />
       </Head>
 
-      {eventStructuredData && (
-        <Script
-          id="event-structured-data"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(eventStructuredData),
-          }}
-        />
-      )}
+      {/* Enhanced structured data */}
+      <Script
+        id="event-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(eventStructuredData),
+        }}
+      />
+
+      <Script
+        id="breadcrumb-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbStructuredData),
+        }}
+      />
 
       {faqStructuredData && (
         <Script
