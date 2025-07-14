@@ -24,7 +24,6 @@ import {
     ListItemText,
     Container,
     Divider,
-    // --- New Imports for the form ---
     TextField,
     FormControl,
     RadioGroup,
@@ -33,8 +32,6 @@ import {
     Autocomplete
 } from '@mui/material';
 
-// The cosineSimilarity helper function is no longer needed on the frontend.
-// It has been moved to the backend.
 
 function NonProfitApplyList({ userClass }) {
     const { accessToken } = useAuthInfo();
@@ -44,23 +41,19 @@ function NonProfitApplyList({ userClass }) {
     const [error, setError] = useState(null);
     const [expandedAppId, setExpandedAppId] = useState(null);
     
-    // State for AI Features
     const [summary, setSummary] = useState('');
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [similarProjects, setSimilarProjects] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     
-    // State for the multi-step approval workflow
-    const [approvalStep, setApprovalStep] = useState('initial'); // 'initial', 'confirm_reject', 'manage_npo', 'create_ps'
+    const [approvalStep, setApprovalStep] = useState('initial'); 
     const [isUpdating, setIsUpdating] = useState(null);
 
-    // --- New State for NPO Management ---
     const [nonprofits, setNonprofits] = useState([]);
     const [matchingNonprofits, setMatchingNonprofits] = useState([]);
     const [npoSelection, setNpoSelection] = useState('create');
     const [selectedNpo, setSelectedNpo] = useState(null);
 
-    // --- MODIFIED: Function to fetch summary from the backend ---
     const fetchSummary = async (application) => {
         setIsSummarizing(true);
         setSummary('');
@@ -91,9 +84,7 @@ function NonProfitApplyList({ userClass }) {
         }
     };
 
-    // --- MODIFIED: Function to generate reasoning from the backend ---
     const fetchReasoningForSimilarity = async (application, projectToUpdate) => {
-        // Mark this specific project as loading its reason
         setSimilarProjects(prev => prev.map(p => 
             p.id === projectToUpdate.id ? { ...p, isReasoning: true } : p
         ));
@@ -115,7 +106,6 @@ function NonProfitApplyList({ userClass }) {
             const data = await response.json();
             const reason = data.reasoning;
 
-            // Update the specific project with the fetched reason
             setSimilarProjects(prev => prev.map(p => 
                 p.id === projectToUpdate.id ? { ...p, reasoning: reason, isReasoning: false } : p
             ));
@@ -128,7 +118,6 @@ function NonProfitApplyList({ userClass }) {
         }
     };
 
-    // --- THIS IS THE FIX: Replace the old function with the new one ---
     const findSimilarProjects = async (application) => {
         setIsSearching(true);
         setSimilarProjects([]);
@@ -148,8 +137,6 @@ function NonProfitApplyList({ userClass }) {
             }
             
             const data = await response.json();
-            // The backend now returns the top N sorted projects directly.
-            // We also add the 'isReasoning' flag for the UI.
             const projectsWithUIState = data.similar_projects.map(p => ({ ...p, isReasoning: false }));
             setSimilarProjects(projectsWithUIState.slice(0, 3));
             
@@ -161,7 +148,6 @@ function NonProfitApplyList({ userClass }) {
         }
     };
 
-    // --- New handler for workflow navigation ---
     const handleApprovalStepChange = (step, app) => {
         setApprovalStep(step);
         if (step === 'manage_npo') {
@@ -186,21 +172,19 @@ function NonProfitApplyList({ userClass }) {
             setExpandedAppId(null);
         } else {
             setExpandedAppId(appId);
-            setApprovalStep('initial'); // Reset form when opening
+            setApprovalStep('initial'); 
             fetchSummary(app);
             findSimilarProjects(app);
         }
     };
 
-    // --- Function to handle application status updates ---
     const handleUpdateStatus = async (appId, status) => {
-        setIsUpdating(appId); // Set loading state for this specific application
+        setIsUpdating(appId); 
         
         const org = userClass.getOrgByName("Opportunity Hack Org");
         const orgId = org ? org.orgId : null;
 
         try {
-            // This endpoint is hypothetical but follows the API's likely structure.
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/npo/applications/${appId}/status`, {
                 method: 'PUT',
                 headers: {
@@ -216,13 +200,11 @@ function NonProfitApplyList({ userClass }) {
                 throw new Error(errorData.message || `Failed to ${status} application`);
             }
 
-            // On success, remove the application from the list in the UI
             setApplications(prevApplications => prevApplications.filter(app => app.id !== appId));
             setExpandedAppId(null); // Close the expanded view
 
         } catch (e) {
             console.error("Error updating application status:", e);
-            // Optionally, show an error message to the user (e.g., using a snackbar)
             setError(e.message);
         } finally {
             setIsUpdating(null); // Reset loading state
