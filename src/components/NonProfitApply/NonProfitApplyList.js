@@ -23,24 +23,18 @@ import {
     ListItem,
     ListItemText,
     Container,
-    Divider
+    Divider,
+    // --- New Imports for the form ---
+    TextField,
+    FormControl,
+    RadioGroup,
+    FormControlLabel,
+    Radio,
+    Autocomplete
 } from '@mui/material';
 
-// --- Helper function for Vector Similarity ---
-function cosineSimilarity(vecA, vecB) {
-    let dotProduct = 0.0;
-    let normA = 0.0;
-    let normB = 0.0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
-    }
-    if (normA === 0 || normB === 0) {
-        return 0;
-    }
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
+// The cosineSimilarity helper function is no longer needed on the frontend.
+// It has been moved to the backend.
 
 function NonProfitApplyList({ userClass }) {
     const { accessToken } = useAuthInfo();
@@ -56,56 +50,38 @@ function NonProfitApplyList({ userClass }) {
     const [similarProjects, setSimilarProjects] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     
-    // New state for handling approve/reject loading
+    // State for the multi-step approval workflow
+    const [approvalStep, setApprovalStep] = useState('initial'); // 'initial', 'confirm_reject', 'manage_npo', 'create_ps'
     const [isUpdating, setIsUpdating] = useState(null);
 
-    // Function to fetch summary from OpenAI
+    // --- New State for NPO Management ---
+    const [nonprofits, setNonprofits] = useState([]);
+    const [matchingNonprofits, setMatchingNonprofits] = useState([]);
+    const [npoSelection, setNpoSelection] = useState('create');
+    const [selectedNpo, setSelectedNpo] = useState(null);
+
+    // --- MODIFIED: Function to fetch summary from the backend ---
     const fetchSummary = async (application) => {
         setIsSummarizing(true);
         setSummary('');
 
-        if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
-            setSummary("Configuration Error: OpenAI API Key is missing.");
-            setIsSummarizing(false);
-            return;
-        }
-
-        const problemText = application.technicalProblem || application.idea || '';
-        const solutionText = application.solutionBenefits || '';
-        const inputText = `Problem: ${problemText}\n\nProposed Solution & Benefits: ${solutionText}`;
-
-        const prompt = `Summarize the following nonprofit project application in a structured format. 
-        Identify the core problem, the proposed solution, 
-        and the key impact or benefit. 
-        Provide the summary in markdown format, 
-        using bold headers like 
-        **Problem:**, **Solution:**, and **Impact:**.
-        ---
-        ${inputText}
-        ---`;
-
         try {
-            // NOTE: Using the standard Chat Completions API endpoint
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/summary`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+                    'Authorization': `Bearer ${accessToken}`
                 },
-                body: JSON.stringify({
-                    model: 'gpt-4o',
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.5,
-                })
+                body: JSON.stringify(application)
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error.message || 'Failed to fetch summary from OpenAI');
+                throw new Error(errorData.error || 'Failed to fetch summary from backend');
             }
 
             const data = await response.json();
-            setSummary(data.choices[0].message.content);
+            setSummary(data.summary);
 
         } catch (e) {
             console.error("Error fetching summary:", e);
@@ -115,52 +91,29 @@ function NonProfitApplyList({ userClass }) {
         }
     };
 
-    // --- Function to generate reasoning for a SINGLE project ---
+    // --- MODIFIED: Function to generate reasoning from the backend ---
     const fetchReasoningForSimilarity = async (application, projectToUpdate) => {
-        if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
-            setSimilarProjects(prev => prev.map(p => 
-                p.id === projectToUpdate.id ? { ...p, reasoning: "API Key not configured.", isReasoning: false } : p
-            ));
-            return;
-        }
-
         // Mark this specific project as loading its reason
         setSimilarProjects(prev => prev.map(p => 
             p.id === projectToUpdate.id ? { ...p, isReasoning: true } : p
         ));
 
-        const appText = `Problem: ${application.technicalProblem || application.idea || ''}. Solution: ${application.solutionBenefits || ''}`;
-
-        const prompt = `
-            A new nonprofit application is being reviewed. It seems similar to an existing project.
-            Provide a single, concise sentence explaining *why* the existing project is similar to the new application. Focus on the core shared goal or problem.
-
-            New Application:
-            ---
-            ${appText}
-            ---
-            
-            Existing Project:
-            ---
-            Title: ${projectToUpdate.title}
-            Description: ${projectToUpdate.description}
-            ---
-        `;
-
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/similarity-reasoning`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}` },
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${accessToken}` 
+                },
                 body: JSON.stringify({
-                    model: 'gpt-4o',
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.3,
+                    application: application,
+                    project: projectToUpdate
                 })
             });
             if (!response.ok) throw new Error('Failed to fetch reasoning');
 
             const data = await response.json();
-            const reason = data.choices[0].message.content;
+            const reason = data.reasoning;
 
             // Update the specific project with the fetched reason
             setSimilarProjects(prev => prev.map(p => 
@@ -175,52 +128,55 @@ function NonProfitApplyList({ userClass }) {
         }
     };
 
-    // --- Updated function for Semantic Search ---
+    // --- THIS IS THE FIX: Replace the old function with the new one ---
     const findSimilarProjects = async (application) => {
         setIsSearching(true);
         setSimilarProjects([]);
 
-        if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
-            // We'll use the similarProjects state to hold the error message for its section.
-            setSimilarProjects([{ id: 'error', title: 'Configuration Error: OpenAI API Key is missing.' }]);
-            setIsSearching(false);
-            return;
-        }
-
         try {
-            const appText = `Problem: ${application.technicalProblem || application.idea || ''}. Solution: ${application.solutionBenefits || ''}`;
-            const textsToEmbed = [appText, ...problemStatements.map(p => `Title: ${p.title}. Description: ${p.description}`)];
-
-            const response = await fetch('https://api.openai.com/v1/embeddings', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/similar-projects`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+                    'Authorization': `Bearer ${accessToken}`
                 },
-                body: JSON.stringify({
-                    model: 'text-embedding-3-small',
-                    input: textsToEmbed
-                })
+                body: JSON.stringify(application)
             });
-            if (!response.ok) throw new Error('Failed to fetch embeddings');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to find similar projects');
+            }
             
             const data = await response.json();
-            const embeddings = data.data.map(item => item.embedding);
-            const newAppEmbedding = embeddings[0];
-            const existingProjectsEmbeddings = embeddings.slice(1);
-
-            const scoredProjects = problemStatements.map((project, index) => ({
-                ...project,
-                similarity: cosineSimilarity(newAppEmbedding, existingProjectsEmbeddings[index])
-            }));
-
-            scoredProjects.sort((a, b) => b.similarity - a.similarity);
-            setSimilarProjects(scoredProjects.slice(0, 3));
+            // The backend now returns the top N sorted projects directly.
+            // We also add the 'isReasoning' flag for the UI.
+            const projectsWithUIState = data.similar_projects.map(p => ({ ...p, isReasoning: false }));
+            setSimilarProjects(projectsWithUIState.slice(0, 3));
             
         } catch (e) {
             console.error("Error finding similar projects:", e);
+            setSimilarProjects([{ id: 'error', title: e.message || 'Error searching for projects.' }]);
         } finally {
             setIsSearching(false);
+        }
+    };
+
+    // --- New handler for workflow navigation ---
+    const handleApprovalStepChange = (step, app) => {
+        setApprovalStep(step);
+        if (step === 'manage_npo') {
+            const appOrgName = (app.organization || app.charityName || '').toLowerCase();
+            if (appOrgName) {
+                const matches = nonprofits.filter(npo => npo.name.toLowerCase().includes(appOrgName));
+                setMatchingNonprofits(matches);
+                if (matches.length > 0) {
+                    setNpoSelection('link');
+                    setSelectedNpo(matches[0]);
+                } else {
+                    setNpoSelection('create');
+                    setSelectedNpo(null);
+                }
+            }
         }
     };
 
@@ -230,6 +186,7 @@ function NonProfitApplyList({ userClass }) {
             setExpandedAppId(null);
         } else {
             setExpandedAppId(appId);
+            setApprovalStep('initial'); // Reset form when opening
             fetchSummary(app);
             findSimilarProjects(app);
         }
@@ -278,19 +235,27 @@ function NonProfitApplyList({ userClass }) {
         const isAdmin = org && org.hasPermission("volunteer.admin");
         const orgId = org ? org.orgId : null;
         if (!isAdmin || !orgId) { setError("You do not have permission to view this data."); setIsLoading(false); return; }
+        
         const fetchAllData = async () => {
             try {
-                const [appsResponse, psResponse] = await Promise.all([
+                // Fetch nonprofits along with other data
+                const [appsResponse, psResponse, npoResponse] = await Promise.all([
                     fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/npo/applications`, { headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Org-Id': orgId } }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/problem_statements`)
+                    fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/problem_statements`),
+                    fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/npos`) // Assumes an endpoint to get all nonprofits
                 ]);
+
                 if (!appsResponse.ok) throw new Error(`Failed to fetch applications: ${appsResponse.status}`);
                 if (!psResponse.ok) throw new Error(`Failed to fetch problem statements: ${psResponse.status}`);
+                if (!npoResponse.ok) throw new Error(`Failed to fetch nonprofits: ${npoResponse.status}`);
+
                 const appsData = await appsResponse.json();
                 const psData = await psResponse.json();
+                const npoData = await npoResponse.json();
                 
                 setApplications(appsData.applications.sort((a, b) => new Date(b.timestamp || b.timeStamp) - new Date(a.timestamp || a.timeStamp)));
                 setProblemStatements(psData.problem_statements);
+                setNonprofits(npoData.nonprofits || []); // Store all nonprofits
 
             } catch (e) {
                 setError(e.message);
@@ -401,26 +366,86 @@ function NonProfitApplyList({ userClass }) {
                                                         </Grid>
                                                     </Grid>
                                                     <Divider sx={{ my: 2 }} />
-                                                    <CardActions sx={{ justifyContent: 'flex-end', p: 0 }}>
-                                                        <Button 
-                                                            size="medium" 
-                                                            color="error" 
-                                                            variant="outlined"
-                                                            onClick={() => handleUpdateStatus(app.id, 'rejected')}
-                                                            disabled={isUpdating === app.id}
-                                                        >
-                                                            {isUpdating === app.id ? <CircularProgress size={24} /> : 'Reject'}
-                                                        </Button>
-                                                        <Button 
-                                                            size="medium" 
-                                                            variant="contained" 
-                                                            color="primary"
-                                                            onClick={() => handleUpdateStatus(app.id, 'approved')}
-                                                            disabled={isUpdating === app.id}
-                                                        >
-                                                            {isUpdating === app.id ? <CircularProgress size={24} /> : 'Approve'}
-                                                        </Button>
-                                                    </CardActions>
+
+                                                    {/* --- PHASE 3: Admin Action Form --- */}
+                                                    <Box sx={{ p: 2 }}>
+                                                        <Typography variant="h6" gutterBottom>Admin Action</Typography>
+                                                        
+                                                        {/* Step 1: Initial Decision */}
+                                                        {approvalStep === 'initial' && (
+                                                            <CardActions sx={{ justifyContent: 'flex-start', p: 0 }}>
+                                                                <Button size="medium" variant="contained" color="primary" onClick={() => handleApprovalStepChange('manage_npo', app)}>
+                                                                    Approve Application
+                                                                </Button>
+                                                                <Button size="medium" color="error" variant="outlined" onClick={() => setApprovalStep('confirm_reject')}>
+                                                                    Reject
+                                                                </Button>
+                                                            </CardActions>
+                                                        )}
+
+                                                        {/* Step 1.1: Confirm Rejection */}
+                                                        {approvalStep === 'confirm_reject' && (
+                                                            <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main' }}>
+                                                                <Typography>Are you sure you want to reject this application? This action cannot be undone.</Typography>
+                                                                <CardActions sx={{ justifyContent: 'flex-start', p: 0, pt: 2 }}>
+                                                                    <Button size="medium" color="error" variant="contained" onClick={() => handleUpdateStatus(app.id, 'rejected')} disabled={isUpdating === app.id}>
+                                                                        {isUpdating === app.id ? <CircularProgress size={24} /> : 'Confirm Reject'}
+                                                                    </Button>
+                                                                    <Button size="medium" variant="outlined" onClick={() => setApprovalStep('initial')}>
+                                                                        Cancel
+                                                                    </Button>
+                                                                </CardActions>
+                                                            </Paper>
+                                                        )}
+
+                                                        {/* --- Step 1: Manage Nonprofit Profile --- */}
+                                                        {approvalStep === 'manage_npo' && (
+                                                            <Paper variant="outlined" sx={{ p: 2 }}>
+                                                                <Typography variant="h6" gutterBottom>Step 1: Manage Nonprofit Profile</Typography>
+                                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                                                    Link this application to an existing nonprofit or create a new one.
+                                                                </Typography>
+
+                                                                <FormControl component="fieldset">
+                                                                    <RadioGroup row value={npoSelection} onChange={(e) => { setNpoSelection(e.target.value); setSelectedNpo(null); }}>
+                                                                        <FormControlLabel value="link" control={<Radio />} label="Link to existing nonprofit" disabled={matchingNonprofits.length === 0} />
+                                                                        <FormControlLabel value="create" control={<Radio />} label="Create new nonprofit" />
+                                                                    </RadioGroup>
+                                                                </FormControl>
+
+                                                                {npoSelection === 'link' && (
+                                                                    <Autocomplete
+                                                                        options={matchingNonprofits}
+                                                                        getOptionLabel={(option) => option.name}
+                                                                        value={selectedNpo}
+                                                                        onChange={(event, newValue) => setSelectedNpo(newValue)}
+                                                                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                                                                        renderInput={(params) => <TextField {...params} label="Select Nonprofit" margin="normal" fullWidth />}
+                                                                    />
+                                                                )}
+
+                                                                {npoSelection === 'create' && (
+                                                                    <TextField label="New Nonprofit Name" value={app.organization || app.charityName || ''} disabled fullWidth margin="normal" />
+                                                                )}
+
+                                                                <CardActions sx={{ justifyContent: 'flex-start', p: 0, pt: 2 }}>
+                                                                    <Button size="medium" variant="outlined" onClick={() => setApprovalStep('initial')}>Back</Button>
+                                                                    <Button size="medium" variant="contained" onClick={() => handleApprovalStepChange('create_ps', app)} disabled={npoSelection === 'link' && !selectedNpo}>
+                                                                        Continue to Create Project
+                                                                    </Button>
+                                                                </CardActions>
+                                                            </Paper>
+                                                        )}
+
+                                                        {/* Placeholder for Step 2 */}
+                                                        {approvalStep === 'create_ps' && (
+                                                            <Paper variant="outlined" sx={{ p: 2 }}>
+                                                                <Typography variant="h6" gutterBottom>Step 2: Create Public Problem Statement</Typography>
+                                                                <Typography color="text.secondary">This form will be implemented next.</Typography>
+                                                                <Button sx={{mt: 1}} size="small" variant="outlined" onClick={() => handleApprovalStepChange('manage_npo', app)}>Back</Button>
+                                                            </Paper>
+                                                        )}
+                                                    </Box>
                                                 </Box>
                                             </Collapse>
                                         </TableCell>
