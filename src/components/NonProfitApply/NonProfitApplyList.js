@@ -359,29 +359,44 @@ function NonProfitApplyList({ userClass }) {
                                                         </Grid>
                                                         <Grid item xs={12} md={4} sx={{ p: 2 }}>
                                                             <Typography variant="h6" gutterBottom>AI-Generated Summary</Typography>
-                                                            <div className="flex items-center justify-between">
-                                                                <button
-                                                                    onClick={() => handleRefreshSummary(app)}
-                                                                    disabled={isSummarizing || isRefreshingSummary}
-                                                                    className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                                                >
-                                                                    {isRefreshingSummary ? 'Refreshing...' : 'Refresh'}
-                                                                </button>
-                                                            </div>
+                                                            
                                                             {isSummarizing ? (
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}><CircularProgress size={24} /><Typography>Generating summary...</Typography></Box>
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
+                                                                    <CircularProgress size={24} />
+                                                                    <Typography>Generating summary...</Typography>
+                                                                </Box>
                                                             ) : (
-                                                                <Paper 
-                                                                    variant="outlined" 
-                                                                    sx={{ 
-                                                                        p: 2, 
-                                                                        backgroundColor: 'white',
-                                                                        overflowWrap: 'break-word', // Add this to break long words
-                                                                        wordWrap: 'break-word'      // For older browser compatibility
-                                                                    }}
-                                                                >
-                                                                    <ReactMarkdown>{summary}</ReactMarkdown>
-                                                                </Paper>
+                                                                <>
+                                                                    <Paper 
+                                                                        variant="outlined" 
+                                                                        sx={{ 
+                                                                            p: 2, 
+                                                                            backgroundColor: 'white',
+                                                                            overflowWrap: 'break-word',
+                                                                            wordWrap: 'break-word',
+                                                                            minHeight: '120px',
+                                                                            mb: 1
+                                                                        }}
+                                                                    >
+                                                                        <ReactMarkdown>{summary}</ReactMarkdown>
+                                                                    </Paper>
+                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            color="primary"
+                                                                            onClick={() => handleRefreshSummary(app)}
+                                                                            disabled={isSummarizing || isRefreshingSummary}
+                                                                            startIcon={isRefreshingSummary ? <CircularProgress size={16} /> : null}
+                                                                            sx={{ 
+                                                                                textTransform: 'none',
+                                                                                fontSize: '0.875rem'
+                                                                            }}
+                                                                        >
+                                                                            {isRefreshingSummary ? 'Refreshing...' : 'Refresh Summary'}
+                                                                        </Button>
+                                                                    </Box>
+                                                                </>
                                                             )}
                                                         </Grid>
                                                         <Grid item xs={12} md={3} sx={{ p: 2 }}>
