@@ -364,31 +364,76 @@ export default function HackathonEvent({ eventData }) {
         "@type": "Event",
         "name": "Hacker Registration",
         "url": applicationUrls.hacker,
-        "description": "Apply to participate as a hacker and build solutions for nonprofits"
+        "description": "Apply to participate as a hacker and build solutions for nonprofits",
+        "startDate": eventStartDate,
+        "location": {
+          "@type": "Place",
+          "name": eventLocation,
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": eventLocation
+          }
+        }
       },
       {
         "@type": "Event", 
         "name": "Judge Registration",
         "url": applicationUrls.judge,
-        "description": "Apply to judge hackathon projects and mentor participants"
+        "description": "Apply to judge hackathon projects and mentor participants",
+        "startDate": eventStartDate,
+        "location": {
+          "@type": "Place",
+          "name": eventLocation,
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": eventLocation
+          }
+        }
       },
       {
         "@type": "Event",
         "name": "Mentor Registration", 
         "url": applicationUrls.mentor,
-        "description": "Apply to mentor teams and share your expertise"
+        "description": "Apply to mentor teams and share your expertise",
+        "startDate": eventStartDate,
+        "location": {
+          "@type": "Place",
+          "name": eventLocation,
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": eventLocation
+          }
+        }
       },
       {
         "@type": "Event",
         "name": "Volunteer Registration",
         "url": applicationUrls.volunteer, 
-        "description": "Apply to volunteer and help make the event successful"
+        "description": "Apply to volunteer and help make the event successful",
+        "startDate": eventStartDate,
+        "location": {
+          "@type": "Place",
+          "name": eventLocation,
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": eventLocation
+          }
+        }
       },
       {
         "@type": "Event",
         "name": "Sponsor Registration",
         "url": applicationUrls.sponsor,
-        "description": "Apply to sponsor the event and support tech for good"
+        "description": "Apply to sponsor the event and support tech for good",
+        "startDate": eventStartDate,
+        "location": {
+          "@type": "Place",
+          "name": eventLocation,
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": eventLocation
+          }
+        }
       }
     ]
   };
