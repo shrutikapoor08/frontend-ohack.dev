@@ -43,8 +43,10 @@ function NonProfitApplyList({ userClass }) {
     
     const [summary, setSummary] = useState('');
     const [isSummarizing, setIsSummarizing] = useState(false);
+    const [isRefreshingSummary, setIsRefreshingSummary] = useState(false);
     const [similarProjects, setSimilarProjects] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [reasoning, setReasoning] = useState({});
     
     const [approvalStep, setApprovalStep] = useState('initial'); 
     const [isUpdating, setIsUpdating] = useState(null);
@@ -55,6 +57,9 @@ function NonProfitApplyList({ userClass }) {
     const [selectedNpo, setSelectedNpo] = useState(null);
 
     const fetchSummary = async (application) => {
+        // --- DEBUG: Log the application object being sent to the backend ---
+        console.log('--- fetchSummary: Sending to backend ---', { application });
+
         setIsSummarizing(true);
         setSummary('');
 
@@ -81,6 +86,32 @@ function NonProfitApplyList({ userClass }) {
             setSummary(`Error: ${e.message}`);
         } finally {
             setIsSummarizing(false);
+        }
+    };
+
+    const handleRefreshSummary = async (application) => {
+        setIsRefreshingSummary(true);
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/summary/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify(application)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to refresh summary.');
+            }
+
+            const data = await response.json();
+            setSummary(data.summary);
+        } catch (error) {
+            console.error("Error refreshing summary:", error);
+            setSummary("Error: Could not refresh the summary.");
+        } finally {
+            setIsRefreshingSummary(false);
         }
     };
 
@@ -119,6 +150,9 @@ function NonProfitApplyList({ userClass }) {
     };
 
     const findSimilarProjects = async (application) => {
+        // --- DEBUG: Log the application object being sent to the backend ---
+        console.log('--- findSimilarProjects: Sending to backend ---', { application });
+
         setIsSearching(true);
         setSimilarProjects([]);
 
@@ -148,25 +182,45 @@ function NonProfitApplyList({ userClass }) {
         }
     };
 
+    // --- THIS IS THE FIX ---
+    // The logic is updated to be more flexible. It no longer disables the "link" option.
+    // Instead, it tries to find a good default but allows the admin to choose any NPO.
     const handleApprovalStepChange = (step, app) => {
         setApprovalStep(step);
         if (step === 'manage_npo') {
             const appOrgName = (app.organization || app.charityName || '').toLowerCase();
+            
+            // Always make all nonprofits available for linking.
+            setMatchingNonprofits(nonprofits); 
+
             if (appOrgName) {
-                const matches = nonprofits.filter(npo => npo.name.toLowerCase().includes(appOrgName));
-                setMatchingNonprofits(matches);
-                if (matches.length > 0) {
+                // Try to find a good default selection.
+                const bestMatch = nonprofits.find(npo => {
+                    const npoName = npo.name.toLowerCase();
+                    return npoName.includes(appOrgName) || appOrgName.includes(npoName);
+                });
+                                
+                if (bestMatch) {
+                    // If a likely match is found, pre-select it and default to the 'link' option.
                     setNpoSelection('link');
-                    setSelectedNpo(matches[0]);
+                    setSelectedNpo(bestMatch);
                 } else {
+                    // If no good match is found, default to the 'create' option.
                     setNpoSelection('create');
                     setSelectedNpo(null);
                 }
+            } else {
+                // If the app has no organization name, default to 'create'.
+                setNpoSelection('create');
+                setSelectedNpo(null);
             }
         }
     };
 
     const handleReviewClick = (app) => {
+        // --- DEBUG: Log the application object when "Review" is clicked ---
+        console.log('--- handleReviewClick ---', { app });
+
         const appId = app.id;
         if (expandedAppId === appId) {
             setExpandedAppId(null);
@@ -305,6 +359,15 @@ function NonProfitApplyList({ userClass }) {
                                                         </Grid>
                                                         <Grid item xs={12} md={4} sx={{ p: 2 }}>
                                                             <Typography variant="h6" gutterBottom>AI-Generated Summary</Typography>
+                                                            <div className="flex items-center justify-between">
+                                                                <button
+                                                                    onClick={() => handleRefreshSummary(app)}
+                                                                    disabled={isSummarizing || isRefreshingSummary}
+                                                                    className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                                                >
+                                                                    {isRefreshingSummary ? 'Refreshing...' : 'Refresh'}
+                                                                </button>
+                                                            </div>
                                                             {isSummarizing ? (
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}><CircularProgress size={24} /><Typography>Generating summary...</Typography></Box>
                                                             ) : (
