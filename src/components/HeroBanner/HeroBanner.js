@@ -184,9 +184,9 @@ const HeroBanner = ({ children }) => {
               style={{ color: "white", backgroundColor: "blue" }}
               target="_blank"
               rel="noopener noreferrer"
-              href="https://www.paypal.com/donate/?campaign_id=WWL4VPVBUS4SA"
+              href="https://givebutter.com/a5MSes"
             >
-              Donate with PayPal
+              Donate Here
             </ButtonBasicStyle>
 
             <ButtonBasicStyle

@@ -729,16 +729,16 @@ export default function SponsorIndexList() {
           <Box mt={2}>
             {selectedAmount > 0 && (
               <Typography variant="h6" gutterBottom>
-                Donate ${selectedAmount} via PayPal:
+                Donate ${selectedAmount}:
               </Typography>
             )}
             <ButtonBasicStyle
               onClick={() => gaButton("button_donate", "donate")}
               style={{ color: "white", backgroundColor: "blue" }}
               target="_blank"
-              href="https://www.paypal.com/donate/?campaign_id=WWL4VPVBUS4SA"
+              href="https://givebutter.com/a5MSes"
             >
-              Donate with PayPal
+              Donate Here
             </ButtonBasicStyle>
           </Box>
         </Box>
