@@ -29,7 +29,6 @@ import {
   useMediaQuery,
   RadioGroup,  
 } from "@mui/material";
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
@@ -41,6 +40,7 @@ import FormPersistenceControls from '../../../components/FormPersistenceControls
 import { useFormPersistence } from '../../../hooks/use-form-persistence';
 import { useRecaptcha } from '../../../hooks/use-recaptcha';
 import GiveButterWidget from '../../../components/GiveButterWidget';
+import UploadPhoto from '../../../components/UploadPhoto';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
@@ -64,9 +64,8 @@ const MentorApplicationComponent = () => {
     setError: setRecaptchaError 
   } = useRecaptcha();
   
-  // Photo upload state
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  // Use ref to store uploaded photo URL to avoid race conditions
+  const uploadedPhotoUrlRef = useRef('');
   
   // Prevent duplicate confirmation dialogs
   const confirmationShownRef = useRef(false);
@@ -468,39 +467,26 @@ const MentorApplicationComponent = () => {
   };
   
   // Handle file selection for photo upload
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image file is too large. Please choose an image under 5MB.');
-      return;
-    }
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Selected file is not an image. Please select an image file.');
-      return;
-    }
-    
-    setPhotoFile(file);
-    setError(''); // Clear any previous errors
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoPreview(reader.result);
-      // Update the form data with the image data URL
-      setFormData(prev => ({
-        ...prev,
-        picture: reader.result
-      }));
-    };
-    reader.onerror = () => {
-      setError('Failed to read the selected file. Please try again.');
-    };
-    reader.readAsDataURL(file);
+  const handlePhotoUpload = (photoUrl) => {
+    // Store URL in both ref (for submission) and state (for form persistence)
+    uploadedPhotoUrlRef.current = photoUrl;
+    setFormData(prev => ({
+      ...prev,
+      picture: photoUrl,
+      photoUrl: photoUrl
+    }));
+    console.log('Photo URL saved to form and ref:', photoUrl);
+  };
+
+  const handlePhotoError = (errorMessage) => {
+    setError(errorMessage);
+    // Clear the URLs on error
+    uploadedPhotoUrlRef.current = '';
+    setFormData(prev => ({
+      ...prev,
+      picture: '',
+      photoUrl: ''
+    }));
   };
 
   // Extend handleFormChange to handle otherExpertise field
@@ -971,37 +957,19 @@ const MentorApplicationComponent = () => {
       </Typography>
       
       <Box sx={{ mb: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <InputLabel htmlFor="photo-upload" sx={{ mb: 1 }}>
-            A photo of you we can use on the website (Optional)
-          </InputLabel>
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<CloudUploadIcon />}
-            sx={{ mb: 1 }}
-          >
-            Upload Photo
-            <input
-              id="photo-upload"
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={handleFileChange}
-            />
-          </Button>
-          <FormHelperText>Please upload a professional photo of yourself</FormHelperText>
-          
-          {photoPreview && (
-            <Box sx={{ mt: 2, maxWidth: 200 }}>
-              <img 
-                src={photoPreview} 
-                alt="Preview" 
-                style={{ width: '100%', borderRadius: '4px' }} 
-              />
-            </Box>
-          )}
-        </Box>
+        <UploadPhoto
+          value={formData.picture || formData.photoUrl || ''}
+          onChange={handlePhotoUpload}
+          onError={handlePhotoError}
+          label="A photo of you we can use on the website (Optional)"
+          helperText="Please upload a professional photo of yourself"
+          directory="mentors"
+          apiServerUrl={apiServerUrl}
+          accessToken={accessToken}
+          orgId={user?.orgId}
+          userId={user?.userId}
+          sx={{ mb: 3 }}
+        />
         
         <TextField
           label="LinkedIn Profile (Optional)"

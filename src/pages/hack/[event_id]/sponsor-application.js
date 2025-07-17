@@ -37,7 +37,7 @@ import {
 } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoIcon from '@mui/icons-material/Info';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import UploadPhoto from '../../../components/UploadPhoto';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
@@ -47,55 +47,81 @@ import FormPersistenceControls from '../../../components/FormPersistenceControls
 import { useFormPersistence } from '../../../hooks/use-form-persistence';
 import { useRecaptcha } from '../../../hooks/use-recaptcha';
 import GiveButterWidget from '../../../components/GiveButterWidget';
+import { sponsorLevels } from '../../../data/sponsorData';
 
-// Sponsorship tiers
+// Sponsorship tiers - aligned with /sponsor page
 const sponsorshipTiers = [
   {
-    name: 'Platinum Sponsor',
-    amount: '$10,000',
+    name: 'Visionary',
+    amount: '$10,000+',
+    color: '#E1BEE7',
     benefits: [
-      'Premium logo placement on event website',
-      'Recognition during opening and closing ceremonies',
-      'Dedicated table at event',
-      'Social media promotion',
+      'Logo on website for 2 years',
+      '6 social media promotion posts',
+      'Booth at Sponsor Fair',
+      '5-minute Opening/Closing Ceremony presentation',
+      '3 judging panel seats',
+      'Unlimited mentorship opportunities',
+      '2 branded prize categories',
+      'Premium logo on event t-shirts',
       'Access to participant resumes',
-      'Opportunity to present prize',
-      '10-minute presentation opportunity'
+      '1-hour sponsored workshop/tech talk',
+      'Pre, during & post-event recruiting/interviews'
     ]
   },
   {
-    name: 'Gold Sponsor',
-    amount: '$5,000',
+    name: 'Transformer',
+    amount: '$5,000+',
+    color: '#FFECB3',
     benefits: [
-      'Logo placement on event website',
-      'Recognition during opening ceremony',
-      'Shared table at event',
-      'Social media promotion',
-      'Access to participant resumes'
+      'Logo on website for 1 year',
+      '4 social media promotion posts',
+      'Booth at Sponsor Fair',
+      '2-minute Opening/Closing Ceremony presentation',
+      '2 judging panel seats',
+      'Unlimited mentorship opportunities',
+      '1 branded prize category',
+      'Large logo on event t-shirts',
+      'Access to participant resumes',
+      '30-minute sponsored workshop/tech talk',
+      'During & post-event recruiting/interviews'
     ]
   },
   {
-    name: 'Silver Sponsor',
-    amount: '$2,500',
+    name: 'Changemaker',
+    amount: '$2,500+',
+    color: '#BBDEFB',
     benefits: [
-      'Logo placement on event website',
-      'Recognition during opening ceremony',
-      'Social media promotion'
+      'Logo on website for 6 months',
+      '2 social media promotion posts',
+      'Booth at Sponsor Fair',
+      '1-minute Opening/Closing Ceremony presentation',
+      '1 judging panel seat',
+      'Unlimited mentorship opportunities',
+      'Medium logo on event t-shirts',
+      'Post-event recruiting/interviews'
     ]
   },
   {
-    name: 'Bronze Sponsor',
-    amount: '$1,000',
+    name: 'Innovator',
+    amount: '$1,000+',
+    color: '#C8E6C9',
     benefits: [
-      'Logo placement on event website',
-      'Recognition during opening ceremony'
+      'Logo on website for 3 months',
+      '1 social media promotion post',
+      '1 judging panel seat',
+      'Unlimited mentorship opportunities',
+      'Small logo on event t-shirts'
     ]
   },
   {
     name: 'Custom Sponsorship',
-    amount: 'Custom',
+    amount: 'Contact Us',
+    color: '#F5F5F5',
     benefits: [
-      'Tailored to your organization\'s needs and budget'
+      'Tailored package to meet your organization\'s specific goals and budget',
+      'Flexible combination of benefits from all tiers',
+      'Unique partnership opportunities based on your needs'
     ]
   }
 ];
@@ -181,8 +207,8 @@ const SponsorApplicationComponent = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [eventData, setEventData] = useState(null);
-  const [logoFile, setLogoFile] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);
+  // Use ref to store uploaded logo URL to avoid race conditions
+  const uploadedLogoUrlRef = useRef('');
   const [error, setError] = useState('');
   
   // Prevent duplicate confirmation dialogs
@@ -380,9 +406,9 @@ const SponsorApplicationComponent = () => {
                 
                 setFormData(transformedData);
                 
-                // If there's a logo URL, set the preview
+                // If there's a logo URL, set it in the ref
                 if (prevData.photoUrl || prevData.logoUrl) {
-                  setLogoPreview(prevData.photoUrl || prevData.logoUrl);
+                  uploadedLogoUrlRef.current = prevData.photoUrl || prevData.logoUrl;
                 }
                 
                 return;
@@ -431,40 +457,27 @@ const SponsorApplicationComponent = () => {
     }      
   }, [handleFormChange, setFormData]);
   
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image file is too large. Please choose an image under 5MB.');
-      return;
-    }
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Selected file is not an image. Please select an image file.');
-      return;
-    }
-    
-    setLogoFile(file);
-    setError(''); // Clear any previous errors
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoPreview(reader.result);
-      
-      // Also update the form data with the logo URL
-      setFormData(prev => ({
-        ...prev,
-        photoUrl: reader.result
-      }));
-    };
-    reader.onerror = () => {
-      setError('Failed to read the selected file. Please try again.');
-    };
-    reader.readAsDataURL(file);
+  const handleLogoUpload = useCallback((logoUrl) => {
+    // Store in ref to avoid race conditions
+    uploadedLogoUrlRef.current = logoUrl;
+    // Update form data
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: logoUrl,
+      logoUrl: logoUrl
+    }));
+    console.log('Logo URL saved to form and ref:', logoUrl);
+  }, [setFormData]);
+  
+  const handleLogoError = useCallback((errorMessage) => {
+    setError(errorMessage);
+    // Clear the uploaded logo URL
+    uploadedLogoUrlRef.current = '';
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: '',
+      logoUrl: ''
+    }));
   }, [setFormData]);
 
   // Validation functions
@@ -608,12 +621,12 @@ const SponsorApplicationComponent = () => {
         event_id,
         preferredContact: formData.preferredContact,
         howHeard: formData.howHeard,
-        logoFile: logoFile ? logoFile.name : null,
-        photoUrl: logoPreview, // Map logo to photoUrl for consistency
+        logoFile: uploadedLogoUrlRef.current ? 'uploaded' : null,
+        photoUrl: uploadedLogoUrlRef.current || formData.logoUrl || formData.photoUrl || '', // Map logo to photoUrl for consistency
         type: "sponsors",
         volunteer_type: "sponsor",
         isSelected: false,
-        logoUrl: logoPreview,
+        logoUrl: uploadedLogoUrlRef.current || formData.logoUrl || formData.photoUrl || '',
         recaptchaToken,
       };
 
@@ -662,7 +675,7 @@ const SponsorApplicationComponent = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [formData, validateForm, apiServerUrl, accessToken, event_id, previouslySubmitted, logoFile, logoPreview, clearSavedData, getRecaptchaToken]);
+  }, [formData, validateForm, apiServerUrl, accessToken, event_id, previouslySubmitted, clearSavedData, getRecaptchaToken]);
 
   // Navigation handlers - Now define these AFTER handleSubmit
   const handleNext = useCallback(() => {
@@ -810,40 +823,28 @@ const SponsorApplicationComponent = () => {
             
             {formData.useLogo === 'Yes' && (
               <Box sx={{ mt: 2 }}>
-                <Button
-                  component="label"
-                  variant="outlined"
-                  startIcon={<CloudUploadIcon />}
-                  sx={{ mb: 1 }}
-                >
-                  Upload Logo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handleFileChange}
-                  />
-                </Button>
-                <FormHelperText>
-                  Recommended: High-resolution PNG or SVG with transparent background
-                </FormHelperText>
-                
-                {logoPreview && (
-                  <Box sx={{ mt: 2, maxWidth: 200 }}>
-                    <img 
-                      src={logoPreview} 
-                      alt="Logo Preview" 
-                      style={{ width: '100%', borderRadius: '4px' }} 
-                    />
-                  </Box>
-                )}
+                <UploadPhoto
+                  value={formData.logoUrl || formData.photoUrl || ''}
+                  onChange={handleLogoUpload}
+                  onError={handleLogoError}
+                  label="Upload Company Logo"
+                  helperText="Recommended: High-resolution PNG or SVG with transparent background"
+                  directory="sponsors"
+                  apiServerUrl={apiServerUrl}
+                  accessToken={accessToken}
+                  orgId={user?.orgId}
+                  userId={user?.userId}
+                  accept="image/*"
+                  allowedTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml']}
+                  sx={{ mb: 2 }}
+                />
               </Box>
             )}
           </Box>
         </Grid>
       </Grid>
     </Box>
-  ), [formData, error, handleChange, handleFileChange, logoPreview]);
+  ), [formData, error, handleChange]);
   
   // Sponsorship Form
   const renderSponsorshipForm = useCallback(() => (
@@ -852,95 +853,200 @@ const SponsorApplicationComponent = () => {
         Choose Your Sponsorship Level
       </Typography>
       
-      <Typography variant="body2" sx={{ mb: 3 }}>
-        Select the sponsorship tier that fits your organization's goals. Each tier includes different benefits and recognition.
+      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+        Select the sponsorship tier that aligns with your organization's impact goals. Each tier offers increasing visibility and engagement opportunities with our passionate tech community.
       </Typography>
+
+      {/* Value Proposition Alert */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>💡 Maximum Impact:</strong> Higher tiers provide exponentially more value through extended website presence, social media reach, and direct access to top tech talent for recruiting.
+        </Typography>
+      </Alert>
       
       <Grid container spacing={3}>
-        {sponsorshipTiers.map((tier) => (
-          <Grid item xs={12} md={tier.name === 'Custom Sponsorship' ? 12 : 6} key={tier.name}>
-            <Card 
-              raised={formData.sponsorshipTier === tier.name} 
-              sx={{ 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                border: formData.sponsorshipTier === tier.name ? 
-                  `2px solid ${theme.palette.primary.main}` : 'none',
-                '&:hover': {
-                  boxShadow: 6
-                }
-              }}
-              onClick={() => handleChange({ 
-                target: { name: 'sponsorshipTier', value: tier.name } 
-              })}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" component="div">
-                    {tier.name}
+        {sponsorshipTiers.map((tier, index) => {
+          const isSelected = formData.sponsorshipTier === tier.name;
+          const isPopular = tier.name === 'Transformer'; // Mark Transformer as popular choice
+          const isCustom = tier.name === 'Custom Sponsorship';
+          
+          return (
+            <Grid item xs={12} md={isCustom ? 12 : 6} key={tier.name}>
+              <Card 
+                raised={isSelected} 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease-in-out',
+                  border: isSelected ? 
+                    `3px solid ${theme.palette.primary.main}` : 
+                    `2px solid ${tier.color || '#e0e0e0'}`,
+                  backgroundColor: tier.color || 'white',
+                  position: 'relative',
+                  transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                  '&:hover': {
+                    boxShadow: 8,
+                    transform: 'scale(1.02)'
+                  }
+                }}
+                onClick={() => handleChange({ 
+                  target: { name: 'sponsorshipTier', value: tier.name } 
+                })}
+              >
+                {/* Popular Badge */}
+                {isPopular && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 80,
+                      right: 10,
+                      backgroundColor: 'warning.main',
+                      color: 'white',
+                      px: 2,
+                      py: 0.5,
+                      borderRadius: '15px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      zIndex: 1
+                    }}
+                  >
+                    ⭐ MOST POPULAR
+                  </Box>
+                )}
+
+                <CardContent sx={{ pb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
+                      {tier.name}
+                    </Typography>
+                    <Chip 
+                      label={tier.amount} 
+                      color={isSelected ? 'primary' : 'default'}
+                      sx={{ 
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        backgroundColor: isSelected ? 'primary.main' : 'rgba(0,0,0,0.1)',
+                        color: isSelected ? 'white' : 'text.primary'
+                      }}
+                    />
+                  </Box>
+                  
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                    Your Benefits & Impact:
                   </Typography>
-                  <Chip label={tier.amount} color="primary" />
-                </Box>
+                  
+                  <Box component="ul" sx={{ 
+                    paddingLeft: '20px', 
+                    margin: 0,
+                    '& li': {
+                      marginBottom: '8px',
+                      '&::marker': {
+                        color: 'primary.main'
+                      }
+                    }
+                  }}>
+                    {tier.benefits.map((benefit, idx) => (
+                      <li key={idx}>
+                        <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                          {benefit}
+                        </Typography>
+                      </li>
+                    ))}
+                  </Box>
+
+                  {/* Social Proof for Higher Tiers */}
+                  {tier.name === 'Visionary' && (
+                    <Box sx={{ mt: 2, p: 1.5, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 1 }}>
+                      <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                        "As a Visionary sponsor, we've hired 3 amazing developers directly from Opportunity Hack events." - PayPal Employee
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {tier.name === 'Transformer' && (
+                    <Box sx={{ mt: 2, p: 1.5, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 1 }}>
+                      <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                        🔥 Perfect balance of visibility and value - chosen by 60% of our returning sponsors
+                      </Typography>
+                    </Box>
+                  )}
+                </CardContent>
                 
-                <Divider sx={{ mb: 2 }} />
-                
-                <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  Benefits:
-                </Typography>
-                
-                <ul style={{ paddingLeft: '20px' }}>
-                  {tier.benefits.map((benefit, idx) => (
-                    <li key={idx}>
-                      <Typography variant="body2">{benefit}</Typography>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardActions>
-                <Button 
-                  size="small" 
-                  color="primary"
-                  onClick={() => handleChange({ 
-                    target: { name: 'sponsorshipTier', value: tier.name } 
-                  })}
-                >
-                  {formData.sponsorshipTier === tier.name ? 'Selected' : 'Select'}
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
+                <CardActions sx={{ pt: 0, pb: 2, px: 2 }}>
+                  <Button 
+                    fullWidth
+                    variant={isSelected ? 'contained' : 'outlined'}
+                    color="primary"
+                    size="large"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChange({ 
+                        target: { name: 'sponsorshipTier', value: tier.name } 
+                      });
+                    }}
+                    sx={{ 
+                      fontWeight: 'bold',
+                      py: 1.5,
+                      borderRadius: 2
+                    }}
+                  >
+                    {isSelected ? '✓ Selected' : `Choose ${tier.name}`}
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
       
       {formData.sponsorshipTier === 'Custom Sponsorship' && (
-        <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 4 }}>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Custom Sponsorship Selected!</strong> We'll work with you to create a tailored package that maximizes your impact and ROI.
+            </Typography>
+          </Alert>
           <TextField
-            label="Describe your custom sponsorship"
+            label="Describe your custom sponsorship vision"
             name="customSponsorship"
             multiline
-            rows={3}
+            rows={4}
             fullWidth
             value={formData.customSponsorship || ''}
             onChange={handleChange}
             error={typeof error === 'string' && error.includes('custom')}
-            helperText="Please describe your sponsorship proposal, budget, and what you'd like to offer"
+            helperText="Share your budget range, specific goals, target audience, or unique partnership ideas. The more details you provide, the better we can tailor your sponsorship package."
+            sx={{ mb: 2 }}
           />
         </Box>
       )}
       
-      <Box sx={{ mt: 3 }}>
+      <Box sx={{ mt: 4 }}>
         <TextField
-          label="Additional Sponsorship Details (Optional)"
+          label="Additional Partnership Goals & Details (Optional)"
           name="sponsorshipDetails"
           multiline
           rows={3}
           fullWidth
           value={formData.sponsorshipDetails || ''}
           onChange={handleChange}
-          helperText="Any specific requests or details about your sponsorship"
+          helperText="Any specific recruitment needs, technical areas of interest, or special requests for your sponsorship experience"
         />
       </Box>
+
+      {/* Benefits Summary for Selected Tier */}
+      {formData.sponsorshipTier && formData.sponsorshipTier !== 'Custom Sponsorship' && (
+        <Box sx={{ mt: 3, p: 3, backgroundColor: 'primary.light', borderRadius: 2 }}>
+          <Typography variant="h6" gutterBottom sx={{ color: 'primary.contrastText' }}>
+            🎯 {formData.sponsorshipTier} Sponsorship
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'primary.contrastText', opacity: 0.9 }}>
+            Thank you for choosing the {formData.sponsorshipTier} tier! Your sponsorship will directly enable us to provide better resources for participants, attract more high-quality talent, and create more impactful solutions for nonprofits.
+          </Typography>
+        </Box>
+      )}
     </Box>
   ), [formData, error, handleChange, theme.palette.primary.main]);
   

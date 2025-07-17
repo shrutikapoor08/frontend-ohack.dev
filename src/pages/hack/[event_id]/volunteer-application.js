@@ -38,7 +38,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
@@ -48,6 +47,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import FormPersistenceControls from '../../../components/FormPersistenceControls';
 import { useFormPersistence } from '../../../hooks/use-form-persistence';
 import { useRecaptcha } from '../../../hooks/use-recaptcha';
+import UploadPhoto from '../../../components/UploadPhoto';
 import GiveButterWidget from '../../../components/GiveButterWidget';
 
 const VolunteerApplicationComponent = () => {
@@ -74,9 +74,8 @@ const VolunteerApplicationComponent = () => {
     setError: setRecaptchaError 
   } = useRecaptcha();
   
-  // Photo upload state
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  // Use ref to store uploaded photo URL to avoid race conditions
+  const uploadedPhotoUrlRef = useRef('');
   
   // Available time slots (will be populated from event data)
   const [availabilityOptions, setAvailabilityOptions] = useState([]);
@@ -99,40 +98,24 @@ const VolunteerApplicationComponent = () => {
   const formInitializedRef = useRef(false);
   const confirmationShownRef = useRef(false);
   
-  // Handle file selection for photo upload
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image file is too large. Please choose an image under 5MB.');
-      return;
-    }
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Selected file is not an image. Please select an image file.');
-      return;
-    }
-    
-    setPhotoFile(file);
-    setError(''); // Clear any previous errors
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoPreview(reader.result);
-      // Update the form data with the image data URL
-      setFormData(prev => ({
-        ...prev,
-        photoUrl: reader.result
-      }));
-    };
-    reader.onerror = () => {
-      setError('Failed to read the selected file. Please try again.');
-    };
-    reader.readAsDataURL(file);
+  const handlePhotoUpload = (photoUrl) => {
+    // Store URL in both ref (for submission) and state (for form persistence)
+    uploadedPhotoUrlRef.current = photoUrl;
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: photoUrl
+    }));
+    console.log('Photo URL saved to form and ref:', photoUrl);
+  };
+
+  const handlePhotoError = (errorMessage) => {
+    setError(errorMessage);
+    // Clear the URLs on error
+    uploadedPhotoUrlRef.current = '';
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: ''
+    }));
   };
   
   // Initial form state
@@ -1257,7 +1240,7 @@ const VolunteerApplicationComponent = () => {
         agreedToCodeOfConduct: formData.codeOfConduct,
         linkedinProfile: formData.linkedin,
         shortBio: formData.bio,
-        photoUrl: photoPreview || formData.photoUrl || '',
+        photoUrl: uploadedPhotoUrlRef.current || formData.photoUrl || '',
         // Map available days to their display text
         availability: formData.availableDays
           .map(
@@ -1385,37 +1368,19 @@ const VolunteerApplicationComponent = () => {
           sx={{ mb: 3 }}
         />
         
-        <Box sx={{ mb: 3 }}>
-          <InputLabel htmlFor="photo-upload" sx={{ mb: 1 }}>
-            Your Profile Photo (Optional)
-          </InputLabel>
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<CloudUploadIcon />}
-            sx={{ mb: 1 }}
-          >
-            Upload Photo
-            <input
-              id="photo-upload"
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={handleFileChange}
-            />
-          </Button>
-          <FormHelperText>Please upload a professional photo of yourself, we'd like to add this to our website so people can see who is volunteering.</FormHelperText>
-          
-          {photoPreview && (
-            <Box sx={{ mt: 2, maxWidth: 200 }}>
-              <img 
-                src={photoPreview} 
-                alt="Preview" 
-                style={{ width: '100%', borderRadius: '4px' }} 
-              />
-            </Box>
-          )}
-        </Box>
+        <UploadPhoto
+          value={formData.photoUrl || ''}
+          onChange={handlePhotoUpload}
+          onError={handlePhotoError}
+          label="Your Profile Photo (Optional)"
+          helperText="Please upload a professional photo of yourself, we'd like to add this to our website so people can see who is volunteering."
+          directory="volunteers"
+          apiServerUrl={apiServerUrl}
+          accessToken={accessToken}
+          orgId={user?.orgId}
+          userId={user?.userId}
+          sx={{ mb: 3 }}
+        />
       </Box>
     </Box>
   );
