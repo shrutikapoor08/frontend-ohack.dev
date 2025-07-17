@@ -42,6 +42,7 @@ import FormPersistenceControls from '../../../components/FormPersistenceControls
 import { useFormPersistence } from '../../../hooks/use-form-persistence';
 import { useRecaptcha } from '../../../hooks/use-recaptcha';
 import GiveButterWidget from '../../../components/GiveButterWidget';
+import UploadPhoto from '../../../components/UploadPhoto';
 import Moment from 'moment';
 import 'moment-timezone';
 
@@ -75,6 +76,9 @@ const HackerApplicationComponent = () => {
   const formInitializedRef = useRef(false);
   const confirmationShownRef = useRef(false);
   
+  // Use ref to store uploaded photo URL to avoid race conditions
+  const uploadedPhotoUrlRef = useRef('');
+  
   // Initial form state
   const initialFormData = {
     timestamp: new Date().toISOString(),
@@ -93,6 +97,7 @@ const HackerApplicationComponent = () => {
     linkedin: '',
     github: '',
     portfolio: '',
+    photoUrl: '',
     inPerson: '',
     shirtSize: '',
     participationCount: '',
@@ -171,6 +176,28 @@ const HackerApplicationComponent = () => {
       saveToLocalStorage();
     }, 500);
   }, [setFormData, saveToLocalStorage]);
+  
+  // Photo upload handlers
+  const handlePhotoUpload = useCallback((photoUrl) => {
+    // Store in ref to avoid race conditions
+    uploadedPhotoUrlRef.current = photoUrl;
+    // Update form data
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: photoUrl
+    }));
+    console.log('Photo URL saved to form and ref:', photoUrl);
+  }, [setFormData]);
+  
+  const handlePhotoError = useCallback((errorMessage) => {
+    setError(errorMessage);
+    // Clear the uploaded photo URL
+    uploadedPhotoUrlRef.current = '';
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: ''
+    }));
+  }, [setFormData]);
 
   // Participant type options
   const participantTypeOptions = [
@@ -662,6 +689,7 @@ const HackerApplicationComponent = () => {
                     linkedin: prevData.linkedin || prevData.linkedinProfile || '',
                     github: prevData.github || '',
                     portfolio: prevData.portfolio || '',
+                    photoUrl: prevData.photoUrl || '',
                     inPerson: prevData.inPerson || (prevData.isInPerson ? 'Yes' : 'No'),
                     shirtSize: prevData.shirtSize || '',
                     participationCount: prevData.participationCount || '',
@@ -996,6 +1024,7 @@ const HackerApplicationComponent = () => {
         agreedToCodeOfConduct: formData.codeOfConduct,
         linkedinProfile: formData.linkedin,
         shortBio: formData.bio,
+        photoUrl: uploadedPhotoUrlRef.current || formData.photoUrl || '',
       };
 
       if (apiServerUrl) {
@@ -1309,6 +1338,20 @@ const HackerApplicationComponent = () => {
           onChange={handleChange}
           sx={{ mb: 3 }}
           placeholder="https://yourwebsite.com"
+        />
+        
+        <UploadPhoto
+          value={formData.photoUrl || ''}
+          onChange={handlePhotoUpload}
+          onError={handlePhotoError}
+          label="Your Profile Photo (Optional)"
+          helperText="Please upload a professional photo of yourself, we'd like to add this to our website so people can see who is participating."
+          directory="hackers"
+          apiServerUrl={apiServerUrl}
+          accessToken={accessToken}
+          orgId={user?.orgId}
+          userId={user?.userId}
+          sx={{ mb: 3 }}
         />
         
         <FormControl fullWidth required sx={{ mb: 3 }}>
