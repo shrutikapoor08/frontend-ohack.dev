@@ -955,17 +955,7 @@ const VolunteerApplicationComponent = () => {
   };
   
   const validateSkillsInfo = () => {
-    // Validate volunteer types
-    if (!formData.volunteerType || formData.volunteerType.length === 0) {
-      setError('Please select at least one volunteer type');
-      return false;
-    }
-    
-    // Check for "Other" volunteer type
-    if (formData.volunteerType.includes('Other') && !formData.otherVolunteerType) {
-      setError('Please specify your other volunteer type');
-      return false;
-    }
+   
     
     
     setError('');
