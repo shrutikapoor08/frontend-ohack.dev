@@ -457,7 +457,7 @@ export default function Apply({ title, description, openGraphData }) {
               </Typography>
             </Box>
             <Typography variant="body1" sx={{ fontSize: '1.25rem' }}>
-              50% of any profit generated from your solution will be shared with your nonprofit organization.
+              If we're able to repackage and sell your solution to others, 50% of any profit generated from your solution will be shared with your nonprofit organization.  We'll never charge you to use the software we build.
             </Typography>
           </InfoCardContent>
               </InfoCard>
