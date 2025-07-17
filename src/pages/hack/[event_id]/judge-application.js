@@ -30,7 +30,6 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
@@ -43,6 +42,7 @@ import { useFormPersistence } from '../../../hooks/use-form-persistence';
 import { useRecaptcha } from '../../../hooks/use-recaptcha';
 import GiveButterWidget from '../../../components/GiveButterWidget';
 import useProfileApi from '../../../hooks/use-profile-api';
+import UploadPhoto from '../../../components/UploadPhoto';
 
 const JudgeApplicationComponent = () => {
   const router = useRouter();
@@ -72,10 +72,6 @@ const JudgeApplicationComponent = () => {
     error: recaptchaError,
     setError: setRecaptchaError 
   } = useRecaptcha();
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [imageUploading, setImageUploading] = useState(false);
-  
   // Use ref to store uploaded photo URL to avoid race conditions
   const uploadedPhotoUrlRef = useRef('');
   
@@ -214,9 +210,8 @@ const JudgeApplicationComponent = () => {
             console.log('Successfully loaded previous submission from backend API:', transformedData);
             setFormData(transformedData);
 
-            // If there's a photo URL (base64 or URL), set the preview and ref
+            // If there's a photo URL (base64 or URL), set the ref
             if (prevData.photoUrl) {
-              setPhotoPreview(prevData.photoUrl);
               uploadedPhotoUrlRef.current = prevData.photoUrl;
             }
             
@@ -245,7 +240,7 @@ const JudgeApplicationComponent = () => {
       // If both fail, we'll still use the base form data that's already set
       // Don't throw error here as the form can still work with base data
     }
-  }, [user?.userId, loadPreviousSubmission, setFormData, setPhotoPreview, loadFromLocalStorage, event_id]);
+  }, [user?.userId, loadPreviousSubmission, setFormData, loadFromLocalStorage, event_id]);
 
   // fetch event data from the backend API
   useEffect(() => {
@@ -412,90 +407,24 @@ const JudgeApplicationComponent = () => {
     }
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Check file size (limit to 10MB to match ImageUpload.js)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image file is too large. Please choose an image under 10MB.');
-      return;
-    }
-    
-    // Validate file type (match ImageUpload.js validation)
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPG, PNG, GIF, or WebP)');
-      return;
-    }
-    
-    setPhotoFile(file);
-    setError(''); // Clear any previous errors
-    setImageUploading(true);
-    
-    try {
-      // Create preview immediately for better UX
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-      
-      // Upload to backend API using same approach as ImageUpload.js
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      uploadFormData.append('directory', 'judges'); // Use judges directory
-      
-      // Generate a meaningful filename
-      const timestamp = Date.now();
-      const cleanFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      uploadFormData.append('filename', `${timestamp}_${cleanFilename}`);
+  const handlePhotoUpload = (photoUrl) => {
+    // Store URL in both ref (for submission) and state (for form persistence)
+    uploadedPhotoUrlRef.current = photoUrl;
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: photoUrl
+    }));
+    console.log('Photo URL saved to form and ref:', photoUrl);
+  };
 
-      const uploadResponse = await fetch(`${apiServerUrl}/api/messages/upload-image`, {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-          "X-Org-Id": user?.orgId || user?.userId || 'default',
-          // Don't set Content-Type, let browser set it with boundary for FormData
-        },
-        body: uploadFormData,
-      });
-      
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
-      }
-      
-      const uploadResult = await uploadResponse.json();
-      console.log('Upload result:', uploadResult); // Debug log
-      
-      if (!uploadResult.success || !uploadResult.url) {
-        throw new Error(uploadResult.error || 'No URL returned from upload');
-      }
-      
-      // Store URL in both ref (for submission) and state (for form persistence)
-      uploadedPhotoUrlRef.current = uploadResult.url;
-      setFormData(prev => ({
-        ...prev,
-        photoUrl: uploadResult.url
-      }));
-      
-      console.log('Photo URL saved to form and ref:', uploadResult.url); // Debug log
-      
-    } catch (err) {
-      console.error('Error uploading image:', err);
-      setError(`Failed to upload image: ${err.message}. Please try again.`);
-      // Clear the file, preview, and URLs on error
-      setPhotoFile(null);
-      setPhotoPreview(null);
-      uploadedPhotoUrlRef.current = '';
-      setFormData(prev => ({
-        ...prev,
-        photoUrl: ''
-      }));
-    } finally {
-      setImageUploading(false);
-    }
+  const handlePhotoError = (errorMessage) => {
+    setError(errorMessage);
+    // Clear the URLs on error
+    uploadedPhotoUrlRef.current = '';
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: ''
+    }));
   };
 
   // Define steps for stepper
@@ -907,49 +836,19 @@ const JudgeApplicationComponent = () => {
           sx={{ mb: 3 }}
         />
         
-        <Box sx={{ mb: 3 }}>
-          <InputLabel htmlFor="photo-upload" sx={{ mb: 1 }}>
-            A photo of you we can use on the DevPost site
-          </InputLabel>
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={imageUploading ? <CircularProgress size={16} /> : <CloudUploadIcon />}
-            disabled={imageUploading}
-            sx={{ mb: 1 }}
-          >
-            {imageUploading ? 'Uploading...' : 'Upload Photo'}
-            <input
-              id="photo-upload"
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={handleFileChange}
-              disabled={imageUploading}
-            />
-          </Button>
-          <FormHelperText>
-            {imageUploading 
-              ? "Uploading your photo..." 
-              : "Please upload a professional photo of yourself"
-            }
-          </FormHelperText>
-          
-          {photoPreview && (
-            <Box sx={{ mt: 2, maxWidth: 200 }}>
-              <img 
-                src={photoPreview} 
-                alt="Preview" 
-                style={{ width: '100%', borderRadius: '4px' }} 
-              />
-              {formData.photoUrl && (
-                <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 1 }}>
-                  ✓ Photo uploaded successfully
-                </Typography>
-              )}
-            </Box>
-          )}
-        </Box>
+        <UploadPhoto
+          value={formData.photoUrl}
+          onChange={handlePhotoUpload}
+          onError={handlePhotoError}
+          label="A photo of you we can use on the DevPost site"
+          helperText="Please upload a professional photo of yourself"
+          directory="judges"
+          apiServerUrl={apiServerUrl}
+          accessToken={accessToken}
+          orgId={user?.orgId}
+          userId={user?.userId}
+          sx={{ mb: 3 }}
+        />
       </Box>
     </Box>
   );
@@ -1610,7 +1509,7 @@ const JudgeApplicationComponent = () => {
                           variant="contained"
                           color="primary"
                           onClick={handleNext}
-                          disabled={submitting || recaptchaLoading || imageUploading}
+                          disabled={submitting || recaptchaLoading}
                         >
                           {activeStep === steps.length - 1 ? (
                             submitting || recaptchaLoading ? (
