@@ -80,6 +80,8 @@ const VolunteerApplicationComponent = () => {
   
   // Available time slots (will be populated from event data)
   const [availabilityOptions, setAvailabilityOptions] = useState([]);
+  // Add state for slot counts
+  const [slotCounts, setSlotCounts] = useState({});
   // State for organizing time slots by date and month
   const [availabilityByDate, setAvailabilityByDate] = useState({});
   const [availabilityByMonth, setAvailabilityByMonth] = useState({});
@@ -197,18 +199,46 @@ const VolunteerApplicationComponent = () => {
     'Experienced volunteer (4+ events)'
   ];
 
-  // Volunteer type options
-  const volunteerTypeOptions = [
-    "Check-in/Registration",
-    "Cleanup Crew",
-    "Food Service",
-    "Presentation Pitch Support",    
-    "Marketing/Communications",
-    "Photography/Videography",
-    "Other",
-  ];
+  // Helper function to determine if event is virtual/global
+  const isVirtualEvent = () => {    
+    // Check if location contains keywords indicating virtual or global participation
+    if (!eventData?.location) return false;
+    const location = eventData.location.toLowerCase();
+    return location.includes('global') || 
+           location.includes('virtual') || 
+           location.includes('online') ||
+           location.includes('remote');
+  };
+
+  // Volunteer type options - updated to be event-type aware
+  const getVolunteerTypeOptions = () => {
+    const isVirtual = isVirtualEvent();
+    
+    const baseOptions = [
+      "Volunteer Product Manager (vPM)",
+      "Marketing/Communications",
+      "Other"
+    ];
+
+    const inPersonOptions = [
+      "Check-in/Registration",
+      "Cleanup Crew",
+      "Food Service",
+      "Presentation Pitch Support",
+      "Photography/Videography",
+      "Judging Support"
+    ];
+
+    const virtualOptions = [      
+      "Virtual Event Moderator",
+      "Content Creation/Social Media"
+    ];
+
+    return isVirtual 
+      ? [...baseOptions, ...virtualOptions]
+      : [...baseOptions, ...inPersonOptions];
+  };
   
- 
   // Social causes options
   const socialCausesOptions = [
     'Education',
@@ -269,26 +299,302 @@ const VolunteerApplicationComponent = () => {
     }
   }, [handleMultiSelectChange, setFormData]);
   
+  // Function to fetch volunteer slot counts
+  const fetchSlotCounts = useCallback(async (eventId) => {
+    if (!apiServerUrl || !eventId) return {};
+    
+    try {
+      const response = await fetch(`${apiServerUrl}/api/volunteer/application_count_by_availability_timeslot/${eventId}`);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch slot counts: ${response.status}`);
+        return {};
+      }
+      
+      const result = await response.json();
+      return result.data || {};
+    } catch (err) {
+      console.error('Error fetching slot counts:', err);
+      return {};
+    }
+  }, [apiServerUrl]);
+  
   // Function to generate time slots based on event dates
-  const generateTimeSlots = (startDate, endDate) => {
+  const generateTimeSlots = (startDate, endDate, slotCountsData = {}) => {
     if (!startDate || !endDate) return [];
     
-    // Parse dates more carefully to avoid timezone issues
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T23:59:59');
-
     console.log('Availability Start Date:', start);
     console.log('Availability End Date:', end);
+    // Calculate total event days between startDate and endDate
+    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+    console.log('Total Event Days:', totalDays);
+
+    // Determine if this is a virtual event - need to check eventData here
+    const isVirtual = eventData?.location ? 
+      eventData.location.toLowerCase().includes('global') || 
+      eventData.location.toLowerCase().includes('virtual') || 
+      eventData.location.toLowerCase().includes('online') ||
+      eventData.location.toLowerCase().includes('remote')
+      : false;
     
-    // Time blocks with icons and descriptions
-    const timeBlocks = [
-      { time: '7am - 9am', label: 'Early Morning', icon: '🌅', energy: 'Fresh minds ready to help!' },
-      { time: '9am - 12pm', label: 'Morning', icon: '☀️', energy: 'Peak productivity time!' },
-      { time: '1pm - 3pm', label: 'Afternoon', icon: '🏙️', energy: 'Post-lunch activities' },
-      { time: '4pm - 7pm', label: 'Evening', icon: '🌆', energy: 'Steady focus time' },
-      { time: '8pm - 11pm', label: 'Night', icon: '🌃', energy: 'Winding down sessions' },
-      { time: '11pm - 2am', label: 'Late Night', icon: '🌙', energy: 'For the night owls!' }
+    console.log('Is Virtual Event:', isVirtual, 'Location:', eventData?.location);
+
+    // Base volunteer roles available for both virtual and in-person events
+    const baseVolunteerRoles = [
+      { 
+        name: 'Volunteer Product Manager (vPM)', 
+        description: 'Represent a nonprofit and answer questions about their problem statement',
+        slotsNeeded: 8,
+        icon: '🎯',
+        availability: {
+          // Available all days during active hacking periods
+          days: 'all',
+          periods: 'all',
+          excludePeriods: ['setup','judging']
+        }
+      }
     ];
+
+    // In-person only volunteer roles
+    const inPersonOnlyRoles = [
+      { 
+        name: 'Check-in Registration', 
+        description: 'Help participants check in and get settled',
+        slotsNeeded: 4,
+        icon: '📋',
+        availability: {
+          // Only available on first day during setup and pitches periods
+          days: [1],
+          periods: ['setup']
+        }
+      },
+      { 
+        name: 'Food Service', 
+        description: 'Assist with meal coordination and service',
+        slotsNeeded: 3,
+        icon: '🍕',
+        availability: {
+          // Available all days during meal periods
+          days: 'all',
+          periods: ['setup','lunch1', 'dinner1', 'latenight', 'morning2', 'final'],
+          excludePeriods: ['pitches', 'afternoon1', 'evening1', 'experts', 'judging']
+        }
+      },
+      { 
+        name: 'Cleanup Crew', 
+        description: 'Help maintain clean and organized spaces throughout the event',
+        slotsNeeded: 3,
+        icon: '🧹',
+        availability: {
+          // Available all days, all periods
+          days: 'all',
+          periods: 'all'
+        }
+      },      
+      { 
+        name: 'Photography', 
+        description: 'Capture moments and document the event with photos and videos',
+        slotsNeeded: 2,
+        icon: '📸',
+        availability: {
+          // Available all days but not during overnight periods
+          days: 'all',
+          periods: 'all',
+          excludePeriods: ['latenight'] // Skip late night/overnight shifts
+        }
+      },            
+      { 
+        name: 'Judging Support', 
+        description: 'Help to ensure smooth judging process',
+        slotsNeeded: 4,
+        icon: '🏆',
+        availability: {
+          // Only available on last day during final periods
+          days: [totalDays], // Last day only
+          periods: ['judging']
+        }
+      }
+    ];
+
+    // Virtual-only volunteer roles (currently just general support)
+    const virtualOnlyRoles = [     
+      { 
+        name: 'Virtual Event Moderator', 
+        description: 'Moderate virtual sessions and facilitate online interactions',
+        slotsNeeded: 2,
+        icon: '🎤',
+        availability: {
+          // Available during key presentation and interaction periods
+          days: 'all',
+          periods: ['setup', 'pitches', 'experts','judging'],
+          excludePeriods: ['afternoon1', 'evening1', 'latenight', 'morning2', 'final']
+        }
+      }
+    ];
+
+    // Combine roles based on event type
+    const volunteerRolesConfig = isVirtual 
+      ? [...baseVolunteerRoles, ...virtualOnlyRoles]
+      : [...baseVolunteerRoles, ...inPersonOnlyRoles];
+    
+    // Time blocks configuration with day assignments
+    const timeBlocksConfig = [
+      // Day 1 time blocks
+      { 
+        time: '8:00am - 11:00am', 
+        label: 'Doors Open & Registration', 
+        period: 'setup', 
+        description: 'Volunteers will need to assist with registration, breakfast prep, and area organization', 
+        day: 1,
+        enabled: true
+      },
+      { 
+        time: '10:00am - 12:00pm', 
+        label: 'Nonprofit Pitches', 
+        period: 'pitches', 
+        description: 'Nonprofit presentations and team formation', 
+        day: 1,
+        enabled: true
+      },
+      { 
+        time: '12:00pm - 3:00pm', 
+        label: 'Lunch', 
+        period: 'lunch1', 
+        description: 'Volunteers will assist with catered lunch prep, area organization, and snack prep', 
+        day: 1,
+        enabled: true
+      },
+      { 
+        time: '2:30pm - 5:00pm', 
+        label: 'Afternoon Support', 
+        period: 'afternoon1', 
+        description: 'Afternoon hacking', 
+        day: 1,
+        enabled: true
+      },
+      { 
+        time: '4:00pm - 7:00pm', 
+        label: 'Dinner & Evening', 
+        period: 'dinner1', 
+        description: 'Volunteers will assist with dinner prep, area organization, and ice cream', 
+        day: 1,
+        enabled: true
+      },
+      { 
+        time: '7:00pm - 11:00pm', 
+        label: 'Evening Hacking', 
+        period: 'evening1', 
+        description: 'Evening hacking session support', 
+        day: 1,
+        enabled: true
+      },
+      { 
+        time: '11:30pm - 12:30am', 
+        label: 'Midnight Run', 
+        period: 'latenight', 
+        description: 'Pizza setup, clean up, and snack refresh', 
+        day: 1,
+        enabled: true
+      },
+      
+      // Day 2 time blocks
+      { 
+        time: '8:00am - 11:00am', 
+        label: 'Breakfast setup & clean-up', 
+        period: 'morning2', 
+        description: 'Volunteers will assist with meal setup, area organization, and snack prep', 
+        day: 2,
+        enabled: true
+      },
+      { 
+        time: '11:00am - 2:00pm', 
+        label: 'Expert Hours', 
+        period: 'experts', 
+        description: 'Subject matter expert consultations', 
+        day: 2,
+        enabled: true
+      },
+      { 
+        time: '12:00pm - 3:00pm', 
+        label: 'Lunch setup & cleanup', 
+        period: 'final', 
+        description: 'Volunteers will assist with lunch setup and clean up, area organization, and snack prep', 
+        day: 2,
+        enabled: true
+      },
+      { 
+        time: '3:00pm - 6:00pm', 
+        label: 'Judging and cleanup', 
+        period: 'judging', 
+        description: 'Volunteers will assist with hacker communication, entertainment, and cleanup', 
+        day: 2,
+        enabled: true
+      },
+      
+      
+      // Generic multi-day blocks (for events longer than 2 days)
+      { 
+        time: '8:00am - 11:00am', 
+        label: 'Morning Session', 
+        period: 'morning', 
+        description: 'Morning activities and support', 
+        day: 'multi',
+        enabled: true
+      },
+      { 
+        time: '11:00am - 2:00pm', 
+        label: 'Midday Session', 
+        period: 'midday', 
+        description: 'Midday activities and lunch', 
+        day: 'multi',
+        enabled: true
+      },
+      { 
+        time: '2:00pm - 5:00pm', 
+        label: 'Afternoon Session', 
+        period: 'afternoon', 
+        description: 'Afternoon activities and support', 
+        day: 'multi',
+        enabled: true
+      },
+      { 
+        time: '5:00pm - 8:00pm', 
+        label: 'Evening Session', 
+        period: 'evening', 
+        description: 'Evening activities and dinner', 
+        day: 'multi',
+        enabled: true
+      }
+    ];
+    
+    // Helper function to check if a role is available for a specific day and period
+    const isRoleAvailableForPeriod = (role, dayNumber, period) => {
+      const availability = role.availability;
+      
+      // Check day availability
+      if (availability.days !== 'all') {
+        if (!availability.days.includes(dayNumber)) {
+          return false;
+        }
+      }
+      
+      // Check period availability
+      if (availability.periods !== 'all') {
+        if (!availability.periods.includes(period)) {
+          return false;
+        }
+      }
+      
+      // Check excluded periods
+      if (availability.excludePeriods && availability.excludePeriods.includes(period)) {
+        return false;
+      }
+      
+      return true;
+    };
     
     const slots = [];
     
@@ -301,17 +607,63 @@ const VolunteerApplicationComponent = () => {
         day: 'numeric'
       });
       
-      // Add each time block for this day
-      timeBlocks.forEach(block => {
-        console.log("Availability Adding time slot:", dateString, block);
-        slots.push({
-          id: `${dateString}-${block.label}`,
-          date: dateString,
-          time: block.time,
-          label: block.label,
-          icon: block.icon,
-          energy: block.energy,
-          displayText: `${dateString}: ${block.icon} ${block.label} (${block.time} PST)`
+      // Determine which day number this is (1, 2, 3, etc.)
+      const dayNumber = Math.floor((dayDate - start) / (1000 * 60 * 60 * 24)) + 1;
+      let relevantTimeBlocks;
+      
+      if (dayNumber === 1) {
+        // Day 1: All day 1 blocks
+        relevantTimeBlocks = timeBlocksConfig.filter(block => block.day === 1 && block.enabled);
+      } else if (dayNumber === totalDays) {
+        // Last day: All day 2 blocks (assuming 2-day event structure)
+        relevantTimeBlocks = timeBlocksConfig.filter(block => block.day === 2 && block.enabled);
+      } else {
+        // Middle days: Use multi-day blocks
+        relevantTimeBlocks = timeBlocksConfig
+          .filter(block => block.day === 'multi' && block.enabled)
+          .map(block => ({
+            ...block,
+            day: dayNumber // Assign current day number
+          }));
+      }
+      
+      // Add slots for each time block and role combination
+      relevantTimeBlocks.forEach(block => {
+        volunteerRolesConfig.forEach(role => {
+          // Check if this role is available for this day and period
+          if (!isRoleAvailableForPeriod(role, dayNumber, block.period)) {
+            return; // Skip this role for this time block
+          }
+          
+          const slotId = `${dateString}-${block.label}-${role.name}`;
+          const displayText = `${dateString}: ${block.label} - ${role.icon} ${role.name} (${block.time})`;
+          
+          console.log("Display Text:", displayText);
+          console.log("Slot ID:", slotId);
+          
+
+          // Get the actual count from API data, default to 0
+          const slotsFilledCount = slotCountsData[slotId] || 0;
+          console.log("Slots Filled Count:", slotsFilledCount);
+          
+          slots.push({
+            id: slotId,
+            date: dateString,
+            roleName: role.name,
+            roleDescription: role.description,
+            roleIcon: role.icon,
+            time: block.time,
+            label: block.label,
+            period: block.period,
+            blockDescription: block.description,
+            slotsNeeded: role.slotsNeeded,
+            slotsFilledCount: slotsFilledCount, // Use actual count from API
+            displayText: displayText,
+            dayNumber: dayNumber,
+            // Additional metadata for debugging/management
+            roleConfig: role.availability,
+            blockConfig: block
+          });
         });
       });
       
@@ -352,6 +704,11 @@ const VolunteerApplicationComponent = () => {
           throw new Error('Invalid event data received');
         }
         
+        // Fetch slot counts in parallel
+        const slotCountsData = await fetchSlotCounts(event_id);
+        console.log("Slot Counts Data:", slotCountsData);
+        setSlotCounts(slotCountsData);
+        
         // Format dates for display
         const startDate = new Date(eventData.start_date);
         const endDate = new Date(eventData.end_date);
@@ -386,8 +743,8 @@ const VolunteerApplicationComponent = () => {
           isEventPast
         });
         
-        // Generate time slots based on event dates
-        const slots = generateTimeSlots(eventData.start_date, eventData.end_date);
+        // Generate time slots based on event dates with actual slot counts
+        const slots = generateTimeSlots(eventData.start_date, eventData.end_date, slotCountsData);
         console.log("Availability Generated time slots:", slots);
         setAvailabilityOptions(slots);
         
@@ -435,7 +792,7 @@ const VolunteerApplicationComponent = () => {
     };
 
     fetchEventData();
-  }, [event_id, apiServerUrl, setIsLoading, initializeRecaptcha]);
+  }, [event_id, apiServerUrl, setIsLoading, initializeRecaptcha, fetchSlotCounts]);
 
   // Handle user data and application loading - separate from event loading
   useEffect(() => {
@@ -632,7 +989,14 @@ const VolunteerApplicationComponent = () => {
     return true;
   };
   
+  // Enhanced validation for in-person events
   const validateAvailabilityInfo = () => {
+    // Check for incompatible selection first
+    if (!isVirtualEvent() && formData.inPerson === 'No') {
+      setError('This is an in-person event. All volunteer roles require physical attendance. Please select "Yes" for in-person attendance or consider applying for our virtual events.');
+      return false;
+    }
+
     const requiredFields = ['country', 'state'];
     
     for (const field of requiredFields) {
@@ -640,6 +1004,12 @@ const VolunteerApplicationComponent = () => {
         setError(`Please fill out the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} field`);
         return false;
       }
+    }
+
+    // For in-person events, ensure user confirmed they will attend in person
+    if (!isVirtualEvent() && formData.inPerson !== 'Yes') {
+      setError('This is an in-person event. All volunteer roles require physical attendance. Please select "Yes" for in-person attendance or consider applying for our virtual events.');
+      return false;
     }
     
     if (!formData.availableDays || formData.availableDays.length === 0) {
@@ -995,7 +1365,7 @@ const VolunteerApplicationComponent = () => {
         />
         
         <TextField
-          label="Job Title"
+          label="Job Title (Optional)"
           name="title"
           fullWidth
           value={formData.title || ''}
@@ -1004,7 +1374,7 @@ const VolunteerApplicationComponent = () => {
         />
         
         <TextField
-          label="Short bio"
+          label="Short bio (Optional)"
           name="bio"
           multiline
           rows={3}
@@ -1034,7 +1404,7 @@ const VolunteerApplicationComponent = () => {
               onChange={handleFileChange}
             />
           </Button>
-          <FormHelperText>Please upload a professional photo of yourself</FormHelperText>
+          <FormHelperText>Please upload a professional photo of yourself, we'd like to add this to our website so people can see who is volunteering.</FormHelperText>
           
           {photoPreview && (
             <Box sx={{ mt: 2, maxWidth: 200 }}>
@@ -1056,34 +1426,28 @@ const VolunteerApplicationComponent = () => {
       <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
         Skills & Experience
       </Typography>
+
+      {/* Event type notice for in-person events */}
+      {!isVirtualEvent() && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>In-Person Event:</strong> All volunteer roles for this event require physical attendance at {eventData?.location}. 
+            Virtual participation is not available for volunteer positions.
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Event type notice for virtual events */}
+      {isVirtualEvent() && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>Virtual Event:</strong> All volunteer roles can be performed remotely. 
+            You'll receive links and instructions for virtual participation.
+          </Typography>
+        </Alert>
+      )}
       
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth required sx={{ mb: formData.volunteerType?.includes('Other') ? 1 : 3 }}>
-          <InputLabel id="volunteer-type-label">How would you like to volunteer?</InputLabel>
-          <Select
-            labelId="volunteer-type-label"
-            id="volunteer-type"
-            multiple
-            value={formData.volunteerType || []}
-            onChange={(e) => customHandleMultiSelectChange(e, 'volunteerType')}
-            input={<OutlinedInput label="How would you like to volunteer?" />}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip key={value} label={value} />
-                ))}
-              </Box>
-            )}
-          >
-            {volunteerTypeOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                <Checkbox checked={(formData.volunteerType || []).indexOf(option) > -1} />
-                <ListItemText primary={option} />
-              </MenuItem>
-            ))}
-          </Select>
-          <FormHelperText>Select all that apply</FormHelperText>
-        </FormControl>
+      <Box sx={{ mb: 3 }}>       
         
         {formData.volunteerType?.includes('Other') && (
           <TextField
@@ -1098,8 +1462,6 @@ const VolunteerApplicationComponent = () => {
           />
         )}
         
-        
-        
         <TextField
           label="Previous Experience (Optional)"
           name="previousExperience"
@@ -1108,7 +1470,11 @@ const VolunteerApplicationComponent = () => {
           fullWidth
           value={formData.previousExperience || ''}
           onChange={handleFormChange}
-          helperText="Share any relevant volunteer or professional experience"
+          helperText={
+            formData.volunteerType?.includes('Volunteer Product Manager (vPM)') 
+              ? "For vPM roles, mention any experience working with nonprofits, product management, or subject matter expertise that would help you represent nonprofit needs"
+              : "Share any relevant volunteer or professional experience"
+          }
           sx={{ mb: 3 }}
         />
         
@@ -1153,238 +1519,350 @@ const VolunteerApplicationComponent = () => {
       </Box>
     </Box>
   );
-  
-  // Helper function to determine if event is virtual/global
-  const isVirtualEvent = () => {
-    if (!eventData?.location) return false;
-    const location = eventData.location.toLowerCase();
-    return location.includes('global') || 
-           location.includes('virtual') || 
-           location.includes('online') ||
-           location.includes('remote');
-  };
 
-  // Render availability form with time slots selection
-  const renderAvailabilityForm = () => (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-        Availability & Location
-      </Typography>
-      
-      <Box sx={{ mb: 3 }}>
-        {/* Conditionally show in-person attendance field only for physical events */}
-        {!isVirtualEvent() && (
-          <FormControl required component="fieldset" sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Are you joining us in-person or virtually?
-            </Typography>
-            <RadioGroup
-              name="inPerson"
-              value={formData.inPerson || ''}
-              onChange={handleFormChange}
-            >
-              <FormControlLabel value="Yes" control={<Radio />} label="Yes, I'll attend in person" />
-              <FormControlLabel value="No" control={<Radio />} label="No, I'll participate virtually" />
-            </RadioGroup>
-          </FormControl>
-        )}
-        
-        <TextField
-          label={isVirtualEvent() ? "Which country will you be volunteering from?" : 
-                 (formData.inPerson === "Yes" ? "Which country are you traveling from?" : "Which country will you be volunteering from?")}
-          name="country"
-          required
-          fullWidth
-          value={formData.country || ''}
-          onChange={handleFormChange}
-          sx={{ mb: 3 }}
-        />
-        
-        <TextField
-          label={isVirtualEvent() ? "State/Province (where you'll be volunteering from)" : 
-                 (formData.inPerson === "Yes" ? "State/Province (where you're traveling from)" : "State/Province (where you'll be volunteering from)")}
-          name="state"
-          required
-          fullWidth
-          value={formData.state || ''}
-          onChange={handleFormChange}
-          sx={{ mb: 3 }}
-        />
+  // Render availability form with SignupGenius-style interface
+  const renderAvailabilityForm = () => {
+    // Group slots by date and time block for table structure
+    const slotsByDate = availabilityOptions.reduce((grouped, slot) => {
+      if (!grouped[slot.date]) {
+        grouped[slot.date] = {};
+      }
+      if (!grouped[slot.date][slot.label]) {
+        grouped[slot.date][slot.label] = {
+          timeBlock: slot,
+          roles: []
+        };
+      }
+      grouped[slot.date][slot.label].roles.push(slot);
+      return grouped;
+    }, {});
 
+    // Check for incompatible selection (virtual participation for in-person event)
+    const hasIncompatibleSelection = !isVirtualEvent() && formData.inPerson === 'No';
+
+    return (
+      <Box sx={{ mb: 4 }}>
         <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-          When can you volunteer? (Select all that apply)
+          Availability & Location
         </Typography>
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          Select the dates you are available. For each date, pick the time slots you can volunteer. For long hackathons, use the filter to quickly find your dates.
-        </Typography>
-
-        {/* Date filter/search */}
-        <TextField
-          label="Filter dates"
-          variant="outlined"
-          fullWidth
-          value={dateFilter}
-          onChange={handleDateFilterChange}
-          placeholder="Type to filter dates (e.g., 'Monday' or 'Jan')"
-          sx={{ mb: 2 }}
-        />
-
-        {/* Accordion for each date */}
-        {getFilteredDates().length === 0 ? (
-          <Alert severity="info">No dates match your filter.</Alert>
-        ) : (
-          <Box>
-            {getFilteredDates().map((date) => (
-              <Accordion
-                key={date}
-                expanded={expandedDate === date}
-                onChange={handleAccordionChange(date)}
-                sx={{ mb: 2 }}
+        
+        <Box sx={{ mb: 3 }}>
+          {/* Conditionally show in-person attendance field only for physical events */}
+          {!isVirtualEvent() && (
+            <FormControl required component="fieldset" sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Are you joining us in-person or virtually?
+              </Typography>
+              <RadioGroup
+                name="inPerson"
+                value={formData.inPerson || ''}
+                onChange={handleFormChange}
               >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon />}
-                  aria-controls={`panel-${date}-content`}
-                  id={`panel-${date}-header`}
-                  sx={{ bgcolor: selectedDates.includes(date) ? 'primary.light' : 'background.paper', color: selectedDates.includes(date) ? 'white' : 'text.primary' }}
+                <FormControlLabel value="Yes" control={<Radio />} label="Yes, I'll attend in person" />
+                <FormControlLabel value="No" control={<Radio />} label="No, I'll participate virtually" />
+              </RadioGroup>
+            </FormControl>
+          )}
+
+          {/* Show blocking alert for incompatible selection */}
+          {hasIncompatibleSelection && (
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mb: 4,
+                '& .MuiAlert-message': { width: '100%' }
+              }}
+            >
+              <Typography variant="h6" component="div" sx={{ mb: 2 }}>
+                Virtual Participation Not Available
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                This hackathon ({eventData?.name}) requires in-person attendance at {eventData?.location}. 
+                All volunteer roles need physical presence to support participants effectively.
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                <strong>Your options:</strong>
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, inPerson: 'Yes' }));
+                  }}
+                  startIcon={<span>📍</span>}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <Chip
-                      label={date}
-                      color={selectedDates.includes(date) ? 'primary' : 'default'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDateToggle(date);
-                      }}
-                      sx={{ mr: 2 }}
-                    />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', flexGrow: 1 }}>{date}</Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectAllSlotsForDate(date);
-                      }}
-                      sx={{ ml: 2 }}
-                    >
-                      Select All Slots
-                    </Button>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {/* Time slots for this date */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-                    {availabilityByDate[date]?.map((slot) => (
-                      <Paper
-                        key={slot.id}
-                        elevation={formData.availableDays.includes(slot.id) ? 8 : 1}
-                        sx={{
+                  Change to In-Person
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => router.push('/hack')}
+                  startIcon={<span>🌐</span>}
+                >
+                  Find Virtual Events
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => router.push(`/hack/${event_id}/mentor-application`)}
+                  startIcon={<span>👥</span>}
+                >
+                  Mentor Instead
+                </Button>
+              </Box>
+            </Alert>
+          )}
+
+          {/* Only show the rest of the form if selection is compatible */}
+          {!hasIncompatibleSelection && (
+            <>
+              <TextField
+                label={isVirtualEvent() ? "Which country will you be volunteering from?" : 
+                       (formData.inPerson === "Yes" ? "Which country are you traveling from?" : "Which country will you be volunteering from?")}
+                name="country"
+                required
+                fullWidth
+                value={formData.country || ''}
+                onChange={handleFormChange}
+                sx={{ mb: 3 }}
+              />
+              
+              <TextField
+                label={isVirtualEvent() ? "State/Province (where you'll be volunteering from)" : 
+                       (formData.inPerson === "Yes" ? "State/Province (where you're traveling from)" : "State/Province (where you'll be volunteering from)")}
+                name="state"
+                required
+                fullWidth
+                value={formData.state || ''}
+                onChange={handleFormChange}
+                sx={{ mb: 3 }}
+              />
+
+              <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
+                Available Volunteer Slots
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
+                Choose the volunteer roles and time slots that work best for you. Each time block shows different volunteer opportunities during that period.
+              </Typography>
+
+              {/* Date filter/search */}
+              <TextField
+                label="Filter dates"
+                variant="outlined"
+                fullWidth
+                value={dateFilter}
+                onChange={handleDateFilterChange}
+                placeholder="Type to filter dates (e.g., 'Monday' or 'Oct')"
+                sx={{ mb: 3, maxWidth: 400 }}
+              />
+
+              {/* SignupGenius-style table */}
+              <Paper elevation={1} sx={{ overflow: 'hidden' }}>
+                {Object.entries(slotsByDate)
+                  .filter(([date]) => !dateFilter || date.toLowerCase().includes(dateFilter))
+                  .map(([date, timeBlocks]) => (
+                    <Box key={date} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                      {/* Date header */}
+                      <Box 
+                        sx={{ 
+                          bgcolor: 'primary.main', 
+                          color: 'white', 
                           p: 2,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          bgcolor: formData.availableDays.includes(slot.id) ? 'primary.light' : 'background.paper',
-                          color: formData.availableDays.includes(slot.id) ? 'white' : 'text.primary',
-                          borderRadius: 2,
-                          '&:hover': {
-                            bgcolor: formData.availableDays.includes(slot.id) ? 'primary.main' : 'action.hover',
-                            transform: 'translateY(-4px)',
-                            boxShadow: 6
-                          }
-                        }}
-                        onClick={() => {
-                          const newAvailability = formData.availableDays.includes(slot.id)
-                            ? formData.availableDays.filter(id => id !== slot.id)
-                            : [...formData.availableDays, slot.id];
-                          setFormData(prev => ({
-                            ...prev,
-                            availableDays: newAvailability
-                          }));
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
                         }}
                       >
-                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                          <Typography variant="body1" sx={{ mb: 1, fontWeight: 'bold' }}>
-                            {slot.icon} {slot.label}
-                          </Typography>
-                          <Typography variant="body2" sx={{ mb: 1 }}>
-                            {slot.time}
-                          </Typography>
-                          <Typography variant="caption" sx={{ mt: 'auto', fontStyle: 'italic' }}>
-                            {slot.energy}
-                          </Typography>
-                          {formData.availableDays.includes(slot.id) && (
-                            <Chip label="Selected!" color="success" size="small" sx={{ alignSelf: 'flex-start', mt: 1 }} />
-                          )}
-                        </Box>
-                      </Paper>
-                    ))}
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
-            ))}
-          </Box>
-        )}
+                        <Typography variant="h6" component="h4">
+                          {date}
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                          Times shown in local timezone
+                        </Typography>
+                      </Box>
 
-        {/* Selected slots summary (sticky on desktop, top on mobile) */}
-        <Box sx={{
-          position: isMobile ? 'static' : 'sticky',
-          top: isMobile ? undefined : 80,
-          zIndex: 10,
-          mt: 3,
-          p: 2,
-          bgcolor: 'success.light',
-          color: 'white',
-          borderRadius: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          minHeight: 56
-        }}>
-          <Typography variant="subtitle1">
-            You've selected {formData.availableDays.length} time slot{formData.availableDays.length !== 1 ? 's' : ''}
-            {selectedDates.length > 0 && ` across ${selectedDates.length} day${selectedDates.length !== 1 ? 's' : ''}`}!
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-            {formData.availableDays.map(slotId => {
-              const slot = availabilityOptions.find(opt => opt.id === slotId);
-              return (
-                <Chip
-                  key={slotId}
-                  label={`${slot?.icon} ${slot?.date} ${slot?.label}`}
-                  onDelete={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      availableDays: prev.availableDays.filter(id => id !== slotId)
-                    }));
-                  }}
-                  color="primary"
-                  sx={{ mb: 1 }}
-                />
-              );
-            })}
-          </Box>
-          {formData.availableDays.length > 0 && (
-            <Button
-              variant="contained"
-              color="warning"
-              size="small"
-              onClick={() => {
-                setFormData(prev => ({ ...prev, availableDays: [] }));
-                setSelectedDates([]);
-              }}
-              sx={{ mt: 2 }}
-            >
-              Clear All
-            </Button>
+                      {/* Time blocks and volunteer slots */}
+                      <Box sx={{ bgcolor: 'background.paper' }}>
+                        {Object.entries(timeBlocks).map(([timeLabel, timeBlockData]) => (
+                          <Box key={timeLabel} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                            {/* Time block header */}
+                            <Box 
+                              sx={{ 
+                                bgcolor: 'grey.100',
+                                p: 2,
+                                borderBottom: '1px solid',
+                                borderColor: 'divider'
+                              }}
+                            >
+                              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                {timeBlockData.timeBlock.time} - {timeBlockData.timeBlock.label}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {timeBlockData.timeBlock.blockDescription}
+                              </Typography>
+                            </Box>
+
+                            {/* Volunteer roles for this time block */}
+                            <Box sx={{ 
+                              display: 'grid', 
+                              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
+                              gap: 0
+                            }}>
+                              {timeBlockData.roles.map((slot) => {
+                                const isSelected = formData.availableDays.includes(slot.id);
+                                const slotsRemaining = slot.slotsNeeded - slot.slotsFilledCount;
+
+                                return (
+                                  <Box 
+                                    key={slot.id}
+                                    sx={{ 
+                                      p: 2,
+                                      borderRight: { xs: 'none', sm: '1px solid' },
+                                      borderBottom: { xs: '1px solid', lg: 'none' },
+                                      borderColor: 'divider',
+                                      '&:hover': { bgcolor: 'grey.50' },
+                                      ...(isSelected && { bgcolor: 'success.light', color: 'success.contrastText' }),
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      minHeight: 120
+                                    }}
+                                  >
+                                    {/* Role info */}
+                                    <Box sx={{ flex: 1, mb: 2 }}>
+                                      <Typography variant="subtitle2" sx={{ fontWeight: 'medium', mb: 0.5 }}>
+                                        {slot.roleIcon} {slot.roleName}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ 
+                                        color: isSelected ? 'success.contrastText' : 'text.secondary',
+                                        display: 'block',
+                                        mb: 1
+                                      }}>
+                                        {slot.roleDescription}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ 
+                                        color: isSelected ? 'success.contrastText' : 'text.secondary',
+                                        display: 'block'
+                                      }}>
+                                        {slot.slotsFilledCount} of {slot.slotsNeeded} slots filled
+                                      </Typography>
+                                    </Box>
+
+                                    {/* Sign up button */}
+                                    <Box sx={{ mt: 'auto' }}>
+                                      {slotsRemaining > 0 || isSelected ? (
+                                        <Button
+                                          variant={isSelected ? "contained" : "outlined"}
+                                          color={isSelected ? "success" : "primary"}
+                                          size="small"
+                                          fullWidth
+                                          onClick={() => {
+                                            const newAvailability = isSelected
+                                              ? formData.availableDays.filter(id => id !== slot.id)
+                                              : [...formData.availableDays, slot.id];
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              availableDays: newAvailability
+                                            }));
+                                          }}
+                                        >
+                                          {isSelected ? "✓ Remove Me" : "Sign Up"}
+                                        </Button>
+                                      ) : (
+                                        <Button 
+                                          variant="outlined" 
+                                          size="small" 
+                                          fullWidth 
+                                          disabled
+                                          sx={{ color: 'error.main', borderColor: 'error.main' }}
+                                        >
+                                          Full
+                                        </Button>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  ))}
+              </Paper>
+
+              {/* Selected slots summary */}
+              {formData.availableDays.length > 0 && (
+                <Paper elevation={2} sx={{ mt: 3, p: 3, bgcolor: 'success.light' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'success.contrastText' }}>
+                    Your Volunteer Commitments ({formData.availableDays.length} slots)
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {formData.availableDays.map(slotId => {
+                      const slot = availabilityOptions.find(opt => opt.id === slotId);
+                      return slot ? (
+                        <Box 
+                          key={slotId}
+                          sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            p: 1,
+                            borderRadius: 1
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ color: 'success.contrastText' }}>
+                            {slot.date} - {slot.label}: {slot.roleIcon} {slot.roleName}
+                          </Typography>
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                availableDays: prev.availableDays.filter(id => id !== slotId)
+                              }));
+                            }}
+                            sx={{ color: 'success.contrastText', minWidth: 'auto', p: 0.5 }}
+                          >
+                            ✕
+                          </Button>
+                        </Box>
+                      ) : null;
+                    })}
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, availableDays: [] }));
+                    }}
+                    sx={{ 
+                      mt: 2, 
+                      color: 'success.contrastText', 
+                      borderColor: 'success.contrastText',
+                      '&:hover': { 
+                        borderColor: 'success.contrastText',
+                        bgcolor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Clear All
+                  </Button>
+                </Paper>
+              )}
+
+              {formData.availableDays.length === 0 && !hasIncompatibleSelection && (
+                <Alert severity="info" sx={{ mt: 3 }}>
+                  Please select at least one volunteer slot to continue.
+                </Alert>
+              )}
+            </>
           )}
         </Box>
-        {formData.availableDays.length === 0 && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Please select at least one time slot when you'll be available to volunteer.
-          </Alert>
-        )}
       </Box>
-    </Box>
-  );
+    );
+  };
   
   // Render interests form
   const renderInterestsForm = () => (
@@ -1528,31 +2006,39 @@ const VolunteerApplicationComponent = () => {
     ? `Join our volunteer team for ${eventData.name} in ${eventData.location} from ${eventData.formattedStartDate} to ${eventData.formattedEndDate}. Help run an impactful hackathon where developers create technology solutions for nonprofits. Volunteer as a mentor, judge, or event organizer.`
     : "Volunteer for Opportunity Hack hackathon! Help run events where developers create technology solutions for nonprofits. Join as a mentor, judge, or organizer and make a real impact in the tech for good community.";
   const canonicalUrl = `https://ohack.dev/hack/${event_id}/volunteer-application`;
+  const imageUrl = eventData?.image || "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp";
   
-  const imageUrl = "https://cdn.ohack.dev/ohack.dev/2024_hackathon_3.webp";
-  
-  // Structured data for volunteer application
+  // Generate structured data for SEO
   const structuredData = eventData ? {
     "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": pageTitle,
+    "@type": "Event",
+    "name": `Volunteer for ${eventData.name}`,
     "description": pageDescription,
-    "url": canonicalUrl,
-    "mainEntity": {
-      "@type": "Event",
-      "name": eventData.name,
-      "startDate": eventData.startDate,
-      "endDate": eventData.endDate,
-      "location": {
-        "@type": "Place",
-        "name": eventData.location
-      },
-      "organizer": {
-        "@type": "Organization",
-        "name": "Opportunity Hack",
-        "url": "https://ohack.dev"
+    "startDate": eventData.startDate,
+    "endDate": eventData.endDate,
+    "location": {
+      "@type": "Place",
+      "name": eventData.location,
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": eventData.location.split(',')[0] || "Tempe",
+        "addressRegion": "Arizona",
+        "addressCountry": "US"
       }
     },
+    "organizer": {
+      "@type": "Organization",
+      "name": "Opportunity Hack",
+      "url": "https://ohack.dev"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    "eventStatus": "https://schema.org/EventScheduled",
+    "eventAttendanceMode": isVirtualEvent() ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
     "breadcrumb": {
       "@type": "BreadcrumbList",
       "itemListElement": [
