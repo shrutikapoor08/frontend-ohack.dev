@@ -731,6 +731,21 @@ const VolunteerApplicationComponent = () => {
         console.log("Availability Generated time slots:", slots);
         setAvailabilityOptions(slots);
         
+        // Set default for in-person attendance if event is in-person
+        const isVirtual = eventData.location ? 
+          eventData.location.toLowerCase().includes('global') || 
+          eventData.location.toLowerCase().includes('virtual') || 
+          eventData.location.toLowerCase().includes('online') ||
+          eventData.location.toLowerCase().includes('remote')
+          : false;
+        
+        if (!isVirtual) {
+          setFormData(prev => ({
+            ...prev,
+            inPerson: prev.inPerson || 'Yes' // Default to 'Yes' for in-person events if not already set
+          }));
+        }
+        
         // Organize time slots by date
         const slotsByDate = slots.reduce((grouped, slot) => {
           if (!grouped[slot.date]) {
@@ -934,7 +949,7 @@ const VolunteerApplicationComponent = () => {
   
   // Validation functions
   const validateBasicInfo = () => {
-    const requiredFields = ['email', 'name', 'company'];
+    const requiredFields = ['email', 'name'];
     
     for (const field of requiredFields) {
       if (!formData[field]) {
@@ -954,13 +969,6 @@ const VolunteerApplicationComponent = () => {
     return true;
   };
   
-  const validateSkillsInfo = () => {
-   
-    
-    
-    setError('');
-    return true;
-  };
   
   // Enhanced validation for in-person events
   const validateAvailabilityInfo = () => {
@@ -994,7 +1002,7 @@ const VolunteerApplicationComponent = () => {
     return true;
   };
   
-  const validateInterestsInfo = () => {
+  const validateAdditionalDetailsInfo = () => {
     // Validate social causes
     if (!formData.socialCauses || formData.socialCauses.length === 0) {
       setError('Please select at least one social cause you are interested in');
@@ -1007,9 +1015,9 @@ const VolunteerApplicationComponent = () => {
       return false;
     }
     
-    // Validate motivation
-    if (!formData.motivation) {
-      setError('Please share your motivation for volunteering with Opportunity Hack');
+    // Validate code of conduct
+    if (!formData.codeOfConduct) {
+      setError('You must agree to the code of conduct');
       return false;
     }
     
@@ -1020,9 +1028,8 @@ const VolunteerApplicationComponent = () => {
   const validateForm = () => {
     return (
       validateBasicInfo() &&
-      validateSkillsInfo() &&
       validateAvailabilityInfo() &&
-      validateInterestsInfo() &&
+      validateAdditionalDetailsInfo() &&
       formData.codeOfConduct
     );
   };
@@ -1160,10 +1167,9 @@ const VolunteerApplicationComponent = () => {
   };
 
   const handleNext = () => {
-    if (activeStep === 0 && !validateBasicInfo()) return;
-    if (activeStep === 1 && !validateSkillsInfo()) return;
-    if (activeStep === 2 && !validateAvailabilityInfo()) return;
-    if (activeStep === 3 && !validateInterestsInfo()) return;
+    if (activeStep === 0 && !validateAvailabilityInfo()) return;
+    if (activeStep === 1 && !validateBasicInfo()) return;
+    if (activeStep === 2 && !validateAdditionalDetailsInfo()) return;
     
     // Save progress when moving between steps
     handleManualSave();
@@ -1287,7 +1293,7 @@ const VolunteerApplicationComponent = () => {
   };
   
   // Define steps for stepper
-  const steps = ['Basic Info', 'Skills & Experience', 'Availability', 'Interests', 'Review'];
+  const steps = ['Available Volunteer Slots', 'Basic Info', 'Additional Details'];
 
   // Render basic information form
   const renderBasicInfoForm = () => (
@@ -1296,6 +1302,7 @@ const VolunteerApplicationComponent = () => {
         Basic Information
       </Typography>
       
+      {/* Required fields */}
       <Box sx={{ mb: 3 }}>
         <TextField
           label="Email Address"
@@ -1317,122 +1324,108 @@ const VolunteerApplicationComponent = () => {
           onChange={handleFormChange}
           sx={{ mb: 3 }}
         />
-        
-        <TextField
-          label="Your Pronouns (Optional)"
-          name="pronouns"
-          fullWidth
-          value={formData.pronouns || ''}
-          onChange={handleFormChange}
-          sx={{ mb: 3 }}
-        />
-        
-        <TextField
-          label="Company or Organization"
-          name="company"
-          required
-          fullWidth
-          value={formData.company || ''}
-          onChange={handleFormChange}
-          sx={{ mb: 3 }}
-        />
-        
-        <TextField
-          label="Job Title (Optional)"
-          name="title"
-          fullWidth
-          value={formData.title || ''}
-          onChange={handleFormChange}
-          sx={{ mb: 3 }}
-        />
-        
-        <TextField
-          label="Short bio (Optional)"
-          name="bio"
-          multiline
-          rows={3}
-          fullWidth
-          value={formData.bio || ''}
-          onChange={handleFormChange}
-          helperText="Tell us a bit about yourself (aim for 100-200 words)"
-          sx={{ mb: 3 }}
-        />
-        
-        <UploadPhoto
-          value={formData.photoUrl || ''}
-          onChange={handlePhotoUpload}
-          onError={handlePhotoError}
-          label="Your Profile Photo (Optional)"
-          helperText="Please upload a professional photo of yourself, we'd like to add this to our website so people can see who is volunteering."
-          directory="volunteers"
-          apiServerUrl={apiServerUrl}
-          accessToken={accessToken}
-          orgId={user?.orgId}
-          userId={user?.userId}
-          sx={{ mb: 3 }}
-        />
       </Box>
+      
+      {/* Optional fields in collapsible section */}
+      <Accordion sx={{ mb: 3 }}>
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          aria-controls="optional-fields-content"
+          id="optional-fields-header"
+        >
+          <Typography variant="subtitle1">Optional Information</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              label="Your Pronouns (Optional)"
+              name="pronouns"
+              fullWidth
+              value={formData.pronouns || ''}
+              onChange={handleFormChange}
+              sx={{ mb: 3 }}
+            />
+            
+            <TextField
+              label="Company or Organization (Optional)"
+              name="company"
+              fullWidth
+              value={formData.company || ''}
+              onChange={handleFormChange}
+              sx={{ mb: 3 }}
+            />
+            
+            <TextField
+              label="Job Title (Optional)"
+              name="title"
+              fullWidth
+              value={formData.title || ''}
+              onChange={handleFormChange}
+              sx={{ mb: 3 }}
+            />
+            
+            <TextField
+              label="Short bio (Optional)"
+              name="bio"
+              multiline
+              rows={3}
+              fullWidth
+              value={formData.bio || ''}
+              onChange={handleFormChange}
+              helperText="Tell us a bit about yourself (aim for 100-200 words)"
+              sx={{ mb: 3 }}
+            />
+            
+            <UploadPhoto
+              value={formData.photoUrl || ''}
+              onChange={handlePhotoUpload}
+              onError={handlePhotoError}
+              label="Your Profile Photo (Optional)"
+              helperText="Please upload a professional photo of yourself, we'd like to add this to our website so people can see who is volunteering."
+              directory="volunteers"
+              apiServerUrl={apiServerUrl}
+              accessToken={accessToken}
+              orgId={user?.orgId}
+              userId={user?.userId}
+              sx={{ mb: 3 }}
+            />
+            
+            <TextField
+              label="LinkedIn Profile (Optional)"
+              name="linkedin"
+              type="url"
+              fullWidth
+              value={formData.linkedin || ''}
+              onChange={handleFormChange}
+              sx={{ mb: 3 }}
+              placeholder="https://linkedin.com/in/yourprofile"
+            />
+            
+            <TextField
+              label="What motivates you to volunteer with Opportunity Hack? (Optional)"
+              name="motivation"
+              multiline
+              rows={3}
+              fullWidth
+              value={formData.motivation || ''}
+              onChange={handleFormChange}
+              helperText="Share your motivation for getting involved"
+              sx={{ mb: 0 }}
+            />
+          </Box>
+        </AccordionDetails>
+      </Accordion>
     </Box>
   );
   
-  // Render skills and experience form
-  const renderSkillsAndExperienceForm = () => (
+  // Render combined additional details form
+  const renderAdditionalDetailsForm = () => (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-        Skills & Experience
+        Additional Details
       </Typography>
-
-      {/* Event type notice for in-person events */}
-      {!isVirtualEvent() && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>In-Person Event:</strong> All volunteer roles for this event require physical attendance at {eventData?.location}. 
-            Virtual participation is not available for volunteer positions.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* Event type notice for virtual events */}
-      {isVirtualEvent() && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Virtual Event:</strong> All volunteer roles can be performed remotely. 
-            You'll receive links and instructions for virtual participation.
-          </Typography>
-        </Alert>
-      )}
       
-      <Box sx={{ mb: 3 }}>       
-        
-        {formData.volunteerType?.includes('Other') && (
-          <TextField
-            label="Please specify how you'd like to volunteer"
-            name="otherVolunteerType"
-            required
-            fullWidth
-            value={formData.otherVolunteerType || ''}
-            onChange={handleFormChange}
-            helperText="Tell us about your specific role or interest"
-            sx={{ mb: 3 }}
-          />
-        )}
-        
-        <TextField
-          label="Previous Experience (Optional)"
-          name="previousExperience"
-          multiline
-          rows={3}
-          fullWidth
-          value={formData.previousExperience || ''}
-          onChange={handleFormChange}
-          helperText={
-            formData.volunteerType?.includes('Volunteer Product Manager (vPM)') 
-              ? "For vPM roles, mention any experience working with nonprofits, product management, or subject matter expertise that would help you represent nonprofit needs"
-              : "Share any relevant volunteer or professional experience"
-          }
-          sx={{ mb: 3 }}
-        />
-        
+      <Box sx={{ mb: 3 }}>
         <FormControl fullWidth sx={{ mb: 3 }}>
           <InputLabel id="experience-level-label">Volunteer Experience Level</InputLabel>
           <Select
@@ -1450,27 +1443,88 @@ const VolunteerApplicationComponent = () => {
           <FormHelperText>How much experience do you have with volunteering?</FormHelperText>
         </FormControl>
         
+        <FormControl fullWidth required sx={{ mb: formData.socialCauses?.includes('Other') ? 1 : 3 }}>
+          <InputLabel id="social-causes-label">Social Causes You're Interested In</InputLabel>
+          <Select
+            labelId="social-causes-label"
+            id="social-causes"
+            multiple
+            value={formData.socialCauses || []}
+            onChange={(e) => customHandleMultiSelectChange(e, 'socialCauses')}
+            input={<OutlinedInput label="Social Causes You're Interested In" />}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => (
+                  <Chip key={value} label={value} />
+                ))}
+              </Box>
+            )}
+          >
+            {socialCausesOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                <Checkbox checked={(formData.socialCauses || []).indexOf(option) > -1} />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>Select causes you're passionate about (select at least one)</FormHelperText>
+        </FormControl>
+        
+        {formData.socialCauses?.includes('Other') && (
+          <TextField
+            label="Please specify your other social cause interest"
+            name="otherSocialCause"
+            required
+            fullWidth
+            value={formData.otherSocialCause || ''}
+            onChange={handleFormChange}
+            helperText="Tell us about your specific interest"
+            sx={{ mb: 3 }}
+          />
+        )}
+        
         <TextField
-          label="LinkedIn Profile (Optional)"
-          name="linkedin"
-          type="url"
+          label="Any additional information or questions?"
+          name="additionalInfo"
+          multiline
+          rows={4}
           fullWidth
-          value={formData.linkedin || ''}
+          value={formData.additionalInfo || ''}
           onChange={handleFormChange}
-          sx={{ mb: 3 }}
-          placeholder="https://linkedin.com/in/yourprofile"
-        />              
-
-        <TextField
-          label="Portfolio/Personal Website (Optional)"
-          name="portfolio"
-          type="url"
-          fullWidth
-          value={formData.portfolio || ''}
-          onChange={handleFormChange}
-          sx={{ mb: 3 }}
-          placeholder="https://yourwebsite.com"
+          sx={{ mb: 4 }}
         />
+        
+        <FormControlLabel
+          control={
+            <Checkbox
+              name="codeOfConduct"
+              checked={formData.codeOfConduct || false}
+              onChange={handleFormChange}
+              color="primary"
+              required
+            />
+          }
+          label={
+            <Typography variant="body2">
+              I agree to the{" "}
+              <Link
+                href="/hack/code-of-conduct"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Code of Conduct
+              </Link>
+            </Typography>
+          }
+          sx={{ mb: 2 }}
+        />
+        
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            By submitting this form, you're expressing interest in volunteering with Opportunity Hack. 
+            We'll review your application and contact you with next steps soon.
+          </Typography>
+        </Alert>
       </Box>
     </Box>
   );
@@ -1819,135 +1873,17 @@ const VolunteerApplicationComponent = () => {
     );
   };
   
-  // Render interests form
-  const renderInterestsForm = () => (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-        Interests & Motivation
-      </Typography>
-      
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth required sx={{ mb: formData.socialCauses?.includes('Other') ? 1 : 3 }}>
-          <InputLabel id="social-causes-label">Social Causes You're Interested In</InputLabel>
-          <Select
-            labelId="social-causes-label"
-            id="social-causes"
-            multiple
-            value={formData.socialCauses || []}
-            onChange={(e) => customHandleMultiSelectChange(e, 'socialCauses')}
-            input={<OutlinedInput label="Social Causes You're Interested In" />}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip key={value} label={value} />
-                ))}
-              </Box>
-            )}
-          >
-            {socialCausesOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                <Checkbox checked={(formData.socialCauses || []).indexOf(option) > -1} />
-                <ListItemText primary={option} />
-              </MenuItem>
-            ))}
-          </Select>
-          <FormHelperText>Select causes you're passionate about (select at least one)</FormHelperText>
-        </FormControl>
-        
-        {formData.socialCauses?.includes('Other') && (
-          <TextField
-            label="Please specify your other social cause interest"
-            name="otherSocialCause"
-            required
-            fullWidth
-            value={formData.otherSocialCause || ''}
-            onChange={handleFormChange}
-            helperText="Tell us about your specific interest"
-            sx={{ mb: 3 }}
-          />
-        )}
-        
-        <TextField
-          label="What motivates you to volunteer with Opportunity Hack?"
-          name="motivation"
-          multiline
-          rows={3}
-          required
-          fullWidth
-          value={formData.motivation || ''}
-          onChange={handleFormChange}
-          helperText="Share your motivation for getting involved"
-          sx={{ mb: 3 }}
-        />
-      </Box>
-    </Box>
-  );
   
-  // Render review form
-  const renderReviewForm = () => (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
-        Review & Submit
-      </Typography>
-      
-      <TextField
-        label="Any additional information or questions?"
-        name="additionalInfo"
-        multiline
-        rows={4}
-        fullWidth
-        value={formData.additionalInfo || ''}
-        onChange={handleFormChange}
-        sx={{ mb: 4 }}
-      />
-      
-      <FormControlLabel
-        control={
-          <Checkbox
-            name="codeOfConduct"
-            checked={formData.codeOfConduct || false}
-            onChange={handleFormChange}
-            color="primary"
-            required
-          />
-        }
-        label={
-          <Typography variant="body2">
-            I agree to the{" "}
-            <Link
-              href="/hack/code-of-conduct"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Code of Conduct
-            </Link>
-          </Typography>
-        }
-        sx={{ mb: 2 }}
-      />
-      
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          By submitting this form, you're expressing interest in volunteering with Opportunity Hack. 
-          We'll review your application and send you further details about how you can contribute.
-        </Typography>
-      </Alert>
-    </Box>
-  );
   
   // Function to render the current step form
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return renderBasicInfoForm();
-      case 1:
-        return renderSkillsAndExperienceForm();
-      case 2:
         return renderAvailabilityForm();
-      case 3:
-        return renderInterestsForm();
-      case 4:
-        return renderReviewForm();
+      case 1:
+        return renderBasicInfoForm();
+      case 2:
+        return renderAdditionalDetailsForm();
       default:
         return 'Unknown step';
     }
