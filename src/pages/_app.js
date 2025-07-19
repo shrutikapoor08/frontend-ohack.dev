@@ -5,6 +5,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { AuthProvider } from "@propelauth/react";
 import { ThemeProvider } from "@mui/material/styles";
 import { Box } from "@mui/material";
+import { useRouter } from "next/router";
 import theme from "../assets/theme";
 
 // Simple placeholder components to reduce CLS
@@ -35,6 +36,10 @@ const GA = dynamic(() => import('../components/GA/GA'), {
 // This default export is required in a new `pages/_app.js` file.
 export default function MyApp({ Component, pageProps }) {
   const { openGraphData = [] } = pageProps;
+  const router = useRouter();
+  
+  // Check if this is the print-timeline page
+  const isPrintTimelinePage = router.pathname === '/hack/[event_id]/print-timeline';
   
   return (
     <>
@@ -54,9 +59,9 @@ export default function MyApp({ Component, pageProps }) {
           <ThemeProvider theme={theme}>
             <CssBaseline>
               <Box className="page-layout" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                <NavBar />                
+                {!isPrintTimelinePage && <NavBar />}                
                 <Component {...pageProps} />                
-                <Footer />              
+                {!isPrintTimelinePage && <Footer />}              
               </Box>
             </CssBaseline>
           </ThemeProvider>

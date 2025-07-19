@@ -10,9 +10,12 @@ import {
   LinearProgress,
   Fade,
   IconButton,
-  Collapse
+  Collapse,
+  Button,
+  Tooltip
 } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
+import { useRouter } from 'next/router';
 import Moment from 'moment';
 import ReactMarkdown from 'react-markdown';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -21,6 +24,7 @@ import PendingIcon from '@mui/icons-material/Pending';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import PrintIcon from '@mui/icons-material/Print';
 
 const TimelineContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -150,13 +154,14 @@ const EventProgress = styled(LinearProgress)(({ theme }) => ({
   borderRadius: '3px 3px 0 0',
 }));
 
-const EventCountdown = ({ countdowns }) => {
+const EventCountdown = ({ countdowns, eventId }) => {
   const [timeLeft, setTimeLeft] = useState(null);
   const [nextEvent, setNextEvent] = useState(null);
   const [expandedEvents, setExpandedEvents] = useState(new Set());
   const [progress, setProgress] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const router = useRouter();
 
   useEffect(() => {
     if (!countdowns?.length) return;
@@ -213,6 +218,12 @@ const EventCountdown = ({ countdowns }) => {
       }
       return newSet;
     });
+  };
+
+  const handlePrintTimeline = () => {
+    if (eventId) {
+      window.open(`/hack/${eventId}/print-timeline`, '_blank');
+    }
   };
 
   const renderCountdown = () => {
@@ -362,9 +373,33 @@ const EventCountdown = ({ countdowns }) => {
   return (
     <TimelineContainer elevation={2}>
       <Box mb={3}>
-        <Typography variant="h5" gutterBottom fontWeight="bold">
-          Event Timeline
-        </Typography>
+        { false && <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+          <Typography variant="h5" gutterBottom fontWeight="bold">
+            Event Timeline
+          </Typography>
+          <Tooltip title="Print Timeline">
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handlePrintTimeline}
+              startIcon={<PrintIcon />}
+              sx={{
+                minWidth: 'auto',
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  borderColor: theme.palette.primary.main,
+                }
+              }}
+            >
+              {isMobile ? '' : 'Print'}
+            </Button>
+          </Tooltip>
+        </Box>}
         <LinearProgress 
           variant="determinate" 
           value={progress} 

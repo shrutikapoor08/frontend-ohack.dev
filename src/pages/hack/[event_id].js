@@ -855,7 +855,7 @@ export default function HackathonEvent({ eventData }) {
             </Typography>
             {/* Order matters on mobile: Countdown first, then Stats */}
             <Grid item xs={12} md={6} id="countdown" order={{ xs: 1, md: 2 }}>
-              <EventCountdown countdowns={event.countdowns} />
+              <EventCountdown countdowns={event.countdowns} eventId={event_id} />
             </Grid>
             <Grid item xs={12} md={6} id="stats" order={{ xs: 2, md: 1 }}>
               {/* Set display to flex and min-height to ensure the component has proper space */}
