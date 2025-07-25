@@ -36,7 +36,8 @@ import {
   Group as TeamsIcon,
   ChevronLeft as ChevronLeftIcon,
   Dashboard as DashboardIcon,
-  Share as ShareIcon
+  Share as ShareIcon,
+  Gavel as JudgingIcon
 } from "@mui/icons-material";
 import HandshakeIcon from '@mui/icons-material/Handshake';
 
@@ -108,6 +109,11 @@ const adminPages = [
     path: "/admin/teams", 
     label: "Teams", 
     icon: <TeamsIcon color="info" />
+  },
+  { 
+    path: "/admin/judging", 
+    label: "Judging", 
+    icon: <JudgingIcon style={{ color: "#673ab7" }} />
   },
   { 
     path: "/admin/time-tracking", 

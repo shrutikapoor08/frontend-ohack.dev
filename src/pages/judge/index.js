@@ -1,0 +1,263 @@
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import {
+  Container,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  Grid,
+  Button,
+  LinearProgress,
+  Chip,
+  Alert,
+  CircularProgress,
+  Paper,
+  Divider
+} from '@mui/material';
+import {
+  Gavel as JudgeIcon,
+  Event as EventIcon,
+  Groups as TeamsIcon,
+  CheckCircle as CompletedIcon,
+  Schedule as PendingIcon,
+  EmojiEvents as TrophyIcon
+} from '@mui/icons-material';
+import { useAuthInfo, withRequiredAuthInfo } from '@propelauth/react';
+import { useSnackbar } from 'notistack';
+import judgeApi from '../../lib/judgeApi';
+
+const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
+  const { accessToken, user } = useAuthInfo();
+  const { enqueueSnackbar } = useSnackbar();
+  const router = useRouter();
+  
+  const [loading, setLoading] = useState(true);
+  const [assignments, setAssignments] = useState([]);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        setLoading(true);
+        const data = await judgeApi.getJudgeAssignments(user.userId, accessToken);
+        setAssignments(data.hackathons || []);
+      } catch (error) {
+        console.error('Error fetching assignments:', error);
+        enqueueSnackbar('Failed to load judging assignments', { variant: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignments();
+  }, [user.userId, accessToken, enqueueSnackbar]);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const calculateProgress = (completed, total) => {
+    if (total === 0) return 0;
+    return Math.round((completed / total) * 100);
+  };
+
+  const getProgressColor = (progress) => {
+    if (progress === 100) return 'success';
+    if (progress >= 50) return 'primary';
+    return 'warning';
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Judge Dashboard - Opportunity Hack</title>
+        <meta name="description" content="Judge hackathon projects and evaluate innovative solutions for nonprofits" />
+      </Head>
+
+      <Container maxWidth="lg">
+        <Box sx={{ mt: 12, mb: 4 }}>
+          {/* Header */}
+          <Paper elevation={2} sx={{ p: 4, mb: 4, bgcolor: 'primary.light', color: 'white' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <JudgeIcon sx={{ fontSize: 48, mr: 2 }} />
+              <div>
+                <Typography variant="h3" component="h1" gutterBottom sx={{ color: 'white', mb: 1 }}>
+                  Welcome, Judge {user.firstName}!
+                </Typography>
+                <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                  Your Hackathon Judging Assignments
+                </Typography>
+              </div>
+            </Box>
+          </Paper>
+
+          {/* Assignments */}
+          {assignments.length === 0 ? (
+            <Alert severity="info" sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>No Current Judging Assignments</Typography>
+              <Typography variant="body1">
+                You don't have any active judging assignments at the moment. 
+                Check back later or contact the hackathon organizers if you believe this is an error.
+              </Typography>
+            </Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {assignments.map((hackathon) => {
+                const round1Progress = calculateProgress(
+                  hackathon.judging_status.round1.completed,
+                  hackathon.judging_status.round1.total
+                );
+                const round2Progress = calculateProgress(
+                  hackathon.judging_status.round2.completed,
+                  hackathon.judging_status.round2.total
+                );
+                
+                return (
+                  <Grid item xs={12} md={6} key={hackathon.event_id}>
+                    <Card sx={{ height: '100%', position: 'relative' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        {/* Hackathon Header */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <EventIcon color="primary" sx={{ mr: 1 }} />
+                          <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 0 }}>
+                            {hackathon.title}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                          {formatDate(hackathon.start_date)} - {formatDate(hackathon.end_date)}
+                        </Typography>
+
+                        <Divider sx={{ mb: 3 }} />
+
+                        {/* Round 1 Progress */}
+                        <Box sx={{ mb: 3 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                              <TeamsIcon sx={{ mr: 1, fontSize: 20 }} />
+                              Round 1 - Video Reviews
+                            </Typography>
+                            <Chip 
+                              label={`${hackathon.judging_status.round1.completed}/${hackathon.judging_status.round1.total}`}
+                              size="small"
+                              color={round1Progress === 100 ? 'success' : 'default'}
+                            />
+                          </Box>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={round1Progress} 
+                            color={getProgressColor(round1Progress)}
+                            sx={{ height: 8, borderRadius: 4, mb: 1 }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {round1Progress}% complete
+                          </Typography>
+                        </Box>
+
+                        {/* Round 2 Progress */}
+                        <Box sx={{ mb: 3 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                              <TrophyIcon sx={{ mr: 1, fontSize: 20 }} />
+                              Round 2 - Live Demos
+                            </Typography>
+                            <Chip 
+                              label={`${hackathon.judging_status.round2.completed}/${hackathon.judging_status.round2.total}`}
+                              size="small"
+                              color={round2Progress === 100 ? 'success' : 'default'}
+                            />
+                          </Box>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={round2Progress} 
+                            color={getProgressColor(round2Progress)}
+                            sx={{ height: 8, borderRadius: 4, mb: 1 }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {round2Progress}% complete
+                          </Typography>
+                        </Box>
+
+                        {/* Action Button */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            {round1Progress === 100 && round2Progress === 100 ? (
+                              <Chip 
+                                icon={<CompletedIcon />} 
+                                label="Judging Complete" 
+                                color="success" 
+                                variant="outlined"
+                              />
+                            ) : (
+                              <Chip 
+                                icon={<PendingIcon />} 
+                                label="In Progress" 
+                                color="primary" 
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
+                          <Button
+                            variant="contained"
+                            onClick={() => router.push(`/judge/${hackathon.event_id}`)}
+                            startIcon={<JudgeIcon />}
+                          >
+                            Start Judging
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
+
+          {/* Help Section */}
+          <Paper elevation={1} sx={{ p: 3, mt: 4, bgcolor: 'grey.50' }}>
+            <Typography variant="h6" gutterBottom>
+              Need Help?
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              As a judge, you'll evaluate teams in two rounds:
+            </Typography>
+            <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+              <li>
+                <Typography variant="body2">
+                  <strong>Round 1:</strong> Review 4-minute team pitch videos and evaluate based on our scoring criteria
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  <strong>Round 2:</strong> Live demos with finalist teams, including Q&A sessions
+                </Typography>
+              </li>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              Each project is scored across four categories: Scope, Documentation, Polish, and Security. 
+              For questions about the judging process, contact the hackathon organizers.
+            </Typography>
+          </Paper>
+        </Box>
+      </Container>
+    </>
+  );
+});
+
+export default JudgeDashboard;
