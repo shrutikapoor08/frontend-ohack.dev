@@ -184,8 +184,9 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
           judgeApi.getTeamDetails(team_id, accessToken),
           judgeApi.getJudgeScores(user.userId, event_id, accessToken)
         ]);
-        
+        console.log('Team Response:', teamResponse);
         setTeamData(teamResponse.team);
+
         
         // Find existing score for this team
         const existingScore = scoresResponse.scores?.find(
@@ -234,7 +235,13 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
   };
 
   const calculateTotal = () => {
-    return Object.values(scores).reduce((sum, score) => sum + (score || 0), 0);
+    console.log('Calculating total score:', scores);
+    // Filter out the 'total' key to avoid double counting
+    const total_score = Object.entries(scores)
+      .filter(([key]) => key !== 'total')
+      .reduce((sum, [, score]) => sum + (score || 0), 0);
+    console.log('Total score calculated:', total_score);
+    return total_score;
   };
 
   const handleSubmit = async () => {

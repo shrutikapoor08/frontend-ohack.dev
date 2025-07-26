@@ -69,6 +69,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     if (selectedHackathon && hackathons.length > 0) {
       const hackathon = hackathons.find(h => h.event_id === selectedHackathon);
       setSelectedHackathonData(hackathon);
+      console.log('Selected Hackathon Data:', hackathon);
     }
   }, [selectedHackathon, hackathons]);
 
@@ -89,7 +90,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           }
         ),
         axios.get(
-          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/teams?event_id=${selectedHackathon}`,
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/team/${selectedHackathonData.id}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -196,7 +197,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
               judge_id: judge.id || judge.user_id,
               event_id: selectedHackathon,
               team_id: team.id,
-              round_name: 'round2',
+              round: 'round2',
               panel_id: panelId,
               room: sessionSettings.room || null,
               demo_time: teamSchedule ? teamSchedule.startTime.toISOString() : null
@@ -535,7 +536,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       {/* Session Settings Dialog */}
       <Dialog open={settingsDialog} onClose={() => setSettingsDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Round 2 Session Settings</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogContent sx={{ pt: 3 }}>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -548,6 +549,8 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                   sessionDuration: parseInt(e.target.value) || 15
                 })}
                 inputProps={{ min: 5, max: 60 }}
+                InputLabelProps={{ shrink: true }}
+                sx={{ mt: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -561,6 +564,8 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                   breakDuration: parseInt(e.target.value) || 5
                 })}
                 inputProps={{ min: 0, max: 30 }}
+                InputLabelProps={{ shrink: true }}
+                sx={{ mt: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
