@@ -56,6 +56,39 @@ function NonProfitApplyList({ userClass }) {
     const [npoSelection, setNpoSelection] = useState('create');
     const [selectedNpo, setSelectedNpo] = useState(null);
 
+    // State for the new "Refresh All Embeddings" feature
+    const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+    const [refreshAllStatus, setRefreshAllStatus] = useState(null);
+
+    const handleRefreshAllEmbeddings = async () => {
+        setIsRefreshingAll(true);
+        setRefreshAllStatus(null); // Clear previous status message
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/embedding-map/populate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to start embedding refresh process.');
+            }
+
+            setRefreshAllStatus({ type: 'success', message: data.message || 'Successfully started refresh process.' });
+
+        } catch (e) {
+            console.error("Error refreshing all embeddings:", e);
+            setRefreshAllStatus({ type: 'error', message: e.message });
+        } finally {
+            setIsRefreshingAll(false);
+        }
+    };
+
     const fetchSummary = async (application) => {
         // --- DEBUG: Log the application object being sent to the backend ---
         console.log('--- fetchSummary: Sending to backend ---', { application });
@@ -308,12 +341,30 @@ function NonProfitApplyList({ userClass }) {
     return (
         <Container maxWidth="xl" sx={{ mt: 12, mb: 4 }}>
             <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-                <Typography variant="h4" component="h1" gutterBottom>
-                    Nonprofit Application List Workbench
-                </Typography>
-                <Typography variant="subtitle1" color="text.secondary">
-                    Review pending applications to create new projects.
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                    <Box>
+                        <Typography variant="h4" component="h1" gutterBottom>
+                            Nonprofit Application List Workbench
+                        </Typography>
+                        <Typography variant="subtitle1" color="text.secondary">
+                            Review pending applications to create new projects.
+                        </Typography>
+                    </Box>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleRefreshAllEmbeddings}
+                        disabled={isRefreshingAll}
+                        startIcon={isRefreshingAll ? <CircularProgress size={20} /> : null}
+                    >
+                        {isRefreshingAll ? 'Refreshing...' : 'Refresh All Embeddings'}
+                    </Button>
+                </Box>
+                {refreshAllStatus && (
+                    <Alert severity={refreshAllStatus.type} sx={{ mt: 2 }} onClose={() => setRefreshAllStatus(null)}>
+                        {refreshAllStatus.message}
+                    </Alert>
+                )}
             </Paper>
 
             {applications.length === 0 && !isLoading ? (
