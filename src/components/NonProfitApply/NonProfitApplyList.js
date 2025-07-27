@@ -60,6 +60,9 @@ function NonProfitApplyList({ userClass }) {
     const [isRefreshingAll, setIsRefreshingAll] = useState(false);
     const [refreshAllStatus, setRefreshAllStatus] = useState(null);
 
+    // --- NEW STATE FOR SINGLE EMBEDDING REFRESH ---
+    const [isRefreshingEmbedding, setIsRefreshingEmbedding] = useState(false);
+
     const handleRefreshAllEmbeddings = async () => {
         setIsRefreshingAll(true);
         setRefreshAllStatus(null); // Clear previous status message
@@ -86,6 +89,44 @@ function NonProfitApplyList({ userClass }) {
             setRefreshAllStatus({ type: 'error', message: e.message });
         } finally {
             setIsRefreshingAll(false);
+        }
+    };
+
+    const handleRefreshEmbedding = async (application) => {
+        setIsRefreshingEmbedding(true);
+        setIsSearching(true); 
+        setSimilarProjects([]);
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/embedding/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                // Send the entire application object
+                body: JSON.stringify(application)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error("Access denied for user");
+                }
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to refresh embedding.');
+            }
+            
+            // The response now contains the new list of similar projects
+            const result = await response.json();
+            const projectsWithUIState = result.similar_projects.map(p => ({ ...p, isReasoning: false }));
+            setSimilarProjects(projectsWithUIState.slice(0, 3));
+
+        } catch (error) {
+            console.error("Error refreshing embedding:", error);
+            setSimilarProjects([{ id: 'error', title: error.message || 'Error refreshing projects.' }]);
+        } finally {
+            setIsRefreshingEmbedding(false);
+            setIsSearching(false); // Reset loading state
         }
     };
 
@@ -455,24 +496,43 @@ function NonProfitApplyList({ userClass }) {
                                                             {isSearching ? (
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}><CircularProgress size={24} /><Typography>Searching...</Typography></Box>
                                                             ) : (
-                                                                <List dense>
-                                                                    {similarProjects.map(p => (
-                                                                        p.id === 'error' ? (
-                                                                            <Alert severity="error" key={p.id}>{p.title}</Alert>
-                                                                        ) : (
-                                                                            <ListItem key={p.id} sx={{ alignItems: 'flex-start', flexDirection: 'column', mb: 1, p:1, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
-                                                                                <ListItemText primary={p.title} secondary={p.similarity ? `Similarity: ${(p.similarity * 100).toFixed(1)}%` : ''} />
-                                                                                {p.reasoning ? (
-                                                                                    <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>{p.reasoning}</Typography>
-                                                                                ) : p.isReasoning ? (
-                                                                                    <CircularProgress size={16} />
-                                                                                ) : (
-                                                                                    <Button size="small" sx={{ p: 0, mt: 0.5 }} onClick={() => fetchReasoningForSimilarity(app, p)}>Get Reason</Button>
-                                                                                )}
-                                                                            </ListItem>
-                                                                        )
-                                                                    ))}
-                                                                </List>
+                                                                <>
+                                                                    <List dense>
+                                                                        {similarProjects.map(p => (
+                                                                            p.id === 'error' ? (
+                                                                                <Alert severity="error" key={p.id}>{p.title}</Alert>
+                                                                            ) : (
+                                                                                <ListItem key={p.id} sx={{ alignItems: 'flex-start', flexDirection: 'column', mb: 1, p:1, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+                                                                                    <ListItemText primary={p.title} secondary={p.similarity ? `Similarity: ${(p.similarity * 100).toFixed(1)}%` : ''} />
+                                                                                    {p.reasoning ? (
+                                                                                        <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>{p.reasoning}</Typography>
+                                                                                    ) : p.isReasoning ? (
+                                                                                        <CircularProgress size={16} />
+                                                                                    ) : (
+                                                                                        <Button size="small" sx={{ p: 0, mt: 0.5 }} onClick={() => fetchReasoningForSimilarity(app, p)}>Get Reason</Button>
+                                                                                    )}
+                                                                                </ListItem>
+                                                                            )
+                                                                        ))}
+                                                                    </List>
+                                                                    {/* --- NEW REFRESH EMBEDDING BUTTON --- */}
+                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            color="primary"
+                                                                            onClick={() => handleRefreshEmbedding(app)}
+                                                                            disabled={isSearching || isRefreshingEmbedding}
+                                                                            startIcon={isRefreshingEmbedding ? <CircularProgress size={16} /> : null}
+                                                                            sx={{ 
+                                                                                textTransform: 'none',
+                                                                                fontSize: '0.875rem'
+                                                                            }}
+                                                                        >
+                                                                            {isRefreshingEmbedding ? 'Refreshing...' : 'Refresh Embedding & Similar Projects'}
+                                                                        </Button>
+                                                                    </Box>
+                                                                </>
                                                             )}
                                                         </Grid>
                                                     </Grid>
