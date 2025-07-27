@@ -60,6 +60,9 @@ function NonProfitApplyList({ userClass }) {
     const [isRefreshingAll, setIsRefreshingAll] = useState(false);
     const [refreshAllStatus, setRefreshAllStatus] = useState(null);
 
+    // --- NEW STATE FOR DEBUG PANEL ---
+    const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
+
     // --- NEW STATE FOR SINGLE EMBEDDING REFRESH ---
     const [isRefreshingEmbedding, setIsRefreshingEmbedding] = useState(false);
 
@@ -391,21 +394,39 @@ function NonProfitApplyList({ userClass }) {
                             Review pending applications to create new projects.
                         </Typography>
                     </Box>
+                    {/* --- NEW DEBUG TOGGLE BUTTON --- */}
                     <Button
-                        variant="outlined"
+                        variant="text"
                         color="secondary"
-                        onClick={handleRefreshAllEmbeddings}
-                        disabled={isRefreshingAll}
-                        startIcon={isRefreshingAll ? <CircularProgress size={20} /> : null}
+                        onClick={() => setIsDebugPanelOpen(!isDebugPanelOpen)}
                     >
-                        {isRefreshingAll ? 'Refreshing...' : 'Refresh All Embeddings'}
+                        {isDebugPanelOpen ? 'Hide Debug Tools' : 'Show Debug Tools'}
                     </Button>
                 </Box>
-                {refreshAllStatus && (
-                    <Alert severity={refreshAllStatus.type} sx={{ mt: 2 }} onClose={() => setRefreshAllStatus(null)}>
-                        {refreshAllStatus.message}
-                    </Alert>
-                )}
+                
+                {/* --- NEW COLLAPSIBLE DEBUG PANEL --- */}
+                <Collapse in={isDebugPanelOpen}>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ p: 2, border: '1px dashed', borderColor: 'grey.400', borderRadius: 1 }}>
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                            Admin Debug Panel
+                        </Typography>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={handleRefreshAllEmbeddings}
+                            disabled={isRefreshingAll}
+                            startIcon={isRefreshingAll ? <CircularProgress size={20} /> : null}
+                        >
+                            {isRefreshingAll ? 'Refreshing...' : 'Force Refresh All Embeddings'}
+                        </Button>
+                        {refreshAllStatus && (
+                            <Alert severity={refreshAllStatus.type} sx={{ mt: 2 }} onClose={() => setRefreshAllStatus(null)}>
+                                {refreshAllStatus.message}
+                            </Alert>
+                        )}
+                    </Box>
+                </Collapse>
             </Paper>
 
             {applications.length === 0 && !isLoading ? (
@@ -514,24 +535,25 @@ function NonProfitApplyList({ userClass }) {
                                                                                 </ListItem>
                                                                             )
                                                                         ))}
+
+                                                                        {/* --- NEW REFRESH EMBEDDING BUTTON --- */}
+                                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                                                                            <Button
+                                                                                size="small"
+                                                                                variant="outlined"
+                                                                                color="primary"
+                                                                                onClick={() => handleRefreshEmbedding(app)}
+                                                                                disabled={isSearching || isRefreshingEmbedding}
+                                                                                startIcon={isRefreshingEmbedding ? <CircularProgress size={16} /> : null}
+                                                                                sx={{ 
+                                                                                    textTransform: 'none',
+                                                                                    fontSize: '0.875rem'
+                                                                                }}
+                                                                            >
+                                                                                {isRefreshingEmbedding ? 'Refreshing...' : 'Refresh Embedding & Similar Projects'}
+                                                                            </Button>
+                                                                        </Box>
                                                                     </List>
-                                                                    {/* --- NEW REFRESH EMBEDDING BUTTON --- */}
-                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                                                                        <Button
-                                                                            size="small"
-                                                                            variant="outlined"
-                                                                            color="primary"
-                                                                            onClick={() => handleRefreshEmbedding(app)}
-                                                                            disabled={isSearching || isRefreshingEmbedding}
-                                                                            startIcon={isRefreshingEmbedding ? <CircularProgress size={16} /> : null}
-                                                                            sx={{ 
-                                                                                textTransform: 'none',
-                                                                                fontSize: '0.875rem'
-                                                                            }}
-                                                                        >
-                                                                            {isRefreshingEmbedding ? 'Refreshing...' : 'Refresh Embedding & Similar Projects'}
-                                                                        </Button>
-                                                                    </Box>
                                                                 </>
                                                             )}
                                                         </Grid>
@@ -542,6 +564,7 @@ function NonProfitApplyList({ userClass }) {
                                                     <Box sx={{ p: 2 }}>
                                                         <Typography variant="h6" gutterBottom>Admin Action</Typography>
                                                         
+
                                                         {/* Step 1: Initial Decision */}
                                                         {approvalStep === 'initial' && (
                                                             <CardActions sx={{ justifyContent: 'flex-start', p: 0 }}>
@@ -623,6 +646,7 @@ function NonProfitApplyList({ userClass }) {
                                     </TableRow>
                                 </Fragment>
                             ))}
+
                         </TableBody>
                     </Table>
                 </TableContainer>
