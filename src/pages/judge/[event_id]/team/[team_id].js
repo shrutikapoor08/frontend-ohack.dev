@@ -30,7 +30,10 @@ import {
   ListItemText,
   ListItemIcon,
   FormControlLabel,
-  Switch
+  Switch,
+  Collapse,
+  TextField,
+  Skeleton
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -48,7 +51,8 @@ import {
   Description as DocumentationIcon,
   AutoFixHigh as PolishIcon,
   Public as WebIcon,
-  Timer as TimerIcon
+  Timer as TimerIcon,
+  HelpOutline as HelpIcon
 } from '@mui/icons-material';
 import { useAuthInfo, withRequiredAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
@@ -67,11 +71,21 @@ const JUDGING_CRITERIA = [
         name: "Impact on Community",
         description: "How many people and nonprofits are impacted by this solution?",
         key: "scopeImpact",
+        examples: [
+          "How many other nonprofits could potentially use this solution?",
+          "Does this address a widespread problem affecting multiple organizations?",
+          "With some small changes, could this solution be scaled to help other nonprofits with similar challenges?"
+        ]
       },
       {
         name: "Complexity of Problem Solved", 
         description: "How hard was this to do versus what is already out there?",
         key: "scopeComplexity",
+        examples: [
+          "Is this solving a problem that hasn't been addressed by existing solutions?",
+          "How technically challenging is the implementation compared to alternatives?",
+          "Does this require innovative approaches or novel integration of technologies?"
+        ]
       },
     ],
     tip: "Consider both breadth and depth of impact. Evaluate community impact and problem complexity.",
@@ -87,11 +101,21 @@ const JUDGING_CRITERIA = [
         name: "Code and UX Documentation",
         description: "Clear how to use the solution",
         key: "documentationCode",
+        examples: [
+          "Is there a clear DevPost project and Github README with setup and usage instructions?",
+          "Are the user interfaces intuitive and self-explanatory?",
+          "Is the code well-commented and structured for maintainability?"
+        ]
       },
       {
         name: "Ease of Understanding",
         description: "Straightforward design",
         key: "documentationEase",
+        examples: [
+          "Can a new user understand how to use the solution without extensive training?",
+          "Is the user experience logical and follows common design patterns?",
+          "Are error messages helpful and actionable?"
+        ]
       },
     ],
     tip: "Assess documentation quality and clarity. Consider project sustainability.",
@@ -107,11 +131,21 @@ const JUDGING_CRITERIA = [
         name: "Work Remaining",
         description: "Minimal work remaining for MVP",
         key: "polishWorkRemaining",
+        examples: [
+          "How much additional development is needed before the nonprofit could use this?",
+          "Are the core features complete and functional?",
+          "What percentage of the planned functionality has been implemented?"
+        ]
       },
       {
         name: "Can Use Today",
         description: "Deployed in the cloud, able to be shipped now",
         key: "polishCanUseToday",
+        examples: [
+          "Is the solution hosted and accessible via a public URL (and not localhost)?",
+          "Can the nonprofit start using this immediately without additional setup?",
+          "Are all major bugs resolved and the solution stable for production use?"
+        ]
       },
     ],
     tip: "Evaluate overall refinement and readiness for real-world use.",
@@ -127,11 +161,21 @@ const JUDGING_CRITERIA = [
         name: "Data Protection",
         description: "Hard to gain access to data because of security controls",
         key: "securityData",
+        examples: [
+          "Is sensitive data properly encrypted in transit and at rest (e.g. using HTTPS)?",
+          "Are there appropriate authentication mechanisms in place?",
+          "Is input validation implemented to prevent security vulnerabilities?"
+        ]
       },
       {
         name: "Role-based Security",
         description: "Admin versus public access (where applicable)",
         key: "securityRole",
+        examples: [
+          "Are there different permission levels for different types of users?",
+          "Can administrators control who has access to what data?",
+          "Is there proper authorization checking for sensitive operations?"
+        ]
       },
     ],
     tip: "Assess data protection and role-based security implementation.",
@@ -161,6 +205,12 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
   const [autoSave, setAutoSave] = useState(true);
   const [submitDialog, setSubmitDialog] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [feedback, setFeedback] = useState({});
+  const [expandedExamples, setExpandedExamples] = useState({});
+
+  const setFeedbackGeneral = (value) => {
+    setFeedback(prev => ({ ...prev, general: value }));
+  };
 
   // Initialize default scores
   const initializeScores = useCallback(() => {
@@ -187,7 +237,9 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
         console.log('Team Response:', teamResponse);
         setTeamData(teamResponse.team);
 
-        
+        console.log('Scores Response:', scoresResponse);
+
+
         // Find existing score for this team
         const existingScore = scoresResponse.scores?.find(
           score => score.team_id === team_id && score.round === round
@@ -195,8 +247,10 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
         
         if (existingScore) {
           setScores(existingScore.scores);
+          setFeedback(existingScore.feedback || {});
         } else {
           setScores(initializeScores());
+          setFeedback({});
         }
         
       } catch (error) {
@@ -218,7 +272,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
     const saveTimer = setTimeout(async () => {
       try {
         setSaving(true);
-        await judgeApi.saveDraft(user.userId, team_id, event_id, scores, round, accessToken);
+        await judgeApi.saveDraft(user.userId, team_id, event_id, scores, round, accessToken, feedback);
         setLastSaved(new Date());
       } catch (error) {
         console.error('Auto-save failed:', error);
@@ -228,7 +282,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
     }, 2000); // Auto-save after 2 seconds of inactivity
 
     return () => clearTimeout(saveTimer);
-  }, [scores, autoSave, loading, user.userId, team_id, event_id, round, accessToken]);
+  }, [scores, feedback, autoSave, loading, user.userId, team_id, event_id, round, accessToken]);
 
   const handleScoreChange = (key, value) => {
     setScores(prev => ({ ...prev, [key]: value }));
@@ -244,15 +298,25 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
     return total_score;
   };
 
+  const validateFeedback = () => {
+    const feedbackText = feedback.general?.replace(/[#*`\-\n\r\s]/g, '').trim();
+    return feedbackText && feedbackText.length >= 10;
+  };
+
   const handleSubmit = async () => {
+    if (!validateFeedback()) {
+      enqueueSnackbar('Please provide meaningful feedback (at least 10 characters) to help the team improve.', { variant: 'warning' });
+      return;
+    }
+
     try {
       setSubmitting(true);
       const totalScore = calculateTotal();
       const scoreData = { ...scores, total: totalScore };
       
-      await judgeApi.submitScore(user.userId, team_id, event_id, scoreData, round, accessToken);
+      await judgeApi.submitScore(user.userId, team_id, event_id, scoreData, round, accessToken, feedback);
       
-      enqueueSnackbar('Score submitted successfully!', { variant: 'success' });
+      enqueueSnackbar('Score and feedback submitted successfully!', { variant: 'success' });
       setSubmitDialog(false);
       
       // Go back to hackathon page
@@ -266,21 +330,57 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
     }
   };
 
+  const toggleExamples = (key) => {
+    setExpandedExamples(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const renderSlider = (criterion) => (
     <Box key={criterion.key} sx={{ mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="subtitle1" gutterBottom>
           {criterion.name}
         </Typography>
-        <Chip 
-          label={`${scores[criterion.key] || 3}/5`} 
-          size="small" 
-          color="primary"
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            size="small"
+            startIcon={<HelpIcon />}
+            onClick={() => toggleExamples(criterion.key)}
+            sx={{ minWidth: 'auto', px: 1 }}
+          >
+            Examples
+          </Button>
+          <Chip 
+            label={`${scores[criterion.key] || 3}/5`} 
+            size="small" 
+            color="primary"
+          />
+        </Box>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         {criterion.description}
       </Typography>
+      
+      <Collapse in={expandedExamples[criterion.key]}>
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+          <Typography variant="subtitle2" gutterBottom color="primary">
+            Consider these questions when scoring:
+          </Typography>
+          <List dense>
+            {(criterion.examples || []).map((example, index) => (
+              <ListItem key={index} sx={{ pl: 0 }}>
+                <ListItemText
+                  primary={`• ${example}`}
+                  primaryTypographyProps={{ variant: 'body2' }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Collapse>
+      
       <Slider
         value={scores[criterion.key] || 3}
         onChange={(_, value) => handleScoreChange(criterion.key, value)}
@@ -301,8 +401,128 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
   if (loading) {
     return (
       <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-          <CircularProgress />
+        <Box sx={{ mt: 12, mb: 4 }}>
+          {/* Header Skeleton */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Skeleton variant="circular" width={40} height={40} sx={{ mr: 2 }} />
+            <div style={{ flex: 1 }}>
+              <Skeleton variant="text" width="60%" height={40} sx={{ mb: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Skeleton variant="rounded" width={80} height={24} />
+                <Skeleton variant="text" width={120} height={20} />
+              </Box>
+            </div>
+          </Box>
+
+          <Grid container spacing={3}>
+            {/* Team Information Panel Skeleton */}
+            <Grid item xs={12} lg={4}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Skeleton variant="text" width="70%" height={32} sx={{ mb: 2 }} />
+                
+                {/* Problem Statement Skeleton */}
+                <Box sx={{ mb: 3 }}>
+                  <Skeleton variant="text" width="80%" height={24} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="90%" height={28} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="100%" />
+                  <Skeleton variant="text" width="75%" />
+                </Box>
+
+                <Divider sx={{ mb: 3 }} />
+
+                {/* Team Members Skeleton */}
+                <Box sx={{ mb: 3 }}>
+                  <Skeleton variant="text" width="50%" height={24} sx={{ mb: 1 }} />
+                  {[1, 2, 3].map((i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Skeleton variant="text" width="60%" />
+                    </Box>
+                  ))}
+                </Box>
+
+                <Divider sx={{ mb: 3 }} />
+
+                {/* Project Links Skeleton */}
+                <Box sx={{ mb: 3 }}>
+                  <Skeleton variant="text" width="40%" height={24} sx={{ mb: 1 }} />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} variant="rounded" width="100%" height={36} />
+                    ))}
+                  </Box>
+                </Box>
+
+                {/* Slack Channel Skeleton */}
+                <Box sx={{ mb: 3 }}>
+                  <Skeleton variant="text" width="40%" height={24} sx={{ mb: 1 }} />
+                  <Skeleton variant="rounded" width="100%" height={48} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="70%" height={16} />
+                </Box>
+
+                {/* Score Summary Skeleton */}
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100',
+                  borderRadius: 1,
+                  textAlign: 'center'
+                }}>
+                  <Skeleton variant="text" width="60%" height={48} sx={{ mx: 'auto', mb: 1 }} />
+                  <Skeleton variant="text" width="40%" height={20} sx={{ mx: 'auto' }} />
+                </Box>
+
+                {/* Auto-save Toggle Skeleton */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                  <Skeleton variant="rounded" width={38} height={22} sx={{ mr: 1 }} />
+                  <Skeleton variant="text" width="30%" />
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Scoring Panel Skeleton */}
+            <Grid item xs={12} lg={8}>
+              <Skeleton variant="text" width="40%" height={40} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width="80%" height={20} sx={{ mb: 3 }} />
+
+              {/* Judging Criteria Accordions Skeleton */}
+              {[1, 2, 3, 4].map((i) => (
+                <Box key={i} sx={{ mb: 2, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+                  <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+                    <Skeleton variant="circular" width={24} height={24} sx={{ mr: 2 }} />
+                    <Skeleton variant="text" width="60%" height={24} sx={{ flexGrow: 1 }} />
+                    <Skeleton variant="rounded" width={40} height={24} sx={{ ml: 1 }} />
+                    <Skeleton variant="circular" width={20} height={20} sx={{ ml: 1 }} />
+                  </Box>
+                </Box>
+              ))}
+
+              {/* Feedback Section Skeleton */}
+              <Card sx={{ mt: 4, mb: 3 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Skeleton variant="circular" width={24} height={24} sx={{ mr: 1 }} />
+                    <Skeleton variant="text" width="30%" height={32} />
+                  </Box>
+                  <Skeleton variant="text" width="90%" height={20} sx={{ mb: 2 }} />
+                  
+                  <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Skeleton variant="text" width="100%" />
+                    <Skeleton variant="text" width="80%" />
+                  </Box>
+
+                  <Skeleton variant="rounded" width="100%" height={150} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="70%" height={16} />
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons Skeleton */}
+              <Box sx={{ mt: 4 }}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Skeleton variant="rounded" width={80} height={36} />
+                  <Skeleton variant="rounded" width={180} height={36} />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       </Container>
     );
@@ -343,7 +563,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Chip 
-                  label={isRound2 ? 'Round 2 - Live Demo' : 'Round 1 - Video Review'} 
+                  label={isRound2 ? 'Round 2' : 'Round 1'} 
                   color={isRound2 ? 'secondary' : 'primary'} 
                   icon={isRound2 ? <VideoIcon /> : <VideoIcon />}
                 />
@@ -464,17 +684,27 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                   </Box>
                 </Box>
 
-                {/* Technologies */}
-                {teamData.technologies && (
+                {/* Slack Channel */}
+                {teamData.slack_channel && (
                   <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Technologies Used
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {teamData.technologies.map((tech, index) => (
-                        <Chip key={index} label={tech} size="small" variant="outlined" />
-                      ))}
-                    </Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Slack Channel
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    size="large"
+                    fullWidth
+                    href={`https://opportunity-hack.slack.com/app_redirect?channel=${teamData.slack_channel.replace('#', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ mb: 1 }}
+                  >
+                    Join {teamData.slack_channel}
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Click to open in Slack app or browser
+                  </Typography>
                   </Box>
                 )}
 
@@ -543,22 +773,71 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                 </Accordion>
               ))}
 
+              {/* Feedback Section */}
+              <Card sx={{ mt: 4, mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DocumentationIcon sx={{ mr: 1 }} />
+                    Team Feedback
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Provide constructive feedback to help this team improve their solution. Your feedback will be anonymized and shared with the team after judging is complete.
+                  </Typography>
+                  
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Feedback Guidelines:</strong> Focus on specific strengths and areas for improvement. 
+                      Be constructive and actionable. Consider technical implementation, user experience, and overall impact.
+                    </Typography>
+                  </Alert>
+
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={6}
+                    value={feedback.general || ''}
+                    onChange={(e) => setFeedbackGeneral(e.target.value)}
+                    placeholder="Provide specific, constructive feedback to help this team improve their solution...\n\nConsider commenting on:\n• Technical implementation and code quality\n• User experience and design\n• Impact and scalability\n• Areas for improvement\n• What they did well"
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '0.95rem',
+                        lineHeight: 1.5
+                      }
+                    }}
+                  />
+                  
+                  <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Format your feedback with basic markdown: **bold**, *italic*, bullet points with •
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+
               {/* Action Buttons */}
-              <Box sx={{ display: 'flex', gap: 2, mt: 4, justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => router.push(`/judge/${event_id}`)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<SubmitIcon />}
-                  onClick={() => setSubmitDialog(true)}
-                  disabled={submitting}
-                >
-                  Submit Score
-                </Button>
+              <Box sx={{ mt: 4 }}>
+                {!validateFeedback() && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    Please provide meaningful feedback to help the team improve before submitting your score.
+                  </Alert>
+                )}
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => router.push(`/judge/${event_id}`)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<SubmitIcon />}
+                    onClick={() => setSubmitDialog(true)}
+                    disabled={submitting || !validateFeedback()}
+                  >
+                    Submit Score & Feedback
+                  </Button>
+                </Box>
               </Box>
             </Grid>
           </Grid>
@@ -570,7 +849,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
         <DialogTitle>Submit Score for {teamData.name}?</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            You are about to submit your final score for this team. You can edit it later if needed.
+            You are about to submit your final score and feedback for this team. You can edit it later if needed.
           </Alert>
           
           <Typography variant="h6" gutterBottom>
@@ -590,7 +869,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
           
           <Divider sx={{ my: 2 }} />
           
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h6">
               Total Score:
             </Typography>
@@ -598,6 +877,30 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
               {totalScore}/40
             </Typography>
           </Box>
+
+          <Divider sx={{ my: 2 }} />
+          
+          <Typography variant="h6" gutterBottom>
+            Feedback Summary:
+          </Typography>
+          
+          <Box sx={{ 
+            maxHeight: 120, 
+            overflow: 'auto', 
+            p: 2, 
+            bgcolor: 'grey.50', 
+            borderRadius: 1, 
+            border: '1px solid', 
+            borderColor: 'grey.200' 
+          }}>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {feedback.general ? feedback.general.replace(/[#*`\-]/g, '').trim() : 'No feedback provided'}
+            </Typography>
+          </Box>
+          
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            Your feedback will be anonymized and shared with the team to help them improve.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSubmitDialog(false)}>Cancel</Button>
