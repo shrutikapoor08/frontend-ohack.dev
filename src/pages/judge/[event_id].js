@@ -128,8 +128,26 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <TeamIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="h6" component="h3" gutterBottom sx={{ mb: 0, flexGrow: 1 }}>
-              {team.name}
-            </Typography>
+              {team.name} {team.slack_channel && (
+              <Tooltip title="Open Slack channel" arrow>
+                <Button
+                size="small"
+                variant="outlined"
+                startIcon={<TeamIcon />}
+                onClick={() => window.open(`https://opportunity-hack.slack.com/app_redirect?channel=${team.slack_channel}`, '_blank')}
+                sx={{ 
+                  ml: 1,
+                  textTransform: 'none',
+                  minWidth: 'auto',
+                  fontSize: '0.75rem',
+                  height: '24px'
+                }}
+                >
+                #{team.slack_channel}
+                </Button>
+              </Tooltip>
+              )}
+            </Typography>            
           </Box>
 
           {/* Problem Statement */}
@@ -366,7 +384,7 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <VideoIcon sx={{ mr: 1 }} />
-                      Round 1 - Video Reviews
+                      Round 1
                     </Box>
                   </Badge>
                 }
@@ -380,7 +398,7 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <LiveIcon sx={{ mr: 1 }} />
-                      Round 2 - Live Demos
+                      Round 2
                     </Box>
                   </Badge>
                 }
@@ -400,13 +418,7 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5">
                       Round 1 Teams ({round1Completed}/{round1Teams.length} completed)
-                    </Typography>
-                    <Chip 
-                      label="Video Reviews" 
-                      icon={<VideoIcon />} 
-                      color="primary" 
-                      variant="outlined"
-                    />
+                    </Typography>                    
                   </Box>
                   <Grid container spacing={3}>
                     {round1Teams.map(team => (
