@@ -22,6 +22,14 @@ import {
   Switch,
   FormControlLabel,
   TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -40,7 +48,11 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   CheckCircle as CheckIcon,
-  Schedule as ScheduleIcon
+  Schedule as ScheduleIcon,
+  Star as StarIcon,
+  Visibility as ViewIcon,
+  Sort as SortIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { useAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
@@ -63,6 +75,22 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   });
   const [settingsDialog, setSettingsDialog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [round1Scores, setRound1Scores] = useState([]);
+  const [loadingScores, setLoadingScores] = useState(false);
+  const [sortBy, setSortBy] = useState('totalScore');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [viewScoresDialog, setViewScoresDialog] = useState(false);
+  const [selectedTeamScores, setSelectedTeamScores] = useState(null);
+  const [nonprofitNames, setNonprofitNames] = useState({});
+  const [loadingNonprofits, setLoadingNonprofits] = useState(false);
+  const [loadingJudgeDetails, setLoadingJudgeDetails] = useState({});
+  const [judgeGroups, setJudgeGroups] = useState([]);
+  const [loadingPanels, setLoadingPanels] = useState(false);
+
+  // Add caching states
+  const [judgeDetailsCache, setJudgeDetailsCache] = useState({});
+  const [panelAssignmentsCache, setPanelAssignmentsCache] = useState({});
+  const [scoresCache, setScoresCache] = useState({});
 
   // Fetch hackathon details
   useEffect(() => {
@@ -73,9 +101,252 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     }
   }, [selectedHackathon, hackathons]);
 
+  // Fetch judge details for a specific judge with caching
+  const fetchJudgeDetails = useCallback(async (judgeId) => {
+    if (!selectedHackathon) return null;
+    
+    // Check cache first
+    if (judgeDetailsCache[judgeId]) {
+      return judgeDetailsCache[judgeId];
+    }
+    
+    // Check if we already have this judge's details loading
+    if (loadingJudgeDetails[judgeId]) return null;
+    
+    setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: true }));
+    
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/judge/${judgeId}/event/${selectedHackathon}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
+      const judgeDetails = response.data.judge;
+      
+      // Cache the result
+      setJudgeDetailsCache(prev => ({ ...prev, [judgeId]: judgeDetails }));
+      setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: false }));
+      
+      return judgeDetails;
+    } catch (error) {
+      console.error(`Error fetching judge details for ${judgeId}:`, error);
+      setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: false }));
+      return null;
+    }
+  }, [selectedHackathon, accessToken, orgId, judgeDetailsCache, loadingJudgeDetails]);
+
+  // Fetch assignments for a specific panel with caching
+  const fetchPanelAssignments = useCallback(async (panelId) => {
+    // Check cache first
+    if (panelAssignmentsCache[panelId]) {
+      return panelAssignmentsCache[panelId];
+    }
+    
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panel/${panelId}/assignments`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
+      const assignments = response.data.assignments || [];
+      
+      // Cache the result
+      setPanelAssignmentsCache(prev => ({ ...prev, [panelId]: assignments }));
+      
+      return assignments;
+    } catch (error) {
+      console.error(`Error fetching assignments for panel ${panelId}:`, error);
+      return [];
+    }
+  }, [accessToken, orgId, panelAssignmentsCache]);
+
+  // Clear caches when hackathon changes
+  useEffect(() => {
+    setJudgeDetailsCache({});
+    setPanelAssignmentsCache({});
+    setScoresCache({});
+  }, [selectedHackathon]);
+
+  // Fetch nonprofit names for teams
+  const fetchNonprofitNames = useCallback(async (teams) => {
+    if (!teams || teams.length === 0) return;
+    
+    setLoadingNonprofits(true);
+    const nonprofitIds = [...new Set(teams
+      .filter(team => team.selected_nonprofit_id)
+      .map(team => team.selected_nonprofit_id))];
+    
+    if (nonprofitIds.length === 0) {
+      setLoadingNonprofits(false);
+      return;
+    }
+
+    try {
+      const nonprofitPromises = nonprofitIds.map(async (nonprofitId) => {
+        try {
+          const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/npo/${nonprofitId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "X-Org-Id": orgId,
+              },
+            }
+          );
+          return { id: nonprofitId, name: response.data.nonprofits.name || `Nonprofit ${nonprofitId}` };
+        } catch (error) {
+          console.error(`Error fetching nonprofit ${nonprofitId}:`, error);
+          return { id: nonprofitId, name: `Nonprofit ${nonprofitId}` };
+        }
+      });
+
+      const nonprofitResults = await Promise.all(nonprofitPromises);
+      const nonprofitMap = {};
+      nonprofitResults.forEach(result => {
+        nonprofitMap[result.id] = result.name;
+      });
+      
+      setNonprofitNames(nonprofitMap);
+    } catch (error) {
+      console.error('Error fetching nonprofit names:', error);
+    } finally {
+      setLoadingNonprofits(false);
+    }
+  }, [accessToken, orgId]);
+
+  // Optimized fetch Round 1 scores with caching
+  const fetchRound1Scores = useCallback(async () => {
+    if (!selectedHackathon || teams.length === 0) return;
+    
+    // Check if we have cached scores for this hackathon
+    const cacheKey = `${selectedHackathon}_${teams.length}`;
+    if (scoresCache[cacheKey]) {
+      setRound1Scores(scoresCache[cacheKey]);
+      return;
+    }
+    
+    setLoadingScores(true);
+    try {
+      // Get all Round 1 panels
+      const panelsResponse = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${selectedHackathon}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+
+      const panels = panelsResponse.data.panels || [];
+      const round1Panels = panels.filter(p => !p.panel_name.includes('Round 2'));
+      
+      // Load all panel assignments in parallel
+      const panelAssignmentPromises = round1Panels.map(panel => 
+        fetchPanelAssignments(panel.id)
+      );
+      
+      const allPanelAssignments = await Promise.all(panelAssignmentPromises);
+      const flatAssignments = allPanelAssignments.flat();
+      
+      // Collect all unique judge IDs and load their details in parallel
+      const allJudgeIds = [...new Set(flatAssignments.map(a => a.judge_id))];
+      const judgeDetailPromises = allJudgeIds.map(judgeId => fetchJudgeDetails(judgeId));
+      await Promise.all(judgeDetailPromises);
+      
+      const teamScores = [];
+      
+      // Process each team
+      for (const team of teams) {
+        const teamScoreData = {
+          team,
+          scores: [],
+          averageScore: 0,
+          totalScore: 0,
+          judgeCount: 0
+        };
+        
+        // Get assignments for this team
+        const teamAssignments = flatAssignments.filter(a => a.team_id === team.id);
+        
+        // Fetch scores for each assignment in parallel
+        const scorePromises = teamAssignments.map(async (assignment) => {
+          try {
+            const scoreResponse = await axios.get(
+              `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/score/${assignment.judge_id}/${team.id}/${selectedHackathon}/round1`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "X-Org-Id": orgId,
+                },
+              }
+            );
+            
+            if (scoreResponse.data.score && !scoreResponse.data.score.is_draft) {
+              const judgeDetails = judgeDetailsCache[assignment.judge_id];
+              return {
+                judge: judgeDetails || { name: assignment.judge_id },
+                score: scoreResponse.data.score
+              };
+            }
+          } catch (error) {
+            console.log(`No score found for judge ${assignment.judge_id} and team ${team.id}`);
+          }
+          return null;
+        });
+        
+        const scoreResults = await Promise.all(scorePromises);
+        teamScoreData.scores = scoreResults.filter(result => result !== null);
+        
+        // Calculate averages using total_score only
+        if (teamScoreData.scores.length > 0) {
+          const totalScores = teamScoreData.scores.map(s => s.score.total_score || 0);
+          
+          teamScoreData.totalScore = totalScores.reduce((sum, score) => sum + score, 0);
+          teamScoreData.averageScore = teamScoreData.totalScore / teamScoreData.scores.length;
+          teamScoreData.judgeCount = teamScoreData.scores.length;
+        }
+        
+        teamScores.push(teamScoreData);
+      }
+      
+      // Sort by average score descending
+      teamScores.sort((a, b) => b.averageScore - a.averageScore);
+      
+      // Cache the results
+      setScoresCache(prev => ({ ...prev, [cacheKey]: teamScores }));
+      setRound1Scores(teamScores);
+      
+      // Auto-select top teams as finalists if none selected
+      if (finalistTeams.length === 0 && teamScores.length > 0) {
+        const topTeams = teamScores
+          .filter(ts => ts.judgeCount > 0)
+          .slice(0, Math.min(5, teamScores.length))
+          .map(ts => ts.team);
+        setFinalistTeams(topTeams);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching Round 1 scores:', error);
+      enqueueSnackbar('Failed to fetch Round 1 scores', { variant: 'error' });
+    } finally {
+      setLoadingScores(false);
+    }
+  }, [selectedHackathon, teams, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails, judgeDetailsCache, scoresCache, finalistTeams.length, enqueueSnackbar]);
+
   // Fetch judges and teams for selected hackathon
   const fetchData = useCallback(async () => {
-    if (!selectedHackathon) return;
+    if (!selectedHackathon || !selectedHackathonData) return;
     
     setLoading(true);
     try {
@@ -94,6 +365,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
+              "X-Org-Id": orgId,
             },
           }
         )
@@ -106,9 +378,8 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       const allTeams = teamsResponse.data.teams || [];
       setTeams(allTeams);
       
-      // Set finalist teams (for now, this could be imported from Round 1 results)
-      // In a real implementation, this would come from Round 1 judging results
-      setFinalistTeams(allTeams.slice(0, Math.min(5, allTeams.length)));
+      // Fetch nonprofit names for teams
+      await fetchNonprofitNames(allTeams);
       
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -116,11 +387,108 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     } finally {
       setLoading(false);
     }
-  }, [selectedHackathon, accessToken, orgId, enqueueSnackbar]);
+  }, [selectedHackathon, selectedHackathonData, accessToken, orgId, fetchNonprofitNames, enqueueSnackbar]);
+
+  // Load existing Round 2 assignments
+  const loadExistingRound2 = useCallback(async () => {
+    if (!selectedHackathon || teams.length === 0) return;
+
+    setLoadingPanels(true);
+    try {
+      // Step 1: Load panels
+      const panelsResponse = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${selectedHackathon}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+
+      const panels = panelsResponse.data.panels || [];
+      const round2Panel = panels.find(p => p.panel_name === 'Round 2 - Final Judging');
+      
+      if (round2Panel) {
+        // Step 2: Load assignments for Round 2 panel
+        const assignments = await fetchPanelAssignments(round2Panel.id);
+        
+        // Group assignments by judge and team
+        const judgeMap = new Map();
+        const teamSet = new Set();
+        
+        for (const assignment of assignments) {
+          // Collect unique judges
+          if (!judgeMap.has(assignment.judge_id)) {
+            const judgeDetails = await fetchJudgeDetails(assignment.judge_id);
+            if (judgeDetails) {
+              judgeMap.set(assignment.judge_id, judgeDetails);
+            }
+          }
+          
+          // Collect unique teams
+          if (assignment.team_id) {
+            const team = teams.find(t => t.id === assignment.team_id);
+            if (team) {
+              teamSet.add(team);
+            }
+          }
+        }
+        
+        const panelJudges = Array.from(judgeMap.values());
+        const panelTeams = Array.from(teamSet);
+        
+        // Update state
+        setFinalistTeams(panelTeams);
+        setJudgeGroups([{
+          id: round2Panel.id,
+          panel_id: round2Panel.id,
+          name: round2Panel.panel_name,
+          judges: panelJudges,
+          teams: panelTeams,
+          room: round2Panel.room || ''
+        }]);
+        
+        // Update session settings from panel data
+        if (round2Panel.room) {
+          setSessionSettings(prev => ({ ...prev, room: round2Panel.room }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading existing Round 2 assignments:', error);
+      // Don't show error to user - this might be first time setup
+    } finally {
+      setLoadingPanels(false);
+    }
+  }, [selectedHackathon, teams, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails]);
+
+  // Fetch Round 1 scores when teams data is available (only once per hackathon/teams change)
+  useEffect(() => {
+    let mounted = true;
+    
+    if (selectedHackathon && teams.length > 0) {
+      fetchRound1Scores().then(() => {
+        if (!mounted) return;
+        // Only auto-select finalists if we haven't loaded existing Round 2 data
+        // and no finalists are currently selected
+      });
+    }
+    
+    return () => {
+      mounted = false;
+    };
+  }, [selectedHackathon, teams.length]); // Removed fetchRound1Scores dependency
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Load existing Round 2 assignments when data is available
+  useEffect(() => {
+    if (selectedHackathon && judges.length > 0 && teams.length > 0) {
+      loadExistingRound2();
+    }
+  }, [selectedHackathon, judges.length, teams.length]); // Removed loadExistingRound2 dependency
 
   // Toggle team finalist status
   const toggleFinalistStatus = (teamId) => {
@@ -134,6 +502,49 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     } else {
       setFinalistTeams([...finalistTeams, team]);
     }
+  };
+
+  // Handle sorting of teams by scores
+  const handleSort = (field) => {
+    const isAsc = sortBy === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortBy(field);
+  };
+
+  // Get sorted teams with scores
+  const getSortedTeamsWithScores = () => {
+    if (round1Scores.length === 0) return teams.map(team => ({ team, averageScore: 0, judgeCount: 0, scores: [] }));
+    
+    const sorted = [...round1Scores].sort((a, b) => {
+      switch (sortBy) {
+        case 'teamName':
+          return sortOrder === 'asc' ? a.team.name.localeCompare(b.team.name) : b.team.name.localeCompare(a.team.name);
+        case 'judgeCount':
+          return sortOrder === 'asc' ? a.judgeCount - b.judgeCount : b.judgeCount - a.judgeCount;
+        case 'totalScore':
+        default:
+          return sortOrder === 'asc' ? a.averageScore - b.averageScore : b.averageScore - a.averageScore;
+      }
+    });
+    
+    return sorted;
+  };
+
+  // View detailed scores for a team
+  const viewTeamScores = (teamScoreData) => {
+    setSelectedTeamScores(teamScoreData);
+    setViewScoresDialog(true);
+  };
+
+  // Auto-select top N teams as finalists
+  const selectTopTeams = (count) => {
+    const sortedTeams = getSortedTeamsWithScores();
+    const topTeams = sortedTeams
+      .filter(ts => ts.judgeCount > 0)
+      .slice(0, count)
+      .map(ts => ts.team);
+    setFinalistTeams(topTeams);
+    enqueueSnackbar(`Selected top ${topTeams.length} teams as finalists`, { variant: 'success' });
   };
 
   // Calculate presentation schedule
@@ -167,24 +578,47 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
 
     setSaving(true);
     try {
-      // Create Round 2 panel for all judges
-      const panelResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels`,
-        {
-          event_id: selectedHackathon,
-          panel_name: 'Round 2 - Final Judging',
-          room: sessionSettings.room || null
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "X-Org-Id": orgId,
-            'Content-Type': 'application/json',
+      // Check if Round 2 panel already exists
+      let panelId = null;
+      let existingPanel = judgeGroups.find(g => g.name === 'Round 2 - Final Judging');
+      
+      if (existingPanel && existingPanel.panel_id) {
+        // Update existing panel
+        await axios.put(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${existingPanel.panel_id}`,
+          {
+            event_id: selectedHackathon,
+            panel_name: 'Round 2 - Final Judging',
+            room: sessionSettings.room || null
           },
-        }
-      );
-
-      const panelId = panelResponse.data.panel_id;
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "X-Org-Id": orgId,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        panelId = existingPanel.panel_id;
+      } else {
+        // Create new Round 2 panel
+        const panelResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels`,
+          {
+            event_id: selectedHackathon,
+            panel_name: 'Round 2 - Final Judging',
+            room: sessionSettings.room || null
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "X-Org-Id": orgId,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        panelId = panelResponse.data.panel_id || panelResponse.data.panel?.id;
+      }
 
       // Assign all judges to all finalist teams for Round 2
       for (const judge of judges) {
@@ -213,6 +647,21 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         }
       }
 
+      // Update local state
+      if (!existingPanel) {
+        setJudgeGroups(prev => [
+          ...prev,
+          {
+            id: panelId,
+            panel_id: panelId,
+            name: 'Round 2 - Final Judging',
+            judges: judges,
+            teams: finalistTeams,
+            room: sessionSettings.room || ''
+          }
+        ]);
+      }
+
       enqueueSnackbar('Round 2 configuration saved successfully!', { variant: 'success' });
     } catch (error) {
       console.error('Error saving Round 2 configuration:', error);
@@ -222,48 +671,12 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     }
   };
 
-  // Load existing Round 2 assignments
-  const loadExistingRound2 = useCallback(async () => {
-    if (!selectedHackathon) return;
-
-    try {
-      const panelsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${selectedHackathon}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "X-Org-Id": orgId,
-          },
-        }
-      );
-
-      const panels = panelsResponse.data.panels || [];
-      const round2Panel = panels.find(p => p.panel_name === 'Round 2 - Final Judging');
-      
-      if (round2Panel && round2Panel.teams) {
-        // Set finalist teams from existing assignments
-        const existingFinalists = teams.filter(team => 
-          round2Panel.teams.some(t => t.id === team.id)
-        );
-        setFinalistTeams(existingFinalists);
-        
-        // Update session settings from panel data
-        if (round2Panel.room) {
-          setSessionSettings(prev => ({ ...prev, room: round2Panel.room }));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading existing Round 2 assignments:', error);
-      // Don't show error to user - this might be first time setup
-    }
-  }, [selectedHackathon, accessToken, orgId, teams]);
-
   // Load existing Round 2 assignments when data is available
   useEffect(() => {
     if (selectedHackathon && judges.length > 0 && teams.length > 0) {
       loadExistingRound2();
     }
-  }, [selectedHackathon, judges.length, teams.length, loadExistingRound2]);
+  }, [selectedHackathon, judges.length, teams.length]); // Removed loadExistingRound2 dependency
 
   if (loading) {
     return (
@@ -365,53 +778,263 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
             Round 2 - Final Judging Setup
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Select finalist teams from Round 1 and manage the final judging session where all judges evaluate the top teams.
+            Review Round 1 scores and select finalist teams for the final judging session where all judges evaluate the top teams.
           </Typography>
 
-          {/* Team Selection */}
+          {/* Round 1 Scores Overview */}
+          <Accordion defaultExpanded sx={{ mb: 3 }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h6">
+                  Round 1 Results & Team Scores
+                </Typography>
+                {loadingScores && <CircularProgress size={20} />}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Review all team scores from Round 1 judging. Teams are ranked by average score across all judges.
+              </Typography>
+              
+              {/* Quick selection buttons */}
+              <Box sx={{ mb: 3, display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Typography variant="body2" sx={{ mr: 1 }}>Quick select:</Typography>
+                <Button 
+                  size="small" 
+                  variant="outlined" 
+                  onClick={() => selectTopTeams(3)}
+                >
+                  Top 3
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined" 
+                  onClick={() => selectTopTeams(5)}
+                >
+                  Top 5
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined" 
+                  onClick={() => selectTopTeams(8)}
+                >
+                  Top 8
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="text" 
+                  onClick={() => setFinalistTeams([])}
+                >
+                  Clear All
+                </Button>
+              </Box>
+
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Finalist</TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'teamName'}
+                          direction={sortBy === 'teamName' ? sortOrder : 'asc'}
+                          onClick={() => handleSort('teamName')}
+                        >
+                          Team Name
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>Nonprofit</TableCell>
+                      <TableCell align="center">
+                        <TableSortLabel
+                          active={sortBy === 'judgeCount'}
+                          direction={sortBy === 'judgeCount' ? sortOrder : 'asc'}
+                          onClick={() => handleSort('judgeCount')}
+                        >
+                          Judges
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align="center">
+                        <TableSortLabel
+                          active={sortBy === 'totalScore'}
+                          direction={sortBy === 'totalScore' ? sortOrder : 'asc'}
+                          onClick={() => handleSort('totalScore')}
+                        >
+                          Avg Score
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align="center">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {getSortedTeamsWithScores().map((teamScoreData, index) => {
+                      const { team, averageScore, judgeCount, scores } = teamScoreData;
+                      const isFinalist = finalistTeams.some(t => t.id === team.id);
+                      const nonprofitName = team.selected_nonprofit_id ? 
+                        (nonprofitNames[team.selected_nonprofit_id] || 'Loading...') : 'No nonprofit';
+                      
+                      return (
+                        <TableRow 
+                          key={team.id}
+                          sx={{ 
+                            backgroundColor: isFinalist ? 'action.selected' : 'inherit',
+                            '&:hover': { backgroundColor: 'action.hover' }
+                          }}
+                        >
+                          <TableCell>
+                            <Switch
+                              checked={isFinalist}
+                              onChange={() => toggleFinalistStatus(team.id)}
+                              color="primary"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {index < 3 && judgeCount > 0 && (
+                                <Chip 
+                                  icon={<TrophyIcon />} 
+                                  label={`#${index + 1}`} 
+                                  size="small" 
+                                  color={index === 0 ? 'warning' : 'default'}
+                                  variant="outlined"
+                                />
+                              )}
+                              <Typography variant="body2" sx={{ fontWeight: isFinalist ? 600 : 400 }}>
+                                {team.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {loadingNonprofits ? 'Loading...' : nonprofitName}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip 
+                              label={judgeCount} 
+                              size="small" 
+                              color={judgeCount === 0 ? 'error' : judgeCount < 3 ? 'warning' : 'success'}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            {judgeCount > 0 ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                  {averageScore.toFixed(1)}
+                                </Typography>
+                                <Box sx={{ display: 'flex' }}>
+                                  {[1,2,3,4,5].map(star => (
+                                    <StarIcon 
+                                      key={star}
+                                      sx={{ 
+                                        fontSize: 16,
+                                        color: star <= averageScore/2 ? 'warning.main' : 'action.disabled'
+                                      }}
+                                    />
+                                  ))}
+                                </Box>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No scores
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="View detailed scores">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => viewTeamScores(teamScoreData)}
+                                disabled={judgeCount === 0}
+                              >
+                                <ViewIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              {round1Scores.length === 0 && !loadingScores && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  No Round 1 scores found. Teams may not have been judged yet, or no Round 1 panels exist.
+                </Alert>
+              )}
+            </AccordionDetails>
+          </Accordion>
+
+          {/* Selected Finalists Summary */}
           <Accordion defaultExpanded sx={{ mb: 3 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6">
-                Select Finalist Teams ({finalistTeams.length} selected)
+                Selected Finalist Teams ({finalistTeams.length} selected)
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Choose which teams advance to Round 2 final judging from the teams that participated in Round 1.
+                These teams will advance to Round 2 final judging presentations.
               </Typography>
-              <Grid container spacing={2}>
-                {teams.map((team) => {
-                  const isFinalist = finalistTeams.some(t => t.id === team.id);
-                  return (
-                    <Grid item xs={12} sm={6} md={4} key={team.id}>
-                      <Card 
-                        sx={{ 
-                          border: isFinalist ? '2px solid' : '1px solid',
-                          borderColor: isFinalist ? 'primary.main' : 'divider',
-                          cursor: 'pointer',
-                          '&:hover': { boxShadow: 3 }
-                        }}
-                        onClick={() => toggleFinalistStatus(team.id)}
-                      >
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h6" component="div">
-                              {team.name}
+              
+              {finalistTeams.length > 0 ? (
+                <Grid container spacing={2}>
+                  {finalistTeams.map((team) => {
+                    const teamScoreData = round1Scores.find(ts => ts.team.id === team.id);
+                    const nonprofitName = team.selected_nonprofit_id ? 
+                      (nonprofitNames[team.selected_nonprofit_id] || 'Loading...') : 'No nonprofit';
+                    
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={team.id}>
+                        <Card 
+                          sx={{ 
+                            border: '2px solid',
+                            borderColor: 'primary.main',
+                            backgroundColor: 'action.selected'
+                          }}
+                        >
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="h6" component="div">
+                                {team.name}
+                              </Typography>
+                              <CheckIcon color="primary" />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                              {nonprofitName}
                             </Typography>
-                            {isFinalist && <CheckIcon color="primary" />}
-                          </Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {team.members?.length || 0} members
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {team.problem_statement?.title || 'No problem statement'}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
+                            {teamScoreData && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Avg Score: {teamScoreData.averageScore.toFixed(1)}
+                                </Typography>
+                                <Chip 
+                                  label={`${teamScoreData.judgeCount} judges`} 
+                                  size="small" 
+                                  variant="outlined"
+                                />
+                              </Box>
+                            )}
+                            <Button
+                              size="small"
+                              color="error"
+                              onClick={() => toggleFinalistStatus(team.id)}
+                              sx={{ mt: 1 }}
+                            >
+                              Remove
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              ) : (
+                <Alert severity="warning">
+                  No finalist teams selected. Use the table above to select teams for Round 2.
+                </Alert>
+              )}
             </AccordionDetails>
           </Accordion>
 
@@ -448,6 +1071,9 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                                   sx={{ ml: 1 }}
                                 />
                               )}
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                {judge.id}
+                              </Typography>
                             </Box>
                           }
                         />
@@ -599,6 +1225,133 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         <DialogActions>
           <Button onClick={() => setSettingsDialog(false)}>Cancel</Button>
           <Button onClick={() => setSettingsDialog(false)} variant="contained">Save Settings</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Team Scores Detail Dialog */}
+      <Dialog 
+        open={viewScoresDialog} 
+        onClose={() => setViewScoresDialog(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TrophyIcon />
+            Detailed Scores: {selectedTeamScores?.team?.name}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedTeamScores && (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Team Overview
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="primary">
+                          {selectedTeamScores.averageScore.toFixed(1)}
+                        </Typography>
+                        <Typography variant="body2">Average Score</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="secondary">
+                          {selectedTeamScores.judgeCount}
+                        </Typography>
+                        <Typography variant="body2">Judges</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="success.main">
+                          {selectedTeamScores.totalScore.toFixed(1)}
+                        </Typography>
+                        <Typography variant="body2">Total Score</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
+              
+              <Typography variant="h6" gutterBottom>
+                Individual Judge Scores
+              </Typography>
+              
+              {selectedTeamScores.scores.length > 0 ? (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Judge</TableCell>
+                        <TableCell>Company</TableCell>
+                        {selectedTeamScores.scores[0] && Object.keys(selectedTeamScores.scores[0].score.scores).map(criteria => (
+                          <TableCell key={criteria} align="center">
+                            {criteria.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </TableCell>
+                        ))}
+                        <TableCell align="center">Total</TableCell>
+                        <TableCell>Feedback</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedTeamScores.scores.map((judgeScore, index) => {
+                        const totalScore = judgeScore.score.total_score || 0;
+                        return (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {judgeScore.judge.name || judgeScore.judge.firstName + ' ' + judgeScore.judge.lastName}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                {judgeScore.judge.company || judgeScore.judge.companyName}
+                              </Typography>
+                            </TableCell>
+                            {Object.entries(judgeScore.score.scores).map(([criteria, score]) => (
+                              <TableCell key={criteria} align="center">
+                                <Chip 
+                                  label={score} 
+                                  size="small" 
+                                  color={score >= 8 ? 'success' : score >= 6 ? 'warning' : 'default'}
+                                />
+                              </TableCell>
+                            ))}
+                            <TableCell align="center">
+                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                {totalScore}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                {judgeScore.score.feedback || 'No feedback provided'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Alert severity="info">
+                  No scores available for this team.
+                </Alert>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewScoresDialog(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -521,11 +521,13 @@ const AboutJudges = () => {
               <Card sx={{ height: "100%", p: 3 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <MovieRounded color="primary" sx={{ mr: 2 }} />
-                  <Typography variant="h5">Stage 1: Video Reviews</Typography>
+                  <Typography variant="h5">Stage 1</Typography>
                 </Box>
                 <Typography variant="body1" sx={{ mb: 2 }}>
                   Evaluate 4-minute pitch videos showcasing project demos and
                   team presentations.
+
+                  In online hackathons, judges ask questions directly in team's Slack channels during this round.
                 </Typography>
                 <Chip
                   label="Initial Assessment"

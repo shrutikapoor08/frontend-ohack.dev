@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 
 import JudgingRound1 from '../../../components/admin/JudgingRound1';
 import JudgingRound2 from '../../../components/admin/JudgingRound2';
+import JudgingResults from '../../../components/admin/JudgingResults';
 import AdminNavigation from '../../../components/admin/AdminNavigation';
 
 const JudgingAdminPage = withRequiredAuthInfo(({ userClass }) => {
@@ -27,7 +28,7 @@ const JudgingAdminPage = withRequiredAuthInfo(({ userClass }) => {
   useEffect(() => {
     if (router.query.tab) {
       const tabIndex = parseInt(router.query.tab);
-      if (!isNaN(tabIndex) && tabIndex >= 0 && tabIndex <= 1) {
+      if (!isNaN(tabIndex) && tabIndex >= 0 && tabIndex <= 2) {
         setActiveTab(tabIndex);
       }
     }
@@ -122,6 +123,7 @@ const JudgingAdminPage = withRequiredAuthInfo(({ userClass }) => {
           >
             <Tab label="Round 1 - Initial Judging" />
             <Tab label="Round 2 - Final Judging" />
+            <Tab label="Final Results" />
           </Tabs>
         </Box>
 
@@ -137,6 +139,16 @@ const JudgingAdminPage = withRequiredAuthInfo(({ userClass }) => {
         )}
         {activeTab === 1 && (
           <JudgingRound2 
+            orgId={orgId} 
+            hackathons={hackathons}
+            selectedHackathon={selectedHackathon}
+            setSelectedHackathon={setSelectedHackathon}
+            onSaveSuccess={handleSaveSuccess}
+            onSaveError={handleSaveError}
+          />
+        )}
+        {activeTab === 2 && (
+          <JudgingResults 
             orgId={orgId} 
             hackathons={hackathons}
             selectedHackathon={selectedHackathon}
@@ -165,7 +177,7 @@ const JudgingAdminPage = withRequiredAuthInfo(({ userClass }) => {
             Judging Administration
           </Typography>
           <Typography variant="body1" sx={{ mb: 4 }}>
-            Manage judging assignments for hackathon events. Organize judges into panels for Round 1 video reviews and Round 2 live demos.
+            Manage judging assignments for hackathon events. Organize judges into panels for Round 1 and Round 2.
           </Typography>
 
           <AdminNavigation />
