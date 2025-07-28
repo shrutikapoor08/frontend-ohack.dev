@@ -151,7 +151,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
                               <TeamsIcon sx={{ mr: 1, fontSize: 20 }} />
-                              Round 1 - Video Reviews
+                              Round 1
                             </Typography>
                             <Chip 
                               label={`${hackathon.judging_status.round1.completed}/${hackathon.judging_status.round1.total}`}
@@ -175,7 +175,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
                               <TrophyIcon sx={{ mr: 1, fontSize: 20 }} />
-                              Round 2 - Live Demos
+                              Round 2
                             </Typography>
                             <Chip 
                               label={`${hackathon.judging_status.round2.completed}/${hackathon.judging_status.round2.total}`}
@@ -235,7 +235,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
               Need Help?
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              As a judge, you'll evaluate teams in two rounds:
+              As a judge, you'll evaluate teams in two rounds (in most hackathons):
             </Typography>
             <Box component="ul" sx={{ pl: 3, mb: 2 }}>
               <li>
@@ -250,8 +250,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
               </li>
             </Box>
             <Typography variant="body2" color="text.secondary">
-              Each project is scored across four categories: Scope, Documentation, Polish, and Security. 
-              For questions about the judging process, contact the hackathon organizers.
+              Each project is scored across four categories: Scope, Documentation, Polish, and Security.               
             </Typography>
           </Paper>
         </Box>
