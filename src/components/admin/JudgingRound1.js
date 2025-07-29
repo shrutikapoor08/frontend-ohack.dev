@@ -12,6 +12,7 @@ import {
   Button,
   Alert,
   CircularProgress,
+  LinearProgress,
   Chip,
   Divider,
   TextField,
@@ -27,7 +28,8 @@ import {
   DialogActions,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Skeleton
 } from '@mui/material';
 import {
   Groups as GroupsIcon,
@@ -55,69 +57,185 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   const [editGroupDialog, setEditGroupDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [nonprofitNames, setNonprofitNames] = useState({});
+  const [loadingNonprofits, setLoadingNonprofits] = useState(false);
+  const [loadingPanels, setLoadingPanels] = useState(false);
+  const [loadingJudgeDetails, setLoadingJudgeDetails] = useState({});
+  
+  // Progressive loading states
+  const [loadingJudges, setLoadingJudges] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [dataLoadComplete, setDataLoadComplete] = useState(false);
 
   // Fetch hackathon details to check if it's in-person
   useEffect(() => {
     if (selectedHackathon && hackathons.length > 0) {
       const hackathon = hackathons.find(h => h.event_id === selectedHackathon);
       setSelectedHackathonData(hackathon);
+      console.log('Selected Hackathon Data:', hackathon);
     }
   }, [selectedHackathon, hackathons]);
 
-  // Fetch judges and teams for selected hackathon
+  // Fetch judge details for a specific judge
+  const fetchJudgeDetails = useCallback(async (judgeId) => {
+    if (!selectedHackathon) return null;
+    
+    // Check if we already have this judge's details loading or loaded
+    if (loadingJudgeDetails[judgeId]) return null;
+    
+    setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: true }));
+    
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/judge/${judgeId}/event/${selectedHackathon}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
+      const judgeDetails = response.data.judge;
+      setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: false }));
+      return judgeDetails;
+    } catch (error) {
+      console.error(`Error fetching judge details for ${judgeId}:`, error);
+      setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: false }));
+      return null;
+    }
+  }, [selectedHackathon, accessToken, orgId, loadingJudgeDetails]);
+
+  // Fetch assignments for a specific panel
+  const fetchPanelAssignments = useCallback(async (panelId) => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panel/${panelId}/assignments`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
+      return response.data.assignments || [];
+    } catch (error) {
+      console.error(`Error fetching assignments for panel ${panelId}:`, error);
+      return [];
+    }
+  }, [accessToken, orgId]);
+
+  // Fetch nonprofit names for teams
+  const fetchNonprofitNames = useCallback(async (teams) => {
+    if (!teams || teams.length === 0) return;
+    
+    setLoadingNonprofits(true);
+    const nonprofitIds = [...new Set(teams
+      .filter(team => team.selected_nonprofit_id)
+      .map(team => team.selected_nonprofit_id))];
+    
+    if (nonprofitIds.length === 0) {
+      setLoadingNonprofits(false);
+      return;
+    }
+
+    try {
+      const nonprofitPromises = nonprofitIds.map(async (nonprofitId) => {
+        try {
+          const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/npo/${nonprofitId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "X-Org-Id": orgId,
+              },
+            }
+          );
+          return { id: nonprofitId, name: response.data.nonprofits.name || `Nonprofit ${nonprofitId}` };
+        } catch (error) {
+          console.error(`Error fetching nonprofit ${nonprofitId}:`, error);
+          return { id: nonprofitId, name: `Nonprofit ${nonprofitId}` };
+        }
+      });
+
+      const nonprofitResults = await Promise.all(nonprofitPromises);
+      const nonprofitMap = {};
+      nonprofitResults.forEach(result => {
+        nonprofitMap[result.id] = result.name;
+      });
+      
+      setNonprofitNames(nonprofitMap);
+    } catch (error) {
+      console.error('Error fetching nonprofit names:', error);
+    } finally {
+      setLoadingNonprofits(false);
+    }
+  }, [accessToken, orgId]);
+
+  // Fetch judges and teams for selected hackathon with progressive loading
   const fetchData = useCallback(async () => {
-    if (!selectedHackathon) return;
+    if (!selectedHackathon || !selectedHackathonData) return;
     
     setLoading(true);
+    setDataLoadComplete(false);
+    
     try {
-      const [judgesResponse, teamsResponse] = await Promise.all([
-        axios.get(
-          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedHackathon}/judge`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "X-Org-Id": orgId,
-            },
-          }
-        ),
-        axios.get(
-          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/team/${selectedHackathonData.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "X-Org-Id": orgId,
-            },
-          }
-        )
-      ]);
-
+      // Step 1: Load judges first
+      setLoadingJudges(true);
+      const judgesResponse = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedHackathon}/judge`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
       // Only get accepted judges
       const acceptedJudges = judgesResponse.data.data?.filter(judge => judge.isSelected) || [];
       setJudges(acceptedJudges);
+      setLoadingJudges(false);
+      console.log('Fetched Judges:', acceptedJudges);
       
-      setTeams(teamsResponse.data.teams || []);
+      // Step 2: Load teams
+      setLoadingTeams(true);
+      const teamsResponse = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/team/${selectedHackathonData.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
+      const teamsData = teamsResponse.data.teams || [];
+      setTeams(teamsData);
+      setLoadingTeams(false);
+      
+      // Step 3: Fetch nonprofit names for teams (in background)
+      fetchNonprofitNames(teamsData);
       
       // Initialize judge groups if none exist
       if (judgeGroups.length === 0 && acceptedJudges.length > 0) {
-        const defaultGroups = [
-          {
-            id: 1,
-            name: 'Panel A',
-            judges: [],
-            teams: [],
-            room: selectedHackathonData?.location?.includes('Virtual') ? '' : 'Room 1'
-          }
+        const defaultGroups = [          
         ];
         setJudgeGroups(defaultGroups);
       }
       
+      setDataLoadComplete(true);
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       enqueueSnackbar('Failed to fetch judging data', { variant: 'error' });
+      setLoadingJudges(false);
+      setLoadingTeams(false);
     } finally {
       setLoading(false);
     }
-  }, [selectedHackathon, accessToken, orgId, judgeGroups.length, selectedHackathonData, enqueueSnackbar]);
+  }, [selectedHackathon, accessToken, orgId, judgeGroups.length, selectedHackathonData, enqueueSnackbar, fetchNonprofitNames]);
 
   useEffect(() => {
     fetchData();
@@ -136,8 +254,31 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   };
 
   // Remove judge group
-  const removeJudgeGroup = (groupId) => {
-    setJudgeGroups(judgeGroups.filter(group => group.id !== groupId));
+  const removeJudgeGroup = async (groupId) => {
+    const group = judgeGroups.find(g => g.id === groupId);
+    if (!group || !group.panel_id) {
+      // If no panel_id, it's just a local group
+      setJudgeGroups(judgeGroups.filter(group => group.id !== groupId));
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${group.panel_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+      
+      setJudgeGroups(judgeGroups.filter(group => group.id !== groupId));
+      enqueueSnackbar('Panel deleted successfully', { variant: 'success' });
+    } catch (error) {
+      console.error('Error deleting panel:', error);
+      enqueueSnackbar('Failed to delete panel', { variant: 'error' });
+    }
   };
 
   // Edit judge group
@@ -156,23 +297,120 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   };
 
   // Assign judge to group
-  const assignJudgeToGroup = (judgeId, groupId) => {
+  const assignJudgeToGroup = async (judgeId, groupId) => {
     const judge = judges.find(j => j.id === judgeId || j.user_id === judgeId);
-    if (!judge) return;
+    const group = judgeGroups.find(g => g.id === groupId);
+    if (!judge || !group) return;
 
-    setJudgeGroups(judgeGroups.map(group => {
-      if (group.id === groupId) {
-        const isAlreadyAssigned = group.judges.some(j => (j.id || j.user_id) === judgeId);
-        if (!isAlreadyAssigned) {
-          return { ...group, judges: [...group.judges, judge] };
-        }
+    // Check if already assigned
+    const isAlreadyAssigned = group.judges.some(j => (j.id || j.user_id) === judgeId);
+    if (isAlreadyAssigned) return;
+
+    // If panel doesn't exist in backend yet, create it first
+    let panelId = group.panel_id;
+    if (!panelId) {
+      try {
+        const panelResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels`,
+          {
+            event_id: selectedHackathon,
+            panel_name: group.name,
+            room: group.room || null
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "X-Org-Id": orgId,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        panelId = panelResponse.data.panel_id || panelResponse.data.panel?.id;
+        
+        // Update local state with panel_id
+        setJudgeGroups(prev => prev.map(g => 
+          g.id === groupId ? { ...g, panel_id: panelId } : g
+        ));
+      } catch (error) {
+        console.error('Error creating panel:', error);
+        enqueueSnackbar('Failed to create panel', { variant: 'error' });
+        return;
       }
-      return group;
+    }
+
+    // Create assignments for all teams in the panel
+    if (group.teams.length > 0) {
+      try {
+        for (const team of group.teams) {
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
+            {
+              judge_id: judgeId,
+              event_id: selectedHackathon,
+              team_id: team.id,
+              round: 'round1',
+              panel_id: panelId,
+              room: group.room || null
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "X-Org-Id": orgId,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+        }
+        enqueueSnackbar('Judge assigned successfully', { variant: 'success' });
+      } catch (error) {
+        console.error('Error creating judge assignments:', error);
+        enqueueSnackbar('Failed to assign judge', { variant: 'error' });
+        return;
+      }
+    }
+
+    // Update local state
+    setJudgeGroups(judgeGroups.map(g => {
+      if (g.id === groupId) {
+        return { ...g, judges: [...g.judges, judge] };
+      }
+      return g;
     }));
   };
 
   // Remove judge from group
-  const removeJudgeFromGroup = (judgeId, groupId) => {
+  const removeJudgeFromGroup = async (judgeId, groupId) => {
+    const group = judgeGroups.find(g => g.id === groupId);
+    if (!group) return;
+
+    // If panel exists in backend, remove assignments
+    if (group.panel_id) {
+      try {
+        // Find and delete all assignments for this judge in this panel
+        const assignments = await fetchPanelAssignments(group.panel_id);
+        const judgeAssignments = assignments.filter(assignment => assignment.judge_id === judgeId);
+        
+        for (const assignment of judgeAssignments) {
+          await axios.delete(
+            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments/${assignment.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "X-Org-Id": orgId,
+              },
+            }
+          );
+        }
+        enqueueSnackbar('Judge removed successfully', { variant: 'success' });
+      } catch (error) {
+        console.error('Error removing judge assignments:', error);
+        enqueueSnackbar('Failed to remove judge', { variant: 'error' });
+        return;
+      }
+    }
+
+    // Update local state
     setJudgeGroups(judgeGroups.map(group => {
       if (group.id === groupId) {
         return {
@@ -185,23 +423,88 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   };
 
   // Assign team to group
-  const assignTeamToGroup = (teamId, groupId) => {
+  const assignTeamToGroup = async (teamId, groupId) => {
     const team = teams.find(t => t.id === teamId);
-    if (!team) return;
+    const group = judgeGroups.find(g => g.id === groupId);
+    if (!team || !group) return;
 
-    setJudgeGroups(judgeGroups.map(group => {
-      if (group.id === groupId) {
-        const isAlreadyAssigned = group.teams.some(t => t.id === teamId);
-        if (!isAlreadyAssigned) {
-          return { ...group, teams: [...group.teams, team] };
+    // Check if already assigned
+    const isAlreadyAssigned = group.teams.some(t => t.id === teamId);
+    if (isAlreadyAssigned) return;
+
+    // If panel exists in backend, create assignments for all judges in the panel
+    if (group.panel_id) {
+      try {
+        // Create assignments for each judge in the panel
+        for (const judge of group.judges) {
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
+            {
+              judge_id: judge.id || judge.user_id,
+              event_id: selectedHackathon,
+              team_id: teamId,
+              round: 'round1',
+              panel_id: group.panel_id,
+              room: group.room || null
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "X-Org-Id": orgId,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
         }
+        enqueueSnackbar('Team assigned successfully', { variant: 'success' });
+      } catch (error) {
+        console.error('Error creating team assignments:', error);
+        enqueueSnackbar('Failed to assign team', { variant: 'error' });
+        return;
       }
-      return group;
+    }
+
+    // Update local state
+    setJudgeGroups(judgeGroups.map(g => {
+      if (g.id === groupId) {
+        return { ...g, teams: [...g.teams, team] };
+      }
+      return g;
     }));
   };
 
   // Remove team from group
-  const removeTeamFromGroup = (teamId, groupId) => {
+  const removeTeamFromGroup = async (teamId, groupId) => {
+    const group = judgeGroups.find(g => g.id === groupId);
+    if (!group) return;
+
+    // If panel exists in backend, remove assignments
+    if (group.panel_id) {
+      try {
+        // Find and delete all assignments for this team in this panel
+        const assignments = await fetchPanelAssignments(group.panel_id);
+        const teamAssignments = assignments.filter(assignment => assignment.team_id === teamId);
+        
+        for (const assignment of teamAssignments) {
+          await axios.delete(
+            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments/${assignment.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "X-Org-Id": orgId,
+              },
+            }
+          );
+        }
+        enqueueSnackbar('Team removed successfully', { variant: 'success' });
+      } catch (error) {
+        console.error('Error removing team assignments:', error);
+        enqueueSnackbar('Failed to remove team', { variant: 'error' });
+        return;
+      }
+    }
+
+    // Update local state
     setJudgeGroups(judgeGroups.map(group => {
       if (group.id === groupId) {
         return {
@@ -228,10 +531,110 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     const assignedTeamIds = judgeGroups.flatMap(group => 
       group.teams.map(t => t.id)
     );
-    return teams.filter(team => !assignedTeamIds.includes(team.id));
+
+    console.log("Teams:", teams);
+    const filteredTeams = teams.filter(team => 
+      !assignedTeamIds.includes(team.id) && 
+      team.status !== 'INACTIVE'
+    );
+
+    // Sort teams by nonprofit name, with teams without nonprofits at the end
+    return filteredTeams.sort((a, b) => {
+      const nonprofitA = a.selected_nonprofit_id ? (nonprofitNames[a.selected_nonprofit_id] || a.selected_nonprofit_id) : 'ZZZ_No Nonprofit';
+      const nonprofitB = b.selected_nonprofit_id ? (nonprofitNames[b.selected_nonprofit_id] || b.selected_nonprofit_id) : 'ZZZ_No Nonprofit';
+      return nonprofitA.localeCompare(nonprofitB);
+    });
   };
 
   const isInPerson = selectedHackathonData && !selectedHackathonData.location?.includes('Virtual');
+
+  // Skeleton Components
+  const StatsCardSkeleton = () => (
+    <Card>
+      <CardContent sx={{ textAlign: 'center' }}>
+        <Skeleton variant="circular" width={40} height={40} sx={{ mx: 'auto', mb: 1 }} />
+        <Skeleton variant="text" width={60} height={32} sx={{ mx: 'auto', mb: 1 }} />
+        <Skeleton variant="text" width={100} height={20} sx={{ mx: 'auto' }} />
+      </CardContent>
+    </Card>
+  );
+
+  const ControlsSkeleton = () => (
+    <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid item xs={12} md={4}>
+        <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Skeleton variant="rectangular" height={36} sx={{ borderRadius: 1 }} />
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Skeleton variant="rectangular" height={36} sx={{ borderRadius: 1 }} />
+      </Grid>
+    </Grid>
+  );
+
+  const StatsSkeleton = () => (
+    <Grid container spacing={2} sx={{ mb: 4 }}>
+      {[1, 2, 3, 4].map((item) => (
+        <Grid item xs={12} sm={3} key={item}>
+          <StatsCardSkeleton />
+        </Grid>
+      ))}
+    </Grid>
+  );
+
+  const PanelSkeleton = () => (
+    <Accordion sx={{ mb: 2 }}>
+      <AccordionSummary>
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <Skeleton variant="text" width={120} height={24} sx={{ mr: 2 }} />
+          <Skeleton variant="rectangular" width={80} height={20} sx={{ borderRadius: 3, mr: 2 }} />
+          <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: 3 }} />
+        </Box>
+      </AccordionSummary>
+    </Accordion>
+  );
+
+  const JudgeListSkeleton = () => (
+    <Paper variant="outlined" sx={{ p: 2, minHeight: 200 }}>
+      <List dense>
+        {[1, 2, 3].map((item) => (
+          <ListItem key={item}>
+            <ListItemIcon>
+              <Skeleton variant="circular" width={24} height={24} />
+            </ListItemIcon>
+            <ListItemText 
+              primary={<Skeleton variant="text" width={150} />}
+              secondary={<Skeleton variant="text" width={100} />}
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Paper>
+  );
+
+  const TeamListSkeleton = () => (
+    <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
+      <List dense>
+        {[1, 2, 3, 4, 5].map((item) => (
+          <ListItem key={item} sx={{ border: '1px dashed #ccc', mb: 1, borderRadius: 1 }}>
+            <ListItemIcon>
+              <Skeleton variant="circular" width={24} height={24} />
+            </ListItemIcon>
+            <Box sx={{ flexGrow: 1 }}>
+              <Skeleton variant="text" width={200} height={20} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width={120} height={16} sx={{ mb: 1 }} />
+              <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+                <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: 3 }} />
+                <Skeleton variant="rectangular" width={50} height={20} sx={{ borderRadius: 3 }} />
+              </Box>
+            </Box>
+            <Skeleton variant="rectangular" width={80} height={32} sx={{ borderRadius: 1 }} />
+          </ListItem>
+        ))}
+      </List>
+    </Paper>
+  );
 
   // Save judge panel assignments to backend
   const saveJudgeAssignments = async () => {
@@ -242,27 +645,55 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
 
     setSaving(true);
     try {
-      // First, create/update panels
+      // First, create/update panels (without judge data)
       for (const group of judgeGroups) {
-        try {
-          // Create or update panel
-          const panelResponse = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels`,
-            {
-              event_id: selectedHackathon,
-              panel_name: group.name,
-              room: group.room || null
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "X-Org-Id": orgId,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-
-          const panelId = panelResponse.data.panel_id;
+      let panelId = group.panel_id;
+      
+      try {
+        let panelResponse;
+        
+        if (panelId) {
+        // Update existing panel
+        panelResponse = await axios.put(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${panelId}`,
+          {
+          event_id: selectedHackathon,
+          panel_name: group.name,
+          room: group.room || null
+          },
+          {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+            'Content-Type': 'application/json',
+          },
+          }
+        );
+        } else {
+        // Create new panel
+        panelResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels`,
+          {
+          event_id: selectedHackathon,
+          panel_name: group.name,
+          room: group.room || null
+          },
+          {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Org-Id": orgId,
+            'Content-Type': 'application/json',
+          },
+          }
+        );
+        
+        panelId = panelResponse.data.panel_id || panelResponse.data.panel?.id;
+        
+        // Update local state with panel_id for new panels
+        setJudgeGroups(prev => prev.map(g => 
+          g.id === group.id ? { ...g, panel_id: panelId } : g
+        ));
+        }
 
           // Create judge assignments for this panel
           for (const judge of group.judges) {
@@ -306,7 +737,9 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   const loadExistingAssignments = useCallback(async () => {
     if (!selectedHackathon) return;
 
+    setLoadingPanels(true);
     try {
+      // Step 1: Load panels
       const panelsResponse = await axios.get(
         `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${selectedHackathon}`,
         {
@@ -318,127 +751,212 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       );
 
       const panels = panelsResponse.data.panels || [];
+      console.log('Loaded Panels:', panels);
       
       if (panels.length > 0) {
-        // Convert panels to judge groups format
-        const loadedGroups = panels.map(panel => ({
-          id: panel.panel_id,
-          name: panel.panel_name,
-          judges: panel.judges || [],
-          teams: panel.teams || [],
-          room: panel.room || ''
-        }));
+        const loadedGroups = [];
+
+        // Exclude panels with a null panel_id
+        const validPanels = panels.filter(panel => panel.panel_id && panel.panel_name);
+        
+        // Step 2: For each panel, load assignments and judge details
+        for (const panel of validPanels) {
+          const assignments = await fetchPanelAssignments(panel.id);
+          
+          // Group assignments by judge and team
+          const judgeMap = new Map();
+          const teamSet = new Set();
+          
+          for (const assignment of assignments) {
+            // Collect unique judges
+            if (!judgeMap.has(assignment.judge_id)) {
+              const judgeDetails = await fetchJudgeDetails(assignment.judge_id);
+              if (judgeDetails) {
+                judgeMap.set(assignment.judge_id, judgeDetails);
+              }
+            }
+            
+            // Collect unique teams
+            if (assignment.team_id) {
+              const team = teams.find(t => t.id === assignment.team_id);
+              if (team) {
+                teamSet.add(team);
+              }
+            }
+          }
+          
+          const groupJudges = Array.from(judgeMap.values());
+          const groupTeams = Array.from(teamSet);
+          
+          loadedGroups.push({
+            id: panel.id, // Use panel.id as the group id
+            panel_id: panel.id, // Store the backend panel ID
+            name: panel.panel_name,
+            judges: groupJudges,
+            teams: groupTeams,
+            room: panel.room || ''
+          });
+        }
         
         setJudgeGroups(loadedGroups);
       }
     } catch (error) {
       console.error('Error loading existing assignments:', error);
       // Don't show error to user - this might be first time setup
+    } finally {
+      setLoadingPanels(false);
     }
-  }, [selectedHackathon, accessToken, orgId]);
+  }, [selectedHackathon, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails, teams]);
 
   // Load existing assignments when hackathon changes
   useEffect(() => {
     if (selectedHackathon && judges.length > 0 && teams.length > 0) {
       loadExistingAssignments();
     }
-  }, [selectedHackathon, judges.length, teams.length, loadExistingAssignments]);
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  }, [selectedHackathon, judges.length, teams.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Box>
       {/* Hackathon Selection */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth>
-            <InputLabel>Select Hackathon</InputLabel>
-            <Select
-              value={selectedHackathon}
-              onChange={(e) => setSelectedHackathon(e.target.value)}
-              label="Select Hackathon"
+      {loading && !selectedHackathon ? (
+        <ControlsSkeleton />
+      ) : (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Select Hackathon</InputLabel>
+              <Select
+                value={selectedHackathon}
+                onChange={(e) => setSelectedHackathon(e.target.value)}
+                label="Select Hackathon"
+              >
+                {hackathons.map((hackathon) => (
+                  <MenuItem key={hackathon.event_id} value={hackathon.event_id}>
+                    {hackathon.title} - {new Date(hackathon.start_date).toLocaleDateString()}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={addJudgeGroup}
+              disabled={!selectedHackathon || !dataLoadComplete}
             >
-              {hackathons.map((hackathon) => (
-                <MenuItem key={hackathon.event_id} value={hackathon.event_id}>
-                  {hackathon.title} - {new Date(hackathon.start_date).toLocaleDateString()}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              Add Judge Panel
+            </Button>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <AssignIcon />}
+              onClick={saveJudgeAssignments}
+              disabled={!selectedHackathon || judgeGroups.length === 0 || saving || !dataLoadComplete}
+              fullWidth
+            >
+              {saving ? 'Saving...' : 'Save Assignments'}
+            </Button>
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={addJudgeGroup}
-            disabled={!selectedHackathon}
-          >
-            Add Judge Panel
-          </Button>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <AssignIcon />}
-            onClick={saveJudgeAssignments}
-            disabled={!selectedHackathon || judgeGroups.length === 0 || saving}
-            fullWidth
-          >
-            {saving ? 'Saving...' : 'Save Assignments'}
-          </Button>
-        </Grid>
-      </Grid>
+      )}
 
       {!selectedHackathon ? (
         <Alert severity="info">Please select a hackathon to manage judging assignments.</Alert>
       ) : (
         <>
+          {/* Loading Progress Indicator */}
+          {(loading || loadingJudges || loadingTeams || loadingPanels) && (
+            <Box sx={{ mb: 2 }}>
+              <LinearProgress 
+                variant="determinate" 
+                value={
+                  loading && !dataLoadComplete ? 20 :
+                  loadingJudges ? 40 :
+                  loadingTeams ? 60 :
+                  loadingPanels ? 80 :
+                  100
+                }
+                sx={{ height: 4, borderRadius: 2 }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                {loading && !dataLoadComplete ? 'Initializing...' :
+                 loadingJudges ? 'Loading judges...' :
+                 loadingTeams ? 'Loading teams...' :
+                 loadingPanels ? 'Loading panels...' :
+                 'Ready'}
+              </Typography>
+            </Box>
+          )}
           {/* Summary Stats */}
-          <Grid container spacing={2} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={3}>
-              <Card>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <PersonIcon color="primary" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">{judges.length}</Typography>
-                  <Typography variant="body2">Total Judges</Typography>
-                </CardContent>
-              </Card>
+          {loading || !dataLoadComplete ? (
+            <StatsSkeleton />
+          ) : (
+            <Grid container spacing={2} sx={{ mb: 4 }}>
+              <Grid item xs={12} sm={3}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <PersonIcon color="primary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      {loadingJudges ? (
+                        <Skeleton variant="text" width={30} sx={{ mx: 'auto' }} />
+                      ) : (
+                        judges.length
+                      )}
+                    </Typography>
+                    <Typography variant="body2">Total Judges</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <GroupsIcon color="secondary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      {loadingTeams ? (
+                        <Skeleton variant="text" width={30} sx={{ mx: 'auto' }} />
+                      ) : (
+                        teams.length
+                      )}
+                    </Typography>
+                    <Typography variant="body2">Total Teams</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <AssignIcon color="success" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      {loadingPanels ? (
+                        <Skeleton variant="text" width={30} sx={{ mx: 'auto' }} />
+                      ) : (
+                        judgeGroups.length
+                      )}
+                    </Typography>
+                    <Typography variant="body2">Judge Panels</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <LocationIcon color="info" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      {loading ? (
+                        <Skeleton variant="text" width={80} sx={{ mx: 'auto' }} />
+                      ) : (
+                        isInPerson ? 'In-Person' : 'Virtual'
+                      )}
+                    </Typography>
+                    <Typography variant="body2">Event Type</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <Card>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <GroupsIcon color="secondary" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">{teams.length}</Typography>
-                  <Typography variant="body2">Total Teams</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Card>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <AssignIcon color="success" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">{judgeGroups.length}</Typography>
-                  <Typography variant="body2">Judge Panels</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Card>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <LocationIcon color="info" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">{isInPerson ? 'In-Person' : 'Virtual'}</Typography>
-                  <Typography variant="body2">Event Type</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+          )}
 
           {/* Judge Groups */}
           <Typography variant="h5" gutterBottom>
@@ -448,12 +966,20 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
             Assign judges to panels and teams to each panel for initial video review judging.
           </Typography>
 
-          {judgeGroups.map((group) => (
+          {/* Show skeleton while loading panels */}
+          {loadingPanels && judgeGroups.length === 0 ? (
+            <Box>
+              {[1, 2].map((item) => (
+                <PanelSkeleton key={item} />
+              ))}
+            </Box>
+          ) : (
+            judgeGroups.map((group) => (
             <Accordion key={group.id} sx={{ mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                    {group.name}
+                    {group.name} {group.panel_id ? `(${group.panel_id})` : ''}
                   </Typography>
                   <Chip 
                     label={`${group.judges.length} judges, ${group.teams.length} teams`} 
@@ -481,6 +1007,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                   <Grid item xs={12} md={6}>
                     <Typography variant="subtitle1" gutterBottom>
                       Assigned Judges ({group.judges.length})
+                      {loadingPanels && <CircularProgress size={16} sx={{ ml: 1 }} />}
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 2, minHeight: 200 }}>
                       <List dense>
@@ -491,6 +1018,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                               <IconButton 
                                 onClick={() => removeJudgeFromGroup(judge.id || judge.user_id, group.id)}
                                 size="small"
+                                disabled={loadingJudgeDetails[judge.id || judge.user_id]}
                               >
                                 <DeleteIcon />
                               </IconButton>
@@ -505,10 +1033,15 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                             />
                           </ListItem>
                         ))}
-                        {group.judges.length === 0 && (
+                        {group.judges.length === 0 && !loadingPanels && (
                           <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
                             No judges assigned to this panel yet
                           </Typography>
+                        )}
+                        {loadingPanels && group.judges.length === 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                            <CircularProgress size={24} />
+                          </Box>
                         )}
                       </List>
                     </Paper>
@@ -538,7 +1071,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                             </ListItemIcon>
                             <ListItemText 
                               primary={team.name}
-                              secondary={`${team.members?.length || 0} members`}
+                              secondary={`${team.team_members?.length || 0} members`}
                             />
                           </ListItem>
                         ))}
@@ -553,106 +1086,181 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                 </Grid>
               </AccordionDetails>
             </Accordion>
-          ))}
+          ))
+          )}
 
           {/* Unassigned Resources */}
           <Grid container spacing={3} sx={{ mt: 4 }}>
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
-                Unassigned Judges ({getUnassignedJudges().length})
+                Unassigned Judges {loadingJudges ? (
+                  <Skeleton variant="text" width={40} component="span" />
+                ) : (
+                  `(${getUnassignedJudges().length})`
+                )}
               </Typography>
-              <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
-                <List dense>
-                  {getUnassignedJudges().map((judge) => (
-                    <ListItem 
-                      key={judge.id || judge.user_id}
-                      sx={{ 
-                        border: '1px dashed #ccc', 
-                        mb: 1, 
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'action.hover' }
-                      }}
-                    >
-                      <ListItemIcon>
-                        <PersonIcon />
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={judge.name || judge.firstName + ' ' + judge.lastName}
-                        secondary={judge.company || judge.companyName}
-                      />
-                      <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <Select
-                          displayEmpty
-                          value=""
-                          onChange={(e) => assignJudgeToGroup(judge.id || judge.user_id, e.target.value)}
-                        >
-                          <MenuItem value="" disabled>Assign to...</MenuItem>
-                          {judgeGroups.map((group) => (
-                            <MenuItem key={group.id} value={group.id}>
-                              {group.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </ListItem>
-                  ))}
-                  {getUnassignedJudges().length === 0 && (
-                    <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                      All judges have been assigned to panels
-                    </Typography>
-                  )}
-                </List>
-              </Paper>
+              {loadingJudges ? (
+                <JudgeListSkeleton />
+              ) : (
+                <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
+                  <List dense>
+                    {getUnassignedJudges().map((judge) => (
+                      <ListItem 
+                        key={judge.id || judge.user_id}
+                        sx={{ 
+                          border: '1px dashed #ccc', 
+                          mb: 1, 
+                          borderRadius: 1,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' }
+                        }}
+                      >
+                        <ListItemIcon>
+                          <PersonIcon />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={judge.name || judge.firstName + ' ' + judge.lastName}
+                          secondary={judge.company || judge.companyName}
+                        />
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                          <Select
+                            displayEmpty
+                            value=""
+                            onChange={(e) => assignJudgeToGroup(judge.id || judge.user_id, e.target.value)}
+                            disabled={!dataLoadComplete}
+                          >
+                            <MenuItem value="" disabled>Assign to...</MenuItem>
+                            {judgeGroups.map((group) => (
+                              <MenuItem key={group.id} value={group.id}>
+                                {group.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </ListItem>
+                    ))}
+                    {getUnassignedJudges().length === 0 && !loadingJudges && (
+                      <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                        All judges have been assigned to panels
+                      </Typography>
+                    )}
+                  </List>
+                </Paper>
+              )}
             </Grid>
 
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
-                Unassigned Teams ({getUnassignedTeams().length})
+                Unassigned Teams {loadingTeams ? (
+                  <Skeleton variant="text" width={40} component="span" />
+                ) : (
+                  `(${getUnassignedTeams().length})`
+                )}
               </Typography>
-              <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
-                <List dense>
-                  {getUnassignedTeams().map((team) => (
-                    <ListItem 
-                      key={team.id}
-                      sx={{ 
-                        border: '1px dashed #ccc', 
-                        mb: 1, 
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'action.hover' }
-                      }}
-                    >
-                      <ListItemIcon>
-                        <GroupsIcon />
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={team.name}
-                        secondary={`${team.members?.length || 0} members`}
-                      />
-                      <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <Select
-                          displayEmpty
-                          value=""
-                          onChange={(e) => assignTeamToGroup(team.id, e.target.value)}
-                        >
-                          <MenuItem value="" disabled>Assign to...</MenuItem>
-                          {judgeGroups.map((group) => (
-                            <MenuItem key={group.id} value={group.id}>
-                              {group.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </ListItem>
-                  ))}
-                  {getUnassignedTeams().length === 0 && (
-                    <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                      All teams have been assigned to panels
-                    </Typography>
-                  )}
-                </List>
-              </Paper>
+              {loadingTeams ? (
+                <TeamListSkeleton />
+              ) : (
+                <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
+                  <List dense>
+                    {getUnassignedTeams().map((team) => (
+                      <ListItem 
+                        key={team.id}
+                        sx={{ 
+                          border: '1px dashed #ccc', 
+                          mb: 1, 
+                          borderRadius: 1,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                          flexDirection: 'column',
+                          alignItems: 'stretch',
+                          py: 2
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', mb: 1 }}>
+                          <ListItemIcon sx={{ minWidth: 32, mt: 0 }}>
+                            <GroupsIcon />
+                          </ListItemIcon>
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              {team.name}
+                            </Typography>
+                            {team.selected_nonprofit_id && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.75rem' }}>
+                                {loadingNonprofits ? 'Loading nonprofit...' : (nonprofitNames[team.selected_nonprofit_id] || team.selected_nonprofit_id)}
+                              </Typography>
+                            )}
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                              <Chip 
+                                label={`${team.team_members?.length || 0} members`} 
+                                size="small" 
+                                variant="outlined"
+                              />
+                              {team.status && (
+                                <Chip 
+                                  label={team.status} 
+                                  size="small" 
+                                  color={
+                                    team.status === 'complete' ? 'success' :
+                                    team.status === 'active' ? 'primary' :
+                                    team.status === 'incomplete' ? 'warning' : 'default'
+                                  }
+                                  variant="outlined"
+                                />
+                              )}
+                              {team.github_links && team.github_links.length > 0 && (
+                                <Chip 
+                                  label="GitHub" 
+                                  size="small" 
+                                  color="success" 
+                                  variant="outlined"
+                                />
+                              )}
+                              {team.devpost_link && (
+                                <Chip 
+                                  label="DevPost" 
+                                  size="small" 
+                                  color="info" 
+                                  variant="outlined"
+                                />
+                              )}
+                             
+                              
+                              {(!team.github_links || team.github_links.length === 0) && !team.devpost_link && (
+                                <Chip 
+                                  label="Incomplete" 
+                                  size="small" 
+                                  color="warning" 
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                          <FormControl size="small" sx={{ minWidth: 120, ml: 1 }}>
+                            <Select
+                              displayEmpty
+                              value=""
+                              onChange={(e) => assignTeamToGroup(team.id, e.target.value)}
+                              disabled={!dataLoadComplete}
+                            >
+                              <MenuItem value="" disabled>Assign to...</MenuItem>
+                              {judgeGroups.map((group) => (
+                                <MenuItem key={group.id} value={group.id}>
+                                  {group.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Box>
+                      </ListItem>
+                    ))}
+                    {getUnassignedTeams().length === 0 && !loadingTeams && (
+                      <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                        All teams have been assigned to panels
+                      </Typography>
+                    )}
+                  </List>
+                </Paper>
+              )}
             </Grid>
           </Grid>
         </>

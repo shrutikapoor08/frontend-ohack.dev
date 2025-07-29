@@ -56,6 +56,7 @@ function NonProfitApplyList({ userClass }) {
     const [npoSelection, setNpoSelection] = useState('create');
     const [selectedNpo, setSelectedNpo] = useState(null);
 
+
     // State for the new "Refresh All Embeddings" feature
     const [isRefreshingAll, setIsRefreshingAll] = useState(false);
     const [refreshAllStatus, setRefreshAllStatus] = useState(null);
@@ -65,6 +66,10 @@ function NonProfitApplyList({ userClass }) {
 
     // --- NEW STATE FOR SINGLE EMBEDDING REFRESH ---
     const [isRefreshingEmbedding, setIsRefreshingEmbedding] = useState(false);
+  
+    const org = userClass.getOrgByName("Opportunity Hack Org");
+    const orgId = org ? org.orgId : null;
+    const isAdmin = org.hasPermission("volunteer.admin");
 
     const handleRefreshAllEmbeddings = async () => {
         setIsRefreshingAll(true);
@@ -75,7 +80,8 @@ function NonProfitApplyList({ userClass }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Authorization': `Bearer ${accessToken}`,
+                     'X-Org-Id': orgId
                 }
             });
 
@@ -105,7 +111,8 @@ function NonProfitApplyList({ userClass }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Org-Id': orgId
                 },
                 // Send the entire application object
                 body: JSON.stringify(application)
@@ -145,7 +152,8 @@ function NonProfitApplyList({ userClass }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Org-Id': orgId
                 },
                 body: JSON.stringify(application)
             });
@@ -173,7 +181,8 @@ function NonProfitApplyList({ userClass }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Org-Id': orgId
                 },
                 body: JSON.stringify(application)
             });
@@ -202,7 +211,8 @@ function NonProfitApplyList({ userClass }) {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${accessToken}` 
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Org-Id': orgId
                 },
                 body: JSON.stringify({
                     application: application,
@@ -238,7 +248,8 @@ function NonProfitApplyList({ userClass }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Org-Id': orgId
                 },
                 body: JSON.stringify(application)
             });
@@ -310,11 +321,7 @@ function NonProfitApplyList({ userClass }) {
     };
 
     const handleUpdateStatus = async (appId, status) => {
-        setIsUpdating(appId); 
-        
-        const org = userClass.getOrgByName("Opportunity Hack Org");
-        const orgId = org ? org.orgId : null;
-
+        setIsUpdating(appId);                 
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/npo/applications/${appId}/status`, {
                 method: 'PUT',
@@ -343,11 +350,7 @@ function NonProfitApplyList({ userClass }) {
     };
 
     useEffect(() => {
-        if (!userClass || !accessToken) { setIsLoading(false); return; }
-        const org = userClass.getOrgByName("Opportunity Hack Org");
-        const isAdmin = org && org.hasPermission("volunteer.admin");
-        const orgId = org ? org.orgId : null;
-        if (!isAdmin || !orgId) { setError("You do not have permission to view this data."); setIsLoading(false); return; }
+        if (!userClass || !accessToken) { setIsLoading(false); return; }        
         
         const fetchAllData = async () => {
             try {

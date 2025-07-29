@@ -50,6 +50,19 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
   useEffect(() => {
     if (!event_id) return;
     
+    // Initialize tab from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'round2') {
+      setActiveTab(1);
+    } else if (tabParam === 'round1') {
+      setActiveTab(0);
+    }
+  }, [event_id]);
+
+  useEffect(() => {
+    if (!event_id) return;
+    
     const fetchTeams = async () => {
       try {
         setLoading(true);
@@ -68,6 +81,12 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    
+    // Update URL parameter to persist tab selection
+    const tabParam = newValue === 1 ? 'round2' : 'round1';
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tabParam);
+    router.replace(url.pathname + url.search, undefined, { shallow: true });
   };
 
   const formatDateTime = (dateString) => {
@@ -109,8 +128,26 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <TeamIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="h6" component="h3" gutterBottom sx={{ mb: 0, flexGrow: 1 }}>
-              {team.name}
-            </Typography>
+              {team.name} {team.slack_channel && (
+              <Tooltip title="Open Slack channel" arrow>
+                <Button
+                size="small"
+                variant="outlined"
+                startIcon={<TeamIcon />}
+                onClick={() => window.open(`https://opportunity-hack.slack.com/app_redirect?channel=${team.slack_channel}`, '_blank')}
+                sx={{ 
+                  ml: 1,
+                  textTransform: 'none',
+                  minWidth: 'auto',
+                  fontSize: '0.75rem',
+                  height: '24px'
+                }}
+                >
+                #{team.slack_channel}
+                </Button>
+              </Tooltip>
+              )}
+            </Typography>            
           </Box>
 
           {/* Problem Statement */}
@@ -166,51 +203,68 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
           <Divider sx={{ mb: 2 }} />
 
           {/* Links and Actions */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-            {team.github_url && (
-              <Tooltip title="View GitHub Repository">
-                <IconButton 
-                  size="small" 
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+              PROJECT LINKS
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {team.github_url && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<GitHubIcon />}
                   onClick={() => window.open(team.github_url, '_blank')}
-                  sx={{ color: 'text.secondary' }}
+                  sx={{ 
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    color: 'text.primary',
+                    borderColor: 'divider'
+                  }}
                 >
-                  <GitHubIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            {team.devpost_url && (
-              <Tooltip title="View DevPost Project">
-                <IconButton 
-                  size="small" 
+                  GitHub Repository
+                </Button>
+              )}
+              {team.devpost_url && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<DevPostIcon />}
                   onClick={() => window.open(team.devpost_url, '_blank')}
-                  sx={{ color: 'text.secondary' }}
+                  sx={{ 
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    color: 'text.primary',
+                    borderColor: 'divider'
+                  }}
                 >
-                  <DevPostIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            {round === 'round1' && team.video_url && (
-              <Tooltip title="Watch Pitch Video">
-                <IconButton 
-                  size="small" 
+                  DevPost Submission
+                </Button>
+              )}
+              {round === 'round1' && team.video_url && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<VideoIcon />}
                   onClick={() => window.open(team.video_url, '_blank')}
-                  sx={{ color: 'text.secondary' }}
+                  sx={{ 
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    color: 'primary.main',
+                    borderColor: 'primary.main'
+                  }}
                 >
-                  <VideoIcon />
-                </IconButton>
-              </Tooltip>
-            )}
+                  Watch Pitch Video
+                </Button>
+              )}
+            </Box>
           </Box>
 
           {/* Score Display */}
           {team.judged && team.score && (
             <Box sx={{ mb: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
               <Typography variant="body2" color="success.dark">
-                <strong>Your Score: {team.score.total}/40</strong>
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Submitted: {formatDateTime(team.score.submitted_at)}
-              </Typography>
+                <strong>Your Score: {team.score}/40</strong>
+              </Typography>              
             </Box>
           )}
 
@@ -254,6 +308,9 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
   const round2Teams = teamsData.round2_teams || [];
   const round1Completed = round1Teams.filter(team => team.judged).length;
   const round2Completed = round2Teams.filter(team => team.judged).length;
+
+  console.log('Round 1 Teams:', round1Teams);
+  console.log('Round 2 Teams:', round2Teams);
 
   return (
     <>
@@ -327,7 +384,7 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <VideoIcon sx={{ mr: 1 }} />
-                      Round 1 - Video Reviews
+                      Round 1
                     </Box>
                   </Badge>
                 }
@@ -341,7 +398,7 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <LiveIcon sx={{ mr: 1 }} />
-                      Round 2 - Live Demos
+                      Round 2
                     </Box>
                   </Badge>
                 }
@@ -361,13 +418,7 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5">
                       Round 1 Teams ({round1Completed}/{round1Teams.length} completed)
-                    </Typography>
-                    <Chip 
-                      label="Video Reviews" 
-                      icon={<VideoIcon />} 
-                      color="primary" 
-                      variant="outlined"
-                    />
+                    </Typography>                    
                   </Box>
                   <Grid container spacing={3}>
                     {round1Teams.map(team => (
