@@ -56,9 +56,89 @@ function NonProfitApplyList({ userClass }) {
     const [npoSelection, setNpoSelection] = useState('create');
     const [selectedNpo, setSelectedNpo] = useState(null);
 
+
+    // State for the new "Refresh All Embeddings" feature
+    const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+    const [refreshAllStatus, setRefreshAllStatus] = useState(null);
+
+    // --- NEW STATE FOR DEBUG PANEL ---
+    const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
+
+    // --- NEW STATE FOR SINGLE EMBEDDING REFRESH ---
+    const [isRefreshingEmbedding, setIsRefreshingEmbedding] = useState(false);
+  
     const org = userClass.getOrgByName("Opportunity Hack Org");
     const orgId = org ? org.orgId : null;
     const isAdmin = org.hasPermission("volunteer.admin");
+
+    const handleRefreshAllEmbeddings = async () => {
+        setIsRefreshingAll(true);
+        setRefreshAllStatus(null); // Clear previous status message
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/embedding-map/populate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                     'X-Org-Id': orgId
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to start embedding refresh process.');
+            }
+
+            setRefreshAllStatus({ type: 'success', message: data.message || 'Successfully started refresh process.' });
+
+        } catch (e) {
+            console.error("Error refreshing all embeddings:", e);
+            setRefreshAllStatus({ type: 'error', message: e.message });
+        } finally {
+            setIsRefreshingAll(false);
+        }
+    };
+
+    const handleRefreshEmbedding = async (application) => {
+        setIsRefreshingEmbedding(true);
+        setIsSearching(true); 
+        setSimilarProjects([]);
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/llm/embedding/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Org-Id': orgId
+                },
+                // Send the entire application object
+                body: JSON.stringify(application)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error("Access denied for user");
+                }
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to refresh embedding.');
+            }
+            
+            // The response now contains the new list of similar projects
+            const result = await response.json();
+            const projectsWithUIState = result.similar_projects.map(p => ({ ...p, isReasoning: false }));
+            setSimilarProjects(projectsWithUIState.slice(0, 3));
+
+        } catch (error) {
+            console.error("Error refreshing embedding:", error);
+            setSimilarProjects([{ id: 'error', title: error.message || 'Error refreshing projects.' }]);
+        } finally {
+            setIsRefreshingEmbedding(false);
+            setIsSearching(false); // Reset loading state
+        }
+    };
 
     const fetchSummary = async (application) => {
         // --- DEBUG: Log the application object being sent to the backend ---
@@ -308,12 +388,48 @@ function NonProfitApplyList({ userClass }) {
     return (
         <Container maxWidth="xl" sx={{ mt: 12, mb: 4 }}>
             <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-                <Typography variant="h4" component="h1" gutterBottom>
-                    Nonprofit Application List Workbench
-                </Typography>
-                <Typography variant="subtitle1" color="text.secondary">
-                    Review pending applications to create new projects.
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                    <Box>
+                        <Typography variant="h4" component="h1" gutterBottom>
+                            Nonprofit Application List Workbench
+                        </Typography>
+                        <Typography variant="subtitle1" color="text.secondary">
+                            Review pending applications to create new projects.
+                        </Typography>
+                    </Box>
+                    {/* --- NEW DEBUG TOGGLE BUTTON --- */}
+                    <Button
+                        variant="text"
+                        color="secondary"
+                        onClick={() => setIsDebugPanelOpen(!isDebugPanelOpen)}
+                    >
+                        {isDebugPanelOpen ? 'Hide Debug Tools' : 'Show Debug Tools'}
+                    </Button>
+                </Box>
+                
+                {/* --- NEW COLLAPSIBLE DEBUG PANEL --- */}
+                <Collapse in={isDebugPanelOpen}>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ p: 2, border: '1px dashed', borderColor: 'grey.400', borderRadius: 1 }}>
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                            Admin Debug Panel
+                        </Typography>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={handleRefreshAllEmbeddings}
+                            disabled={isRefreshingAll}
+                            startIcon={isRefreshingAll ? <CircularProgress size={20} /> : null}
+                        >
+                            {isRefreshingAll ? 'Refreshing...' : 'Force Refresh All Embeddings'}
+                        </Button>
+                        {refreshAllStatus && (
+                            <Alert severity={refreshAllStatus.type} sx={{ mt: 2 }} onClose={() => setRefreshAllStatus(null)}>
+                                {refreshAllStatus.message}
+                            </Alert>
+                        )}
+                    </Box>
+                </Collapse>
             </Paper>
 
             {applications.length === 0 && !isLoading ? (
@@ -404,24 +520,44 @@ function NonProfitApplyList({ userClass }) {
                                                             {isSearching ? (
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}><CircularProgress size={24} /><Typography>Searching...</Typography></Box>
                                                             ) : (
-                                                                <List dense>
-                                                                    {similarProjects.map(p => (
-                                                                        p.id === 'error' ? (
-                                                                            <Alert severity="error" key={p.id}>{p.title}</Alert>
-                                                                        ) : (
-                                                                            <ListItem key={p.id} sx={{ alignItems: 'flex-start', flexDirection: 'column', mb: 1, p:1, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
-                                                                                <ListItemText primary={p.title} secondary={p.similarity ? `Similarity: ${(p.similarity * 100).toFixed(1)}%` : ''} />
-                                                                                {p.reasoning ? (
-                                                                                    <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>{p.reasoning}</Typography>
-                                                                                ) : p.isReasoning ? (
-                                                                                    <CircularProgress size={16} />
-                                                                                ) : (
-                                                                                    <Button size="small" sx={{ p: 0, mt: 0.5 }} onClick={() => fetchReasoningForSimilarity(app, p)}>Get Reason</Button>
-                                                                                )}
-                                                                            </ListItem>
-                                                                        )
-                                                                    ))}
-                                                                </List>
+                                                                <>
+                                                                    <List dense>
+                                                                        {similarProjects.map(p => (
+                                                                            p.id === 'error' ? (
+                                                                                <Alert severity="error" key={p.id}>{p.title}</Alert>
+                                                                            ) : (
+                                                                                <ListItem key={p.id} sx={{ alignItems: 'flex-start', flexDirection: 'column', mb: 1, p:1, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+                                                                                    <ListItemText primary={p.title} secondary={p.similarity ? `Similarity: ${(p.similarity * 100).toFixed(1)}%` : ''} />
+                                                                                    {p.reasoning ? (
+                                                                                        <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>{p.reasoning}</Typography>
+                                                                                    ) : p.isReasoning ? (
+                                                                                        <CircularProgress size={16} />
+                                                                                    ) : (
+                                                                                        <Button size="small" sx={{ p: 0, mt: 0.5 }} onClick={() => fetchReasoningForSimilarity(app, p)}>Get Reason</Button>
+                                                                                    )}
+                                                                                </ListItem>
+                                                                            )
+                                                                        ))}
+
+                                                                        {/* --- NEW REFRESH EMBEDDING BUTTON --- */}
+                                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                                                                            <Button
+                                                                                size="small"
+                                                                                variant="outlined"
+                                                                                color="primary"
+                                                                                onClick={() => handleRefreshEmbedding(app)}
+                                                                                disabled={isSearching || isRefreshingEmbedding}
+                                                                                startIcon={isRefreshingEmbedding ? <CircularProgress size={16} /> : null}
+                                                                                sx={{ 
+                                                                                    textTransform: 'none',
+                                                                                    fontSize: '0.875rem'
+                                                                                }}
+                                                                            >
+                                                                                {isRefreshingEmbedding ? 'Refreshing...' : 'Refresh Embedding & Similar Projects'}
+                                                                            </Button>
+                                                                        </Box>
+                                                                    </List>
+                                                                </>
                                                             )}
                                                         </Grid>
                                                     </Grid>
@@ -431,6 +567,7 @@ function NonProfitApplyList({ userClass }) {
                                                     <Box sx={{ p: 2 }}>
                                                         <Typography variant="h6" gutterBottom>Admin Action</Typography>
                                                         
+
                                                         {/* Step 1: Initial Decision */}
                                                         {approvalStep === 'initial' && (
                                                             <CardActions sx={{ justifyContent: 'flex-start', p: 0 }}>
@@ -512,6 +649,7 @@ function NonProfitApplyList({ userClass }) {
                                     </TableRow>
                                 </Fragment>
                             ))}
+
                         </TableBody>
                     </Table>
                 </TableContainer>
