@@ -283,7 +283,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         const scorePromises = teamAssignments.map(async (assignment) => {
           try {
             const scoreResponse = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/score/${assignment.judge_id}/${team.id}/${selectedHackathon}/round1`,
+              `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/admin/score/${assignment.judge_id}/${team.id}/${selectedHackathon}/round1`,
               {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
@@ -628,7 +628,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
             {
-              judge_id: judge.id || judge.user_id,
+              judge_id: judge.user_id, // Use user_id consistently
               event_id: selectedHackathon,
               team_id: team.id,
               round: 'round2',
@@ -1052,7 +1052,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <List>
                   {judges.map((judge, index) => (
-                    <React.Fragment key={judge.id || judge.user_id}>
+                    <React.Fragment key={judge.user_id}>
                       <ListItem>
                         <ListItemIcon>
                           <PersonIcon />
@@ -1072,7 +1072,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                                 />
                               )}
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                {judge.id}
+                                {judge.user_id}
                               </Typography>
                             </Box>
                           }

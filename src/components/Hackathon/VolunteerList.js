@@ -804,11 +804,11 @@ const VolunteerList = ({ event_id, type }) => {
               image={imageToDisplay}
               title={volunteer.name || "Volunteer"}
             />
-            {volunteer.isInPerson ? (
+            {type !== "judge" && (volunteer.isInPerson ? (
               <InPersonBadge>In-Person</InPersonBadge>
             ) : (
               <RemoteBadge>Remote</RemoteBadge>
-            )}
+            ))}
           </VolunteerMediaContainer>
           <VolunteerContent>
             <Box

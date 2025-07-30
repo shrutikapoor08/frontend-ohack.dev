@@ -273,7 +273,7 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
         const scorePromises = teamAssignments.map(async (assignment) => {
           try {
             const scoreResponse = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/score/${assignment.judge_id}/${team.id}/${selectedHackathon}/round2`,
+              `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/admin/score/${assignment.judge_id}/${team.id}/${selectedHackathon}/round2`,
               {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,

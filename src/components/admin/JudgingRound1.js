@@ -298,12 +298,12 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
 
   // Assign judge to group
   const assignJudgeToGroup = async (judgeId, groupId) => {
-    const judge = judges.find(j => j.id === judgeId || j.user_id === judgeId);
+    const judge = judges.find(j => j.user_id === judgeId);
     const group = judgeGroups.find(g => g.id === groupId);
     if (!judge || !group) return;
 
     // Check if already assigned
-    const isAlreadyAssigned = group.judges.some(j => (j.id || j.user_id) === judgeId);
+    const isAlreadyAssigned = group.judges.some(j => j.user_id === judgeId);
     if (isAlreadyAssigned) return;
 
     // If panel doesn't exist in backend yet, create it first
@@ -343,10 +343,11 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     if (group.teams.length > 0) {
       try {
         for (const team of group.teams) {
+          console.log('Assigning judge to team:', team.id, 'judge.user_id:', judge.user_id);
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
             {
-              judge_id: judgeId,
+              judge_id: judge.user_id,
               event_id: selectedHackathon,
               team_id: team.id,
               round: 'round1',
@@ -415,7 +416,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       if (group.id === groupId) {
         return {
           ...group,
-          judges: group.judges.filter(j => (j.id || j.user_id) !== judgeId)
+          judges: group.judges.filter(j => j.user_id !== judgeId)
         };
       }
       return group;
@@ -437,10 +438,11 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       try {
         // Create assignments for each judge in the panel
         for (const judge of group.judges) {
+          console.log('Assigning team to judge:', judge.user_id);
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
             {
-              judge_id: judge.id || judge.user_id,
+              judge_id: judge.user_id, // Use user_id consistently
               event_id: selectedHackathon,
               team_id: teamId,
               round: 'round1',
@@ -519,10 +521,10 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   // Get unassigned judges
   const getUnassignedJudges = () => {
     const assignedJudgeIds = judgeGroups.flatMap(group => 
-      group.judges.map(j => j.id || j.user_id)
+      group.judges.map(j => j.user_id)
     );
     return judges.filter(judge => 
-      !assignedJudgeIds.includes(judge.id || judge.user_id)
+      !assignedJudgeIds.includes(judge.user_id)
     );
   };
 
@@ -698,10 +700,11 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           // Create judge assignments for this panel
           for (const judge of group.judges) {
             for (const team of group.teams) {
+              console.log('Saving assignment for judge:', judge.user_id, 'team:', team.id);
               await axios.post(
                 `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
                 {
-                  judge_id: judge.id || judge.user_id,
+                  judge_id: judge.user_id, // Use user_id consistently
                   event_id: selectedHackathon,
                   team_id: team.id,
                   round: 'round1',
@@ -1013,12 +1016,12 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                       <List dense>
                         {group.judges.map((judge) => (
                           <ListItem 
-                            key={judge.id || judge.user_id}
+                            key={judge.user_id}
                             secondaryAction={
                               <IconButton 
-                                onClick={() => removeJudgeFromGroup(judge.id || judge.user_id, group.id)}
+                                onClick={() => removeJudgeFromGroup(judge.user_id, group.id)}
                                 size="small"
-                                disabled={loadingJudgeDetails[judge.id || judge.user_id]}
+                                disabled={loadingJudgeDetails[judge.user_id]}
                               >
                                 <DeleteIcon />
                               </IconButton>
@@ -1106,7 +1109,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                   <List dense>
                     {getUnassignedJudges().map((judge) => (
                       <ListItem 
-                        key={judge.id || judge.user_id}
+                        key={judge.user_id}
                         sx={{ 
                           border: '1px dashed #ccc', 
                           mb: 1, 
@@ -1126,7 +1129,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                           <Select
                             displayEmpty
                             value=""
-                            onChange={(e) => assignJudgeToGroup(judge.id || judge.user_id, e.target.value)}
+                            onChange={(e) => assignJudgeToGroup(judge.user_id, e.target.value)}
                             disabled={!dataLoadComplete}
                           >
                             <MenuItem value="" disabled>Assign to...</MenuItem>
