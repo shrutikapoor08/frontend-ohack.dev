@@ -570,7 +570,8 @@ const JudgeApplicationComponent = () => {
         backgroundAreas: backgroundAreasFormatted, // Include both formats for compatibility
         volunteer_type: "judge",
         isInPerson: formData.inPerson === "Yes",
-        isSelected: false, // Default to false, admin will select later
+        // Don't set this value so that any updates will stay as-is on the backend
+        // isSelected: false, // Default to false, admin will select later
         agreedToCodeOfConduct: Boolean(formData.codeOfConduct),
         type: "judges",
         shortBio: formData.biography || "", // Map to appropriate field
