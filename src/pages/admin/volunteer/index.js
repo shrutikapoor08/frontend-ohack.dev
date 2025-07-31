@@ -22,6 +22,8 @@ import VolunteerEditDialog from "../../../components/admin/VolunteerEditDialog";
 import ApplicationReviewList from "../../../components/admin/ApplicationReviewList";
 import ApplicationEditDialog from "../../../components/admin/ApplicationEditDialog";
 import VolunteerCommunication from "../../../components/admin/VolunteerCommunication";
+import SlackInviteDialog from "../../../components/admin/SlackInviteDialog";
+import BatchEmailDialog from "../../../components/admin/BatchEmailDialog";
 import useHackathonEvents from "../../../hooks/use-hackathon-events";
 
 import { Typography } from "@mui/material";
@@ -56,6 +58,12 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const [editingApplication, setEditingApplication] = useState(null);
   const [communicationDialogOpen, setCommunicationDialogOpen] = useState(false);
   const [selectedVolunteerForMessage, setSelectedVolunteerForMessage] = useState(null);
+  const [slackInviteDialogOpen, setSlackInviteDialogOpen] = useState(false);
+  const [volunteersForSlackInvite, setVolunteersForSlackInvite] = useState([]);
+  const [volunteerTypeForSlackInvite, setVolunteerTypeForSlackInvite] = useState('');
+  const [batchEmailDialogOpen, setBatchEmailDialogOpen] = useState(false);
+  const [volunteersForBatchEmail, setVolunteersForBatchEmail] = useState([]);
+  const [volunteerTypeForBatchEmail, setVolunteerTypeForBatchEmail] = useState('');
 
   const org = userClass.getOrgByName("Opportunity Hack Org");
   const isAdmin = org.hasPermission("volunteer.admin");
@@ -261,6 +269,40 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     });
     setCommunicationDialogOpen(true);
   }, [tabValue, getCurrentVolunteerType]);
+
+  const handleSlackInvite = useCallback((volunteers, type) => {
+    setVolunteersForSlackInvite(volunteers);
+    setVolunteerTypeForSlackInvite(type);
+    setSlackInviteDialogOpen(true);
+  }, []);
+
+  const handleSlackInviteComplete = useCallback((summary) => {
+    setSnackbar({
+      open: true,
+      message: `Slack invitations completed: ${summary.successful} successful, ${summary.failed} failed`,
+      severity: summary.failed > 0 ? "warning" : "success",
+    });
+    setSlackInviteDialogOpen(false);
+    setVolunteersForSlackInvite([]);
+    setVolunteerTypeForSlackInvite('');
+  }, []);
+
+  const handleBatchEmail = useCallback((volunteers, type) => {
+    setVolunteersForBatchEmail(volunteers);
+    setVolunteerTypeForBatchEmail(type);
+    setBatchEmailDialogOpen(true);
+  }, []);
+
+  const handleBatchEmailComplete = useCallback((summary) => {
+    setSnackbar({
+      open: true,
+      message: `Batch emails completed: ${summary.successful} successful, ${summary.failed} failed`,
+      severity: summary.failed > 0 ? "warning" : "success",
+    });
+    setBatchEmailDialogOpen(false);
+    setVolunteersForBatchEmail([]);
+    setVolunteerTypeForBatchEmail('');
+  }, []);
 
   const handleAddSingleVolunteer = useCallback(() => {
     setEditingVolunteer({
@@ -754,6 +796,8 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
                 onRequestSort={handleRequestSort}
                 onEditVolunteer={handleEditVolunteer}
                 onMessageVolunteer={handleMessageVolunteer}
+                onSlackInvite={handleSlackInvite}
+                onBatchEmail={handleBatchEmail}
               />
               {sortedVolunteers.length === 0 && (
                 <Box sx={{ mt: 2, textAlign: "center" }}>
@@ -821,6 +865,37 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
           }}
         />
       )}
+
+      {/* Slack Invite Dialog */}
+      <SlackInviteDialog
+        open={slackInviteDialogOpen}
+        onClose={() => {
+          setSlackInviteDialogOpen(false);
+          setVolunteersForSlackInvite([]);
+          setVolunteerTypeForSlackInvite('');
+        }}
+        volunteers={volunteersForSlackInvite}
+        volunteerType={volunteerTypeForSlackInvite}
+        accessToken={accessToken}
+        orgId={orgId}
+        onComplete={handleSlackInviteComplete}
+      />
+
+      {/* Batch Email Dialog */}
+      <BatchEmailDialog
+        open={batchEmailDialogOpen}
+        onClose={() => {
+          setBatchEmailDialogOpen(false);
+          setVolunteersForBatchEmail([]);
+          setVolunteerTypeForBatchEmail('');
+        }}
+        volunteers={volunteersForBatchEmail}
+        volunteerType={volunteerTypeForBatchEmail}
+        accessToken={accessToken}
+        orgId={orgId}
+        eventId={selectedEventId}
+        onComplete={handleBatchEmailComplete}
+      />
     </AdminPage>
   );
 });

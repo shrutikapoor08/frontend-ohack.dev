@@ -18,7 +18,8 @@ import {
 import { styled } from "@mui/system";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { FaPaperPlane } from 'react-icons/fa';
+import { FaPaperPlane, FaSlack } from 'react-icons/fa';
+import { Email as EmailIcon } from '@mui/icons-material';
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   width: "100%",
@@ -70,6 +71,8 @@ const VolunteerTable = ({
   onRequestSort,
   onEditVolunteer,
   onMessageVolunteer,
+  onSlackInvite,
+  onBatchEmail,
 }) => {
   console.log("VolunteerTable", volunteers);
   const columns = useMemo(() => {
@@ -128,6 +131,18 @@ const VolunteerTable = ({
     return volunteers.filter((volunteer) => volunteer.isSelected).length;
   }, [volunteers]);
 
+  const eligibleForSlackCount = useMemo(() => {
+    return volunteers.filter((volunteer) => 
+      volunteer.isSelected && volunteer.slack_user_id && volunteer.slack_user_id.trim() !== ''
+    ).length;
+  }, [volunteers]);
+
+  const eligibleForEmailCount = useMemo(() => {
+    return volunteers.filter((volunteer) => 
+      volunteer.isSelected && volunteer.email && volunteer.email.trim() !== '' && volunteer.id
+    ).length;
+  }, [volunteers]);
+
   const renderCellContent = (volunteer, column) => {
     switch (column.id) {
       case "id":
@@ -173,9 +188,35 @@ const VolunteerTable = ({
 
   return (
     <>
-      <Typography variant="h6" gutterBottom>
-        Total {type}: {volunteers.length} | Selected: {selectedCount}
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">
+          Total {type}: {volunteers.length} | Selected: {selectedCount}
+        </Typography>
+        <Box display="flex" gap={1}>
+          {onBatchEmail && eligibleForEmailCount > 0 && (
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<EmailIcon />}
+              onClick={() => onBatchEmail(volunteers, type)}
+              size="small"
+            >
+              Send Email ({eligibleForEmailCount})
+            </Button>
+          )}
+          {onSlackInvite && eligibleForSlackCount > 0 && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<FaSlack />}
+              onClick={() => onSlackInvite(volunteers, type)}
+              size="small"
+            >
+              Invite to Slack ({eligibleForSlackCount})
+            </Button>
+          )}
+        </Box>
+      </Box>
       <StyledTableContainer component={Paper}>
         <Table stickyHeader>
           <TableHead>

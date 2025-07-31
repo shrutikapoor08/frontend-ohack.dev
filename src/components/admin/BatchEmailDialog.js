@@ -1,30 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
   Dialog,
-  DialogActions,
-  DialogContent,
   DialogTitle,
-  Divider,
-  Grid,
+  DialogContent,
+  DialogActions,
+  Button,
   TextField,
   Typography,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
   Alert,
-  CircularProgress
+  Chip,
+  LinearProgress,
+  IconButton,
+  Collapse,
+  Card,
+  CardContent,
+  Grid,
+  Step,
+  Stepper,
+  StepLabel,
 } from '@mui/material';
-import { 
-  FaPaperPlane,
-  FaEdit,
-  FaCheck,
-  FaTimes
-} from 'react-icons/fa';
-import { useSnackbar } from 'notistack';
-import axios from 'axios';
+import {
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  Person as PersonIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Email as EmailIcon,
+  ArrowBack as ArrowBackIcon,
+} from '@mui/icons-material';
+import { FaPaperPlane, FaEdit } from 'react-icons/fa';
+import { styled } from '@mui/system';
+import BatchEmailService from '../../lib/batchEmailService';
 
+// Import the message templates from VolunteerCommunication
 const MESSAGE_TEMPLATES = {
   APPROVAL: {
     category: "Approval & Confirmation",
@@ -120,114 +134,58 @@ const MESSAGE_TEMPLATES = {
   }
 };
 
-const VolunteerCommunication = ({ 
-  volunteer, 
-  volunteerType, // Add this prop
-  onMessageSent, 
-  eventId, 
-  orgId, 
-  accessToken,
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    minWidth: '700px',
+    maxWidth: '900px',
+    maxHeight: '90vh',
+  },
+}));
+
+const ProgressContainer = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+  marginBottom: theme.spacing(2),
+}));
+
+const ResultsList = styled(List)(({ theme }) => ({
+  maxHeight: '300px',
+  overflow: 'auto',
+  backgroundColor: theme.palette.grey[50],
+  borderRadius: theme.shape.borderRadius,
+  margin: theme.spacing(1, 0),
+}));
+
+const BatchEmailDialog = ({
   open,
-  onClose 
+  onClose,
+  volunteers,
+  volunteerType,
+  accessToken,
+  orgId,
+  eventId,
+  onComplete,
 }) => {
-  const { enqueueSnackbar } = useSnackbar();
-  const [messageDialogOpen, setMessageDialogOpen] = useState(open || false);
-  const [messageText, setMessageText] = useState("");
+  const [currentStep, setCurrentStep] = useState(0);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [customMessage, setCustomMessage] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [subject, setSubject] = useState('');
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [progress, setProgress] = useState(null);
+  const [results, setResults] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
 
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !volunteer) return;
+  // Filter eligible users when volunteers change
+  const eligibleUsers = BatchEmailService.filterEligibleUsers(volunteers);
 
-    setLoading(true);
-    try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/admin/${volunteer.id}/message`,
-        {
-          message: messageText,
-          subject: selectedTemplate ? selectedTemplate.title : "Message from Opportunity Hack",
-          recipient_type: volunteer.type || 'volunteer',
-          recipient_id: volunteer.id
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-            "X-Org-Id": orgId,
-          },
-        }
-      );
-
-      if (response.data && response.data.success) {
-        enqueueSnackbar("Message sent successfully", { variant: "success" });
-        setMessageDialogOpen(false);
-        setMessageText("");
-        setSelectedTemplate(null);
-        setCustomMessage(false);
-        if (onMessageSent) {
-          onMessageSent();
-        }
-        if (onClose) {
-          onClose();
-        }
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      enqueueSnackbar(error.response?.data?.message || "Failed to send message", { variant: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCloseMessageDialog = () => {
-    setMessageDialogOpen(false);
-    setMessageText("");
-    setSelectedTemplate(null);
-    setCustomMessage(false);
-    if (onClose) {
-      onClose();
-    }
-  };
-
-  const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template);
-    let message = template.message;
-    
-    // Replace [EVENT_ID] placeholder if present
-    if (eventId && message.includes('[EVENT_ID]')) {
-      message = message.replace(/\[EVENT_ID\]/g, eventId);
-    }
-    
-    setMessageText(message);
-    setCustomMessage(false);
-  };
-
-  const handleCustomMessageToggle = () => {
-    setCustomMessage(true);
-    setSelectedTemplate(null);
-    setMessageText("");
-  };
-
-  // Use useEffect to sync external open state with internal state
-  React.useEffect(() => {
-    if (open !== undefined) {
-      setMessageDialogOpen(open);
-    }
-  }, [open]);
-
-  if (!volunteer) {
-    return null;
-  }
-
-  // Add helper function to filter templates by volunteer type
+  // Get filtered templates based on volunteer type
   const getFilteredTemplates = () => {
     const filteredCategories = {};
     
     Object.entries(MESSAGE_TEMPLATES).forEach(([categoryKey, category]) => {
       const filteredTemplates = category.templates.filter(template => 
         template.applicableRoles.includes(volunteerType) || 
-        template.applicableRoles.includes(volunteer?.type)
+        template.applicableRoles.includes(BatchEmailService.getRecipientType(volunteerType))
       );
       
       if (filteredTemplates.length > 0) {
@@ -241,228 +199,156 @@ const VolunteerCommunication = ({
     return filteredCategories;
   };
 
-  // Get filtered templates based on volunteer type
   const filteredTemplates = getFilteredTemplates();
 
-  // If used with external dialog control, skip the card and just show dialog
-  if (open !== undefined) {
-    return (
-      /* Send Message Dialog */
-      <Dialog
-        open={messageDialogOpen}
-        onClose={handleCloseMessageDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaPaperPlane />
-            Send Message to {volunteer.name || 'Volunteer'} ({volunteerType || volunteer.type})
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            {!customMessage && !selectedTemplate && (
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  Choose a Message Template for {volunteerType || volunteer.type}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  Templates filtered for {volunteerType || volunteer.type} role only
-                </Typography>
-                
-                {Object.entries(filteredTemplates).map(([categoryKey, category]) => (
-                  <Box key={categoryKey} sx={{ mb: 3 }}>
-                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                      {category.category}
-                    </Typography>
-                    <Grid container spacing={2}>
-                      {category.templates.map((template) => (
-                        <Grid item xs={12} sm={6} key={template.id}>
-                          <Card 
-                            variant="outlined" 
-                            sx={{ 
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                borderColor: 'primary.main',
-                                boxShadow: 1
-                              }
-                            }}
-                            onClick={() => handleTemplateSelect(template)}
-                          >
-                            <CardContent sx={{ pb: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <Typography variant="h6" component="span">
-                                  {template.icon}
-                                </Typography>
-                                <Typography variant="subtitle2" fontWeight="bold">
-                                  {template.title}
-                                </Typography>
-                              </Box>
-                              <Typography 
-                                variant="body2" 
-                                color="text.secondary"
-                                sx={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}
-                              >
-                                {template.message}
-                              </Typography>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                ))}
-                
-                {Object.keys(filteredTemplates).length === 0 && (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body1" color="text.secondary">
-                      No specific templates available for {volunteerType || volunteer.type}.
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      You can still write a custom message.
-                    </Typography>
-                  </Box>
-                )}
-                
-                <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    onClick={handleCustomMessageToggle}
-                    startIcon={<FaEdit />}
-                  >
-                    Write Custom Message
-                  </Button>
-                </Box>
-              </Box>
-            )}
+  useEffect(() => {
+    // Reset state when dialog opens/closes
+    if (!open) {
+      setCurrentStep(0);
+      setSelectedTemplate(null);
+      setCustomMessage(false);
+      setMessageText('');
+      setSubject('');
+      setIsScheduling(false);
+      setProgress(null);
+      setResults(null);
+      setShowDetails(false);
+    }
+  }, [open]);
 
-            {(selectedTemplate || customMessage) && (
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="h6">
-                    {selectedTemplate ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <span>{selectedTemplate.icon}</span>
-                        {selectedTemplate.title}
-                      </Box>
-                    ) : (
-                      'Custom Message'
-                    )}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setSelectedTemplate(null);
-                      setCustomMessage(false);
-                      setMessageText("");
-                    }}
-                  >
-                    Back to Templates
-                  </Button>
-                </Box>
-                
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={12}
-                  label="Message Content"
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  placeholder="Type your message to the volunteer..."
-                  variant="outlined"
-                  helperText={`Message will be sent to ${volunteer.name || 'volunteer'} at ${volunteer.email || 'their registered email'}`}
-                />
-                
-                {selectedTemplate && (
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      💡 Feel free to customize this template before sending. The message above can be edited to fit your specific needs.
-                    </Typography>
-                  </Alert>
-                )}
-              </Box>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseMessageDialog}>Cancel</Button>
-          {(selectedTemplate || customMessage) && (
-            <Button
-              onClick={handleSendMessage}
-              variant="contained"
-              color="primary"
-              disabled={loading || !messageText.trim()}
-              startIcon={loading ? <CircularProgress size={16} /> : <FaPaperPlane />}
-            >
-              Send Message
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(template);
+    setMessageText(template.message);
+    setSubject(template.title);
+    setCustomMessage(false);
+    setCurrentStep(1);
+  };
+
+  const handleCustomMessageToggle = () => {
+    setCustomMessage(true);
+    setSelectedTemplate(null);
+    setMessageText('');
+    setSubject('Message from Opportunity Hack');
+    setCurrentStep(1);
+  };
+
+  const handleBackToTemplates = () => {
+    setCurrentStep(0);
+    setSelectedTemplate(null);
+    setCustomMessage(false);
+    setMessageText('');
+    setSubject('');
+  };
+
+  const handleSendEmails = async () => {
+    const messageError = BatchEmailService.validateMessage(messageText);
+    const subjectError = BatchEmailService.validateSubject(subject);
+    
+    if (messageError || subjectError) {
+      return;
+    }
+
+    setIsScheduling(true);
+    setCurrentStep(2);
+    setProgress({ current: 0, total: eligibleUsers.length, percentage: 0 });
+
+    const batchEmailService = new BatchEmailService(
+      process.env.NEXT_PUBLIC_API_SERVER_URL,
+      accessToken,
+      orgId
     );
-  }
+
+    const recipientType = BatchEmailService.getRecipientType(volunteerType);
+
+    try {
+      const { results: emailResults, summary } = await batchEmailService.sendBatchEmails(
+        eligibleUsers,
+        messageText,
+        subject,
+        recipientType,
+        eventId,
+        (progressUpdate) => {
+          setProgress(progressUpdate);
+        }
+      );
+
+      setResults({ results: emailResults, summary });
+      
+      if (onComplete) {
+        onComplete(summary);
+      }
+    } catch (error) {
+      console.error('Error during batch email sending:', error);
+      setResults({
+        results: [],
+        summary: {
+          total: eligibleUsers.length,
+          successful: 0,
+          failed: eligibleUsers.length,
+          errors: [{ user: 'System', error: error.message }]
+        }
+      });
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isScheduling) {
+      onClose();
+    }
+  };
+
+  const getResultIcon = (success) => {
+    return success ? (
+      <CheckCircleIcon color="success" />
+    ) : (
+      <ErrorIcon color="error" />
+    );
+  };
+
+  const steps = ['Select Template', 'Review & Customize', 'Send Emails'];
 
   return (
-    <>
-      <Card elevation={1} sx={{ mb: 3 }}>
-        <CardHeader
-          title="Volunteer Communication"
-          subheader={`Send messages to ${volunteer.name || 'volunteer'} (${volunteer.email || 'No email'}) - Role: ${volunteerType || volunteer.type}`}
-        />
-        <Divider />
-        <CardContent>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <Typography variant="body2" color="text.secondary">
-              Role: {volunteerType || volunteer.type}
-            </Typography>
-            <Button
-              startIcon={<FaPaperPlane />}
-              variant="contained"
-              color="primary"
-              onClick={() => {
-                setSelectedTemplate(null);
-                setCustomMessage(false);
-                setMessageText("");
-                setMessageDialogOpen(true);
-              }}
-            >
-              Send Message
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+    <StyledDialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        <Box display="flex" alignItems="center" gap={1}>
+          <EmailIcon color="primary" />
+          <Typography variant="h6">
+            Send Batch Email to {volunteerType}
+          </Typography>
+        </Box>
+        <Stepper activeStep={currentStep} sx={{ mt: 2 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </DialogTitle>
+      
+      <DialogContent>
+        {/* Eligible Users Summary */}
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            Found <strong>{eligibleUsers.length}</strong> selected {volunteerType.toLowerCase()} with email addresses, out of <strong>{volunteers.length}</strong> total {volunteerType.toLowerCase()}.
+          </Typography>
+        </Alert>
 
-      {/* Send Message Dialog */}
-      <Dialog
-        open={messageDialogOpen}
-        onClose={handleCloseMessageDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaPaperPlane />
-            Send Message to {volunteer.name || 'Volunteer'} ({volunteerType || volunteer.type})
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            {!customMessage && !selectedTemplate && (
+        {eligibleUsers.length === 0 ? (
+          <Alert severity="warning">
+            No eligible users found. Users must be selected and have email addresses to receive emails.
+          </Alert>
+        ) : (
+          <>
+            {/* Step 0: Template Selection */}
+            {currentStep === 0 && (
               <Box>
                 <Typography variant="h6" gutterBottom>
-                  Choose a Message Template for {volunteerType || volunteer.type}
+                  Choose a Message Template for {volunteerType}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Templates filtered for {volunteerType || volunteer.type} role only
+                  Templates filtered for {volunteerType} role only
                 </Typography>
                 
                 {Object.entries(filteredTemplates).map(([categoryKey, category]) => (
@@ -518,7 +404,7 @@ const VolunteerCommunication = ({
                 {Object.keys(filteredTemplates).length === 0 && (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
-                      No specific templates available for {volunteerType || volunteer.type}.
+                      No specific templates available for {volunteerType}.
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                       You can still write a custom message.
@@ -539,7 +425,8 @@ const VolunteerCommunication = ({
               </Box>
             )}
 
-            {(selectedTemplate || customMessage) && (
+            {/* Step 1: Review & Customize */}
+            {currentStep === 1 && (
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="h6">
@@ -554,15 +441,22 @@ const VolunteerCommunication = ({
                   </Typography>
                   <Button
                     size="small"
-                    onClick={() => {
-                      setSelectedTemplate(null);
-                      setCustomMessage(false);
-                      setMessageText("");
-                    }}
+                    onClick={handleBackToTemplates}
+                    startIcon={<ArrowBackIcon />}
                   >
                     Back to Templates
                   </Button>
                 </Box>
+
+                <TextField
+                  fullWidth
+                  label="Email Subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  error={!!BatchEmailService.validateSubject(subject)}
+                  helperText={BatchEmailService.validateSubject(subject) || 'Email subject line'}
+                  sx={{ mb: 2 }}
+                />
                 
                 <TextField
                   fullWidth
@@ -571,9 +465,10 @@ const VolunteerCommunication = ({
                   label="Message Content"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  placeholder="Type your message to the volunteer..."
+                  error={!!BatchEmailService.validateMessage(messageText)}
+                  helperText={BatchEmailService.validateMessage(messageText) || `Message will be sent to ${eligibleUsers.length} ${volunteerType.toLowerCase()}`}
+                  placeholder="Type your message..."
                   variant="outlined"
-                  helperText={`Message will be sent to ${volunteer.name || 'volunteer'} at ${volunteer.email || 'their registered email'}`}
                 />
                 
                 {selectedTemplate && (
@@ -583,27 +478,132 @@ const VolunteerCommunication = ({
                     </Typography>
                   </Alert>
                 )}
+
+                {/* Users to be emailed */}
+                <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                  Users to be emailed:
+                </Typography>
+                <Box sx={{ mb: 2, maxHeight: '150px', overflow: 'auto' }}>
+                  {eligibleUsers.map((user, index) => (
+                    <Chip
+                      key={index}
+                      label={`${user.name || 'Unknown'} (${user.email})`}
+                      size="small"
+                      sx={{ m: 0.5 }}
+                      icon={<PersonIcon />}
+                    />
+                  ))}
+                </Box>
               </Box>
             )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseMessageDialog}>Cancel</Button>
-          {(selectedTemplate || customMessage) && (
-            <Button
-              onClick={handleSendMessage}
-              variant="contained"
-              color="primary"
-              disabled={loading || !messageText.trim()}
-              startIcon={loading ? <CircularProgress size={16} /> : <FaPaperPlane />}
-            >
-              Send Message
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-    </>
+
+            {/* Step 2: Progress & Results */}
+            {currentStep === 2 && (
+              <Box>
+                {/* Progress */}
+                {progress && !results && (
+                  <ProgressContainer>
+                    <Typography variant="body2" gutterBottom>
+                      Sending email to {progress.currentUser}... ({progress.current}/{progress.total})
+                    </Typography>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={progress.percentage} 
+                      sx={{ mb: 1 }}
+                    />
+                    <Typography variant="caption" color="textSecondary">
+                      {progress.percentage}% complete
+                    </Typography>
+                  </ProgressContainer>
+                )}
+
+                {/* Results */}
+                {results && (
+                  <Card sx={{ mt: 2 }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Email Results
+                      </Typography>
+                      
+                      <Box display="flex" gap={2} mb={2}>
+                        <Chip 
+                          label={`${results.summary.successful} Successful`}
+                          color="success"
+                          size="small"
+                        />
+                        <Chip 
+                          label={`${results.summary.failed} Failed`}
+                          color="error"
+                          size="small"
+                        />
+                      </Box>
+
+                      {results.summary.errors.length > 0 && (
+                        <>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <IconButton
+                              size="small"
+                              onClick={() => setShowDetails(!showDetails)}
+                            >
+                              {showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                            <Typography variant="body2">
+                              View Details ({results.summary.errors.length} errors)
+                            </Typography>
+                          </Box>
+
+                          <Collapse in={showDetails}>
+                            <ResultsList>
+                              {results.results.map((result, index) => (
+                                <ListItem key={index}>
+                                  <ListItemIcon>
+                                    {getResultIcon(result.success)}
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primary={result.user.name || result.user.email}
+                                    secondary={
+                                      result.success 
+                                        ? 'Email sent successfully'
+                                        : result.error
+                                    }
+                                  />
+                                </ListItem>
+                              ))}
+                            </ResultsList>
+                          </Collapse>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </Box>
+            )}
+          </>
+        )}
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={handleClose} disabled={isScheduling}>
+          {results ? 'Close' : 'Cancel'}
+        </Button>
+        
+        {currentStep === 1 && !results && eligibleUsers.length > 0 && (
+          <Button
+            onClick={handleSendEmails}
+            variant="contained"
+            disabled={
+              isScheduling || 
+              !!BatchEmailService.validateMessage(messageText) || 
+              !!BatchEmailService.validateSubject(subject)
+            }
+            startIcon={<FaPaperPlane />}
+          >
+            {isScheduling ? 'Sending...' : `Send to ${eligibleUsers.length} Users`}
+          </Button>
+        )}
+      </DialogActions>
+    </StyledDialog>
   );
 };
 
-export default VolunteerCommunication;
+export default BatchEmailDialog;
