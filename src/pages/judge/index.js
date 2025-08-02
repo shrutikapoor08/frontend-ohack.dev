@@ -240,12 +240,12 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
             <Box component="ul" sx={{ pl: 3, mb: 2 }}>
               <li>
                 <Typography variant="body2">
-                  <strong>Round 1:</strong> Review 4-minute team pitch videos and evaluate based on our scoring criteria
+                  <strong>Round 1:</strong> Review 4-minute team pitch videos (from DevPost) and project on GitHub - evaluate based on our scoring criteria
                 </Typography>
               </li>
               <li>
                 <Typography variant="body2">
-                  <strong>Round 2:</strong> Live demos with finalist teams, including Q&A sessions
+                  <strong>Round 2:</strong> Online: Review responses to Round 1 questions, and re-evaluate projects based on new information, then submit final scores. In-person: Live demos with finalist teams, including Q&A sessions
                 </Typography>
               </li>
             </Box>
