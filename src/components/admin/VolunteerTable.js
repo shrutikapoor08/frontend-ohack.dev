@@ -73,6 +73,7 @@ const VolunteerTable = ({
   onMessageVolunteer,
   onSlackInvite,
   onBatchEmail,
+  onBatchEmailNotSelected,
 }) => {
   console.log("VolunteerTable", volunteers);
   const columns = useMemo(() => {
@@ -143,6 +144,12 @@ const VolunteerTable = ({
     ).length;
   }, [volunteers]);
 
+  const notSelectedForEmailCount = useMemo(() => {
+    return volunteers.filter((volunteer) => 
+      !volunteer.isSelected && volunteer.email && volunteer.email.trim() !== '' && volunteer.id
+    ).length;
+  }, [volunteers]);
+
   const renderCellContent = (volunteer, column) => {
     switch (column.id) {
       case "id":
@@ -192,13 +199,13 @@ const VolunteerTable = ({
         <Typography variant="h6">
           Total {type}: {volunteers.length} | Selected: {selectedCount}
         </Typography>
-        <Box display="flex" gap={1}>
+        <Box display="flex" gap={1} flexWrap="wrap">
           {onBatchEmail && eligibleForEmailCount > 0 && (
             <Button
               variant="contained"
               color="secondary"
               startIcon={<EmailIcon />}
-              onClick={() => onBatchEmail(volunteers, type)}
+              onClick={() => onBatchEmail(volunteers, type, true)}
               size="small"
             >
               Send Email ({eligibleForEmailCount})
@@ -213,6 +220,17 @@ const VolunteerTable = ({
               size="small"
             >
               Invite to Slack ({eligibleForSlackCount})
+            </Button>
+          )}
+          {onBatchEmailNotSelected && notSelectedForEmailCount > 0 && (
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<EmailIcon />}
+              onClick={() => onBatchEmailNotSelected(volunteers, type, false)}
+              size="small"
+            >
+              Send Rejection Email ({notSelectedForEmailCount})
             </Button>
           )}
         </Box>

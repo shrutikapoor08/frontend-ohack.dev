@@ -137,6 +137,20 @@ class BatchEmailService {
   }
 
   /**
+   * Filter users who are NOT selected and have email addresses (for rejection emails)
+   * @param {Array} users - Array of user objects
+   * @returns {Array} Filtered users ready for rejection email sending
+   */
+  static filterNotSelectedUsers(users) {
+    return users.filter(user => 
+      !user.isSelected && 
+      user.email && 
+      user.email.trim() !== '' &&
+      user.id // Must have an ID for the API endpoint
+    );
+  }
+
+  /**
    * Validate email message content
    * @param {string} message - Message content to validate
    * @returns {string} Error message if invalid, empty string if valid

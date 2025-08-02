@@ -64,6 +64,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const [batchEmailDialogOpen, setBatchEmailDialogOpen] = useState(false);
   const [volunteersForBatchEmail, setVolunteersForBatchEmail] = useState([]);
   const [volunteerTypeForBatchEmail, setVolunteerTypeForBatchEmail] = useState('');
+  const [isSelectedUsersForEmail, setIsSelectedUsersForEmail] = useState(true);
 
   const org = userClass.getOrgByName("Opportunity Hack Org");
   const isAdmin = org.hasPermission("volunteer.admin");
@@ -287,22 +288,25 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     setVolunteerTypeForSlackInvite('');
   }, []);
 
-  const handleBatchEmail = useCallback((volunteers, type) => {
+  const handleBatchEmail = useCallback((volunteers, type, isSelected = true) => {
     setVolunteersForBatchEmail(volunteers);
     setVolunteerTypeForBatchEmail(type);
+    setIsSelectedUsersForEmail(isSelected);
     setBatchEmailDialogOpen(true);
   }, []);
 
   const handleBatchEmailComplete = useCallback((summary) => {
+    const messageType = isSelectedUsersForEmail ? 'Batch emails' : 'Rejection emails';
     setSnackbar({
       open: true,
-      message: `Batch emails completed: ${summary.successful} successful, ${summary.failed} failed`,
+      message: `${messageType} completed: ${summary.successful} successful, ${summary.failed} failed`,
       severity: summary.failed > 0 ? "warning" : "success",
     });
     setBatchEmailDialogOpen(false);
     setVolunteersForBatchEmail([]);
     setVolunteerTypeForBatchEmail('');
-  }, []);
+    setIsSelectedUsersForEmail(true);
+  }, [isSelectedUsersForEmail]);
 
   const handleAddSingleVolunteer = useCallback(() => {
     setEditingVolunteer({
@@ -798,6 +802,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
                 onMessageVolunteer={handleMessageVolunteer}
                 onSlackInvite={handleSlackInvite}
                 onBatchEmail={handleBatchEmail}
+                onBatchEmailNotSelected={handleBatchEmail}
               />
               {sortedVolunteers.length === 0 && (
                 <Box sx={{ mt: 2, textAlign: "center" }}>
@@ -888,6 +893,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
           setBatchEmailDialogOpen(false);
           setVolunteersForBatchEmail([]);
           setVolunteerTypeForBatchEmail('');
+          setIsSelectedUsersForEmail(true);
         }}
         volunteers={volunteersForBatchEmail}
         volunteerType={volunteerTypeForBatchEmail}
@@ -895,6 +901,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         orgId={orgId}
         eventId={selectedEventId}
         onComplete={handleBatchEmailComplete}
+        isSelectedUsers={isSelectedUsersForEmail}
       />
     </AdminPage>
   );

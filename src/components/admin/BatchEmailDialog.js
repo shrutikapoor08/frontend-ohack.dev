@@ -164,6 +164,7 @@ const BatchEmailDialog = ({
   orgId,
   eventId,
   onComplete,
+  isSelectedUsers = true, // true for selected/approved users, false for not-selected/rejected users
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -175,8 +176,10 @@ const BatchEmailDialog = ({
   const [results, setResults] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  // Filter eligible users when volunteers change
-  const eligibleUsers = BatchEmailService.filterEligibleUsers(volunteers);
+  // Filter eligible users when volunteers change based on context
+  const eligibleUsers = isSelectedUsers 
+    ? BatchEmailService.filterEligibleUsers(volunteers)
+    : BatchEmailService.filterNotSelectedUsers(volunteers);
 
   // Get filtered templates based on volunteer type
   const getFilteredTemplates = () => {
@@ -213,8 +216,17 @@ const BatchEmailDialog = ({
       setProgress(null);
       setResults(null);
       setShowDetails(false);
+    } else if (!isSelectedUsers) {
+      // Auto-suggest the "Application Not Approved" template for not-selected users
+      const denialTemplate = MESSAGE_TEMPLATES.DENIAL.templates.find(t => t.id === 'application_denied');
+      if (denialTemplate) {
+        setSelectedTemplate(denialTemplate);
+        setMessageText(denialTemplate.message);
+        setSubject(denialTemplate.title);
+        setCurrentStep(1); // Skip template selection and go to review step
+      }
     }
-  }, [open]);
+  }, [open, isSelectedUsers]);
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template);
@@ -315,7 +327,10 @@ const BatchEmailDialog = ({
         <Box display="flex" alignItems="center" gap={1}>
           <EmailIcon color="primary" />
           <Typography variant="h6">
-            Send Batch Email to {volunteerType}
+            {isSelectedUsers 
+              ? `Send Batch Email to Selected ${volunteerType}`
+              : `Send Rejection Email to Not Selected ${volunteerType}`
+            }
           </Typography>
         </Box>
         <Stepper activeStep={currentStep} sx={{ mt: 2 }}>
@@ -331,13 +346,14 @@ const BatchEmailDialog = ({
         {/* Eligible Users Summary */}
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            Found <strong>{eligibleUsers.length}</strong> selected {volunteerType.toLowerCase()} with email addresses, out of <strong>{volunteers.length}</strong> total {volunteerType.toLowerCase()}.
+            Found <strong>{eligibleUsers.length}</strong> {isSelectedUsers ? 'selected' : 'not selected'} {volunteerType.toLowerCase()} 
+            with email addresses out of <strong>{volunteers.length}</strong> total {volunteerType.toLowerCase()}.
           </Typography>
         </Alert>
 
         {eligibleUsers.length === 0 ? (
           <Alert severity="warning">
-            No eligible users found. Users must be selected and have email addresses to receive emails.
+            No eligible users found. Users must be {isSelectedUsers ? 'selected' : 'not selected'} and have email addresses to receive emails.
           </Alert>
         ) : (
           <>
@@ -428,6 +444,15 @@ const BatchEmailDialog = ({
             {/* Step 1: Review & Customize */}
             {currentStep === 1 && (
               <Box>
+                {!isSelectedUsers && selectedTemplate?.id === 'application_denied' && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      💡 We've automatically selected the "Application Not Approved" template for not-selected {volunteerType.toLowerCase()}. 
+                      You can customize the message below or choose a different template.
+                    </Typography>
+                  </Alert>
+                )}
+                
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="h6">
                     {selectedTemplate ? (
