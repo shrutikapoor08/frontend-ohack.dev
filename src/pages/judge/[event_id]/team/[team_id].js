@@ -629,9 +629,12 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
 
                 {/* Project Links */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>
+                    <Typography variant="subtitle1" gutterBottom>
                     Project Links
-                  </Typography>
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    You'll be evaluating the DevPost project, video, and GitHub repository against the judging criteria below.
+                    </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {teamData.github_url && (
                       <Button
@@ -687,7 +690,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                 {/* Slack Channel */}
                 {teamData.slack_channel && (
                   <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>
+                  <Typography variant="subtitle1" gutterBottom>
                     Slack Channel
                   </Typography>
                   <Button
@@ -702,8 +705,16 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                   >
                     Join {teamData.slack_channel}
                   </Button>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Click to open in Slack app or browser
+                  <Typography variant="body2" color="text.secondary" display="block">
+                    Slack guidance for Round 1 questions: It's okay to use @here or @channel to notify all team members as you ask questions. You can record video or audio of yourself asking questions using the tools within Slack, or you can screenshot areas you have questions on, or simply use text.{' '}
+                    <Link 
+                      href="https://slack.com/help/articles/4406235165587-Create-audio-and-video-clips-in-Slack" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      sx={{ fontSize: 'inherit' }}
+                    >
+                      Learn how to create audio and video clips in Slack.
+                    </Link>
                   </Typography>
                   </Box>
                 )}
@@ -797,7 +808,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                     rows={6}
                     value={feedback.general || ''}
                     onChange={(e) => setFeedbackGeneral(e.target.value)}
-                    placeholder="Provide specific, constructive feedback to help this team improve their solution...\n\nConsider commenting on:\n• Technical implementation and code quality\n• User experience and design\n• Impact and scalability\n• Areas for improvement\n• What they did well"
+                    placeholder="Provide specific, constructive feedback to help this team improve their solution... Consider commenting on: Technical implementation and code quality, User experience and design, Impact and scalability, Areas for improvement, What they did well"
                     variant="outlined"
                     sx={{
                       '& .MuiOutlinedInput-root': {
