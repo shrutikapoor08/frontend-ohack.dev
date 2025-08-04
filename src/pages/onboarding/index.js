@@ -205,6 +205,9 @@ function OnboardingComponent() {
       
       setCompleted(allCompleted);
       
+      // Mark onboarding as completed to prevent dialog from showing again
+      localStorage.setItem('ohack_onboarding_completed', 'true');
+      
       setOpenCongratulatoryDialog(true); // Open the dialog
     } catch (err) {
       console.error('Error completing onboarding:', err);
