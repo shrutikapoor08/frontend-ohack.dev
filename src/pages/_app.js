@@ -33,6 +33,10 @@ const GA = dynamic(() => import('../components/GA/GA'), {
   ssr: false
 });
 
+const OnboardingDialog = dynamic(() => import('../components/Onboarding/OnboardingDialog'), {
+  ssr: false
+});
+
 // This default export is required in a new `pages/_app.js` file.
 export default function MyApp({ Component, pageProps }) {
   const { openGraphData = [] } = pageProps;
@@ -64,6 +68,7 @@ export default function MyApp({ Component, pageProps }) {
                 {!isPrintTimelinePage && <Footer />}              
               </Box>
             </CssBaseline>
+            <OnboardingDialog />
           </ThemeProvider>
         </AxiosWrapper>
       </AuthProvider>

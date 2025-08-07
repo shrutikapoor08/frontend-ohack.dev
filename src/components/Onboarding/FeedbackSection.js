@@ -66,6 +66,10 @@ const TopicChip = styled(Chip)(({ theme, selected }) => ({
 /**
  * FeedbackSection component
  * Collects feedback from users about their onboarding experience
+ * 
+ * Spam Prevention: Includes user agent and timestamp in feedback data
+ * to help prevent multiple submissions from the same source.
+ * IP address will be captured server-side for additional protection.
  */
 const FeedbackSection = () => {
   const { user, isLoggedIn } = useAuthInfo();
@@ -105,6 +109,26 @@ const FeedbackSection = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [errors, setErrors] = useState({});
 
+  // Function to get client IP address and user agent
+  const getClientInfo = async () => {
+    const userAgent = navigator.userAgent || 'Unknown';
+    
+    // Get IP address from a public IP service
+    let ipAddress = 'Unknown';
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      ipAddress = data.ip;
+    } catch (error) {
+      console.warn('Could not fetch IP address:', error);
+    }
+    
+    return {
+      userAgent,
+      ipAddress
+    };
+  };
+
   // Available topics for feedback
   const topicOptions = [
     'Mission Overview', 
@@ -134,6 +158,15 @@ const FeedbackSection = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check for recent submission to prevent spam
+    const lastSubmission = localStorage.getItem('ohack_feedback_last_submission');
+    const now = Date.now();
+    if (lastSubmission && (now - parseInt(lastSubmission)) < 60000) { // 1 minute cooldown
+      showMessage('Please wait a moment before submitting another feedback.', 'warning');
+      return;
+    }
+    
     setSubmitting(true);
     let newErrors = {};
     if (overallRating === 0) {
@@ -157,6 +190,9 @@ const FeedbackSection = () => {
       return;
     }
 
+    // Get client information for spam prevention
+    const clientInfo = await getClientInfo();
+    
     // Prepare feedback data in the required format
     const feedbackData = {
       overallRating,
@@ -167,13 +203,18 @@ const FeedbackSection = () => {
       additionalFeedback,
       contactForFollowup: contactForFollowup
         ? { willing: true, firstName, email }
-        : { willing: false }
+        : { willing: false },
+      // Add client information for spam prevention
+      clientInfo: {
+        userAgent: clientInfo.userAgent,
+        ipAddress: clientInfo.ipAddress
+      }
     };
 
     try {
       // Indicate submit was clicked and API will be called
       console.log('Submit Feedback button clicked. Calling /onboarding_feedback API...');
-      // Log the data for debugging
+      // Log the data for debugging (including client info for spam prevention)
       console.log('Feedback data to be sent to /onboarding_feedback:', feedbackData);
       await axios.post(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/onboarding_feedback`, 
         feedbackData);
@@ -187,6 +228,8 @@ const FeedbackSection = () => {
       });
       setSubmitting(false);
       setSubmitted(true);
+      // Record submission timestamp for spam prevention
+      localStorage.setItem('ohack_feedback_last_submission', Date.now().toString());
       showMessage('Thank you for your feedback! It helps us improve the onboarding experience.');
     } catch (error) {
       setSubmitting(false);
@@ -206,6 +249,9 @@ const FeedbackSection = () => {
     setFirstName('');
     setEmail('');
     setSubmitted(false);
+    
+    // Clear submission timestamp to allow new feedback
+    localStorage.removeItem('ohack_feedback_last_submission');
   };
 
   // Persist all feedback fields to localStorage on change
