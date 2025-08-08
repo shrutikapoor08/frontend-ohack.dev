@@ -38,7 +38,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   GetApp as DownloadIcon,
   Share as ShareIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  ContentCopy as ContentCopyIcon
 } from '@mui/icons-material';
 import { useAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
@@ -408,6 +409,46 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
     document.body.removeChild(link);
     
     enqueueSnackbar('Results exported successfully!', { variant: 'success' });
+  };
+
+  // Copy all feedback for a team to clipboard
+  const copyAllFeedback = (teamScoreData) => {
+    if (!teamScoreData || teamScoreData.scores.length === 0) {
+      enqueueSnackbar('No feedback available to copy', { variant: 'warning' });
+      return;
+    }
+
+    const feedbackText = [
+      `=== Feedback for ${teamScoreData.team.name} ===`,
+      `Average Score: ${teamScoreData.averageScore.toFixed(1)}`,
+      `Total Score: ${teamScoreData.totalScore.toFixed(1)}`,
+      `Judges Complete: ${teamScoreData.judgeCount}/${teamScoreData.totalAssignedJudges}`,
+      '',
+      '--- Individual Judge Feedback ---',
+      ...teamScoreData.scores.map((judgeScore) => {
+        const judgeName = judgeScore.judge.name || 
+          (judgeScore.judge.firstName && judgeScore.judge.lastName 
+            ? `${judgeScore.judge.firstName} ${judgeScore.judge.lastName}` 
+            : judgeScore.judge.firstName || judgeScore.judge.lastName || 'Unknown Judge');
+        
+        const company = judgeScore.judge.company || judgeScore.judge.companyName || 'Unknown Company';
+        const totalScore = judgeScore?.score?.total_score || 0;
+        const feedback = typeof judgeScore.score?.feedback === 'object' 
+          ? judgeScore.score?.feedback?.general || 'No feedback provided'
+          : judgeScore.score?.feedback || 'No feedback provided';
+
+        return [                    
+          `Judge Feedback: ${feedback}`,
+          ''
+        ].join('\n');
+      })
+    ].join('\n');
+
+    navigator.clipboard.writeText(feedbackText).then(() => {
+      enqueueSnackbar('All feedback copied to clipboard!', { variant: 'success' });
+    }).catch(() => {
+      enqueueSnackbar('Failed to copy feedback to clipboard', { variant: 'error' });
+    });
   };
 
   // Winner podium component with animations
@@ -836,9 +877,22 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                 </Grid>
               </Box>
               
-              <Typography variant="h6" gutterBottom>
-                {selectedTeamScores.scores.length > 0 ? 'Individual Judge Scores' : 'Judge Assignments'}
-              </Typography>
+              {/* Replace heading with container + copy button */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, mt: 2 }}>
+                <Typography variant="h6">
+                  {selectedTeamScores.scores.length > 0 ? 'Individual Judge Scores' : 'Judge Assignments'}
+                </Typography>
+                {selectedTeamScores.scores.length > 0 && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<ContentCopyIcon />}
+                    onClick={() => copyAllFeedback(selectedTeamScores)}
+                  >
+                    Copy All Feedback
+                  </Button>
+                )}
+              </Box>
               
               {selectedTeamScores.totalAssignedJudges === 0 ? (
                 <Alert severity="warning">
@@ -851,10 +905,13 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                       <TableRow>
                         <TableCell>Judge</TableCell>
                         <TableCell>Company</TableCell>
-                        {selectedTeamScores.scores[0] && Object.keys(selectedTeamScores.scores[0].score.scores).map(criteria => (
-                          <TableCell key={criteria} align="center">
-                            {criteria.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          </TableCell>
+                        {selectedTeamScores.scores?.[0]?.score?.scores && Object
+                          .keys(selectedTeamScores.scores[0].score.scores)
+                          .filter(k => k.toLowerCase() !== 'total') // prevent duplicate Total column
+                          .map(criteria => (
+                            <TableCell key={criteria} align="center">
+                              {criteria.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </TableCell>
                         ))}
                         <TableCell align="center">Total</TableCell>
                         <TableCell>Feedback</TableCell>
@@ -862,27 +919,36 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                     </TableHead>
                     <TableBody>
                       {selectedTeamScores.scores.map((judgeScore, index) => {
-                        const totalScore = judgeScore.score.total_score || 0;
+                        const totalScore = judgeScore?.score?.total_score || 0;
+                        if (!judgeScore || !judgeScore.judge) {
+                          return null; // Skip invalid entries
+                        }
                         return (
                           <TableRow key={index}>
                             <TableCell>
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {judgeScore.judge.name || judgeScore.judge.firstName + ' ' + judgeScore.judge.lastName}
+                                {judgeScore.judge.name || 
+                                  (judgeScore.judge.firstName && judgeScore.judge.lastName 
+                                    ? `${judgeScore.judge.firstName} ${judgeScore.judge.lastName}` 
+                                    : judgeScore.judge.firstName || judgeScore.judge.lastName || 'Unknown Judge')}
                               </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
-                                {judgeScore.judge.company || judgeScore.judge.companyName}
+                                {judgeScore.judge.company || judgeScore.judge.companyName || 'Unknown Company'}
                               </Typography>
                             </TableCell>
-                            {Object.entries(judgeScore.score.scores).map(([criteria, score]) => (
-                              <TableCell key={criteria} align="center">
-                                <Chip 
-                                  label={score} 
-                                  size="small" 
-                                  color={score >= 8 ? 'success' : score >= 6 ? 'warning' : 'default'}
-                                />
-                              </TableCell>
+                            {judgeScore.score?.scores && Object
+                              .entries(judgeScore.score.scores)
+                              .filter(([k]) => k.toLowerCase() !== 'total')
+                              .map(([criteria, score]) => (
+                                <TableCell key={criteria} align="center">
+                                  <Chip
+                                    label={score || 0}
+                                    size="small"
+                                    color={score >= 8 ? 'success' : score >= 6 ? 'warning' : 'default'}
+                                  />
+                                </TableCell>
                             ))}
                             <TableCell align="center">
                               <Typography variant="body1" sx={{ fontWeight: 600 }}>
@@ -891,7 +957,9 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
-                                {judgeScore.score.feedback || 'No feedback provided'}
+                                {typeof judgeScore.score?.feedback === 'object' 
+                                  ? judgeScore.score?.feedback?.general || 'No feedback provided'
+                                  : judgeScore.score?.feedback || 'No feedback provided'}
                               </Typography>
                             </TableCell>
                           </TableRow>

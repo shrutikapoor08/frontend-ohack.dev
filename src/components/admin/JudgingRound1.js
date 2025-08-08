@@ -743,6 +743,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     setLoadingPanels(true);
     try {
       // Step 1: Load panels
+      console.log('Loading existing panels for hackathon:', selectedHackathon);
       const panelsResponse = await axios.get(
         `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${selectedHackathon}`,
         {

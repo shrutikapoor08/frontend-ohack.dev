@@ -239,18 +239,39 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
 
         console.log('Scores Response:', scoresResponse);
 
-
-        // Find existing score for this team
+        // Find existing submitted score for this team
         const existingScore = scoresResponse.scores?.find(
           score => score.team_id === team_id && score.round === round
         );
         
         if (existingScore) {
+          // Use submitted score if it exists
           setScores(existingScore.scores);
           setFeedback(existingScore.feedback || {});
+          console.log('Loaded submitted score:', existingScore.scores);
         } else {
-          setScores(initializeScores());
-          setFeedback({});
+          // If no submitted score, check for draft
+          try {
+            const draftResponse = await judgeApi.getDraft(user.userId, team_id, event_id, round, accessToken);
+            console.log('Draft Response:', draftResponse);
+            if (draftResponse && draftResponse.draft && draftResponse.draft.scores) {
+              // Remove the 'total' key from draft scores to avoid interference
+              const { total, ...draftScores } = draftResponse.draft.scores;
+              setScores(draftScores);
+              setFeedback(draftResponse.draft.feedback || {});
+              console.log('Loaded draft score:', draftScores);
+              console.log('Loaded draft feedback:', draftResponse.draft.feedback);
+              enqueueSnackbar('Draft scores loaded', { variant: 'info' });
+            } else {
+              setScores(initializeScores());
+              setFeedback({});
+              console.log('No existing scores or drafts, initialized defaults');
+            }
+          } catch (draftError) {
+            console.log('No draft found, using default scores');
+            setScores(initializeScores());
+            setFeedback({});
+          }
         }
         
       } catch (error) {
@@ -263,7 +284,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
     };
 
     fetchData();
-  }, [team_id, event_id, round, user.userId, accessToken, enqueueSnackbar, initializeScores]);
+  }, [team_id, event_id, round, user.userId, accessToken, enqueueSnackbar]);
 
   // Auto-save functionality
   useEffect(() => {
@@ -319,8 +340,9 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
       enqueueSnackbar('Score and feedback submitted successfully!', { variant: 'success' });
       setSubmitDialog(false);
       
-      // Go back to hackathon page
-      router.push(`/judge/${event_id}`);
+      // Go back to hackathon page, preserving the round tab
+      const tabParam = round === 'round2' ? 'round2' : 'round1';
+      router.push(`/judge/${event_id}?tab=${tabParam}`);
       
     } catch (error) {
       console.error('Error submitting score:', error);
@@ -554,7 +576,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
         <Box sx={{ mt: 12, mb: 4 }}>
           {/* Header */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <IconButton onClick={() => router.push(`/judge/${event_id}`)} sx={{ mr: 2 }}>
+            <IconButton onClick={() => router.push(`/judge/${event_id}?tab=${round === 'round2' ? 'round2' : 'round1'}`)} sx={{ mr: 2 }}>
               <BackIcon />
             </IconButton>
             <div>
@@ -836,7 +858,7 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                   <Button
                     variant="outlined"
-                    onClick={() => router.push(`/judge/${event_id}`)}
+                    onClick={() => router.push(`/judge/${event_id}?tab=${round === 'round2' ? 'round2' : 'round1'}`)}
                   >
                     Cancel
                   </Button>

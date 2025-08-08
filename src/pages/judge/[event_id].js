@@ -47,10 +47,10 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
   const [teamsData, setTeamsData] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
 
+  // Initialize tab from URL parameter only once when event_id is available
   useEffect(() => {
-    if (!event_id) return;
+    if (!event_id || !router.isReady) return;
     
-    // Initialize tab from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     if (tabParam === 'round2') {
@@ -58,10 +58,11 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
     } else if (tabParam === 'round1') {
       setActiveTab(0);
     }
-  }, [event_id]);
+    // Remove the URL parameter dependency that was causing re-renders
+  }, [event_id, router.isReady]);
 
   useEffect(() => {
-    if (!event_id) return;
+    if (!event_id || !router.isReady) return;
     
     const fetchTeams = async () => {
       try {
@@ -77,16 +78,17 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
     };
 
     fetchTeams();
-  }, [event_id, user.userId, accessToken, enqueueSnackbar]);
+  }, [event_id, user.userId, accessToken, enqueueSnackbar, router.isReady]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
     
     // Update URL parameter to persist tab selection
     const tabParam = newValue === 1 ? 'round2' : 'round1';
-    const url = new URL(window.location);
-    url.searchParams.set('tab', tabParam);
-    router.replace(url.pathname + url.search, undefined, { shallow: true });
+    
+    // Use router.asPath to get the actual path with interpolated values
+    const currentPath = router.asPath.split('?')[0]; // Remove existing query params
+    router.replace(`${currentPath}?tab=${tabParam}`, undefined, { shallow: true });
   };
 
   const formatDateTime = (dateString) => {

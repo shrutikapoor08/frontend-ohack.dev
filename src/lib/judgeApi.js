@@ -344,6 +344,34 @@ class JudgeApiService {
   }
 
   /**
+   * Get draft score for a specific team/judge/event/round combination
+   * @param {string} judgeId - Judge user ID
+   * @param {string} teamId - Team ID
+   * @param {string} eventId - Event ID
+   * @param {string} round - 'round1' or 'round2'
+   * @param {string} accessToken - Auth token
+   * @returns {Promise} Draft data or null if no draft exists
+   */
+  async getDraft(judgeId, teamId, eventId, round, accessToken) {
+    try {
+      const response = await axios.get(
+        `${this.baseURL}/api/judge/draft/${judgeId}/${teamId}/${eventId}/${round}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching draft:', error);
+      // Return null if no draft exists (common case)
+      return null;
+    }
+  }
+
+  /**
    * Admin: Create judge panel
    * @param {string} eventId - Event ID
    * @param {string} panelName - Panel name
