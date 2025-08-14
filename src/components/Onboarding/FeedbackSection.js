@@ -226,6 +226,19 @@ const FeedbackSection = () => {
           topics_count: usefulTopics.length
         }
       });
+      // Store the original feedback data for potential editing
+      setOriginalFeedback({
+        overallRating,
+        usefulTopics,
+        missingTopics,
+        easeOfUnderstanding,
+        improvements,
+        additionalFeedback,
+        contactForFollowup,
+        firstName,
+        email
+      });
+      
       setSubmitting(false);
       setSubmitted(true);
       // Record submission timestamp for spam prevention
@@ -237,17 +250,23 @@ const FeedbackSection = () => {
     }
   };
 
-  // Reset the form
+  // Store original feedback data for editing
+  const [originalFeedback, setOriginalFeedback] = useState(null);
+
+  // Reset the form to allow editing
   const resetForm = () => {
-    setOverallRating(0);
-    setUsefulTopics([]);
-    setMissingTopics('');
-    setEaseOfUnderstanding('');
-    setImprovements('');
-    setAdditionalFeedback('');
-    setContactForFollowup(false);
-    setFirstName('');
-    setEmail('');
+    // Restore the original feedback data instead of clearing it
+    if (originalFeedback) {
+      setOverallRating(originalFeedback.overallRating || 0);
+      setUsefulTopics(originalFeedback.usefulTopics || []);
+      setMissingTopics(originalFeedback.missingTopics || '');
+      setEaseOfUnderstanding(originalFeedback.easeOfUnderstanding || '');
+      setImprovements(originalFeedback.improvements || '');
+      setAdditionalFeedback(originalFeedback.additionalFeedback || '');
+      setContactForFollowup(originalFeedback.contactForFollowup || false);
+      setFirstName(originalFeedback.firstName || '');
+      setEmail(originalFeedback.email || '');
+    }
     setSubmitted(false);
     
     // Clear submission timestamp to allow new feedback
@@ -342,7 +361,7 @@ const FeedbackSection = () => {
               <Typography variant="body1" paragraph sx={{ fontSize: '1.2rem' }}>
                 {contactForFollowup ? 
                   `We'll be in touch with you soon at ${email} to discuss your feedback further.` : 
-                  'If you have any additional thoughts, feel free to share them in our Slack community.'}
+                  'You can edit your feedback if you\'d like to make any changes.'}
               </Typography>
               <Button 
                 variant="outlined" 
@@ -350,7 +369,7 @@ const FeedbackSection = () => {
                 onClick={resetForm}
                 sx={{ mt: 2, fontSize: '1.1rem', py: 1.5, px: 3 }}
               >
-                Provide Additional Feedback
+                Edit feedback
               </Button>
             </CardContent>
           </Card>
