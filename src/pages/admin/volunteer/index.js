@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuthInfo, withRequiredAuthInfo } from "@propelauth/react";
+import { useRouter } from "next/router";
+import Head from "next/head";
 import {
   Box,
   Grid,
@@ -15,7 +17,12 @@ import {
   Badge,
   ToggleButton,
   ToggleButtonGroup,
+  IconButton,
+  Tooltip,
+  Alert,
+  Snackbar as MuiSnackbar,
 } from "@mui/material";
+import { Share as ShareIcon, ContentCopy as CopyIcon } from "@mui/icons-material";
 import AdminPage from "../../../components/admin/AdminPage";
 import VolunteerTable from "../../../components/admin/VolunteerTable";
 import VolunteerEditDialog from "../../../components/admin/VolunteerEditDialog";  
@@ -30,6 +37,7 @@ import { Typography } from "@mui/material";
 
 const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const { accessToken } = useAuthInfo();
+  const router = useRouter();
   const { hackathons } = useHackathonEvents(false); // Get all hackathon events, not just current
 
   const [volunteers, setVolunteers] = useState({
@@ -65,14 +73,19 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const [volunteersForBatchEmail, setVolunteersForBatchEmail] = useState([]);
   const [volunteerTypeForBatchEmail, setVolunteerTypeForBatchEmail] = useState('');
   const [isSelectedUsersForEmail, setIsSelectedUsersForEmail] = useState(true);
+  const [shareSnackbar, setShareSnackbar] = useState({ open: false, message: '' });
 
   const org = userClass.getOrgByName("Opportunity Hack Org");
   const isAdmin = org.hasPermission("volunteer.admin");
   const orgId = org.orgId;
   
-  // Find the most recent hackathon event to use as default
+  // Handle URL parameters and set initial state
   useEffect(() => {
-    if (hackathons && hackathons.length > 0 && !selectedEventId) {
+    const { event_id, tab } = router.query;
+    
+    if (event_id && hackathons && hackathons.some(h => h.event_id === event_id)) {
+      setSelectedEventId(event_id);
+    } else if (hackathons && hackathons.length > 0 && !selectedEventId) {
       // Sort hackathons by date (descending) and use the most recent one
       const sortedHackathons = [...hackathons].sort((a, b) => {
         const dateA = new Date(a.start_date);
@@ -82,7 +95,25 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       
       setSelectedEventId(sortedHackathons[0].event_id);
     }
-  }, [hackathons, selectedEventId]);
+    
+    if (tab !== undefined) {
+      const tabIndex = parseInt(tab, 10);
+      if (tabIndex >= 0 && tabIndex <= 4) {
+        setTabValue(tabIndex);
+      }
+    }
+  }, [hackathons, selectedEventId, router.query]);
+
+  // Update URL when selectedEventId or tabValue changes
+  useEffect(() => {
+    if (selectedEventId && hackathons && hackathons.length > 0) {
+      const newQuery = { ...router.query, event_id: selectedEventId, tab: tabValue };
+      router.replace({
+        pathname: router.pathname,
+        query: newQuery
+      }, undefined, { shallow: true });
+    }
+  }, [selectedEventId, tabValue, router, hackathons]);
 
   const fetchVolunteers = useCallback(async () => {
     if (!selectedEventId) return;
@@ -212,6 +243,45 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const handleTabChange = useCallback((event, newValue) => {
     setTabValue(newValue);
   }, []);
+
+  const handleEventChange = useCallback((eventId) => {
+    setSelectedEventId(eventId);
+  }, []);
+
+  const generateShareLink = useCallback(() => {
+    if (!selectedEventId) return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/admin/volunteer?event_id=${selectedEventId}&tab=${tabValue}`;
+  }, [selectedEventId, tabValue]);
+
+  const handleShareLink = useCallback(() => {
+    const shareUrl = generateShareLink();
+    if (navigator.share) {
+      navigator.share({
+        title: `Volunteer Management - ${getCurrentEventName()}`,
+        url: shareUrl,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setShareSnackbar({ open: true, message: 'Link copied to clipboard!' });
+      }).catch(() => {
+        setShareSnackbar({ open: true, message: 'Failed to copy link' });
+      });
+    }
+  }, [generateShareLink, getCurrentEventName]);
+
+  const getCurrentEventName = useCallback(() => {
+    if (!selectedEventId || !hackathons) return 'Volunteer Management';
+    const currentEvent = hackathons.find(h => h.event_id === selectedEventId);
+    return currentEvent ? `${currentEvent.event_id} - ${currentEvent.start_date}` : 'Volunteer Management';
+  }, [selectedEventId, hackathons]);
+
+  const getPageTitle = useCallback(() => {
+    const eventName = getCurrentEventName();
+    const tabNames = ['Mentors', 'Judges', 'Volunteers', 'Hackers', 'Sponsors'];
+    const currentTab = tabNames[tabValue] || 'Volunteer';
+    return `${currentTab} - ${eventName}`;
+  }, [getCurrentEventName, tabValue]);
 
   const handleEditChange = useCallback((field, value) => {
     setEditingVolunteer((prev) => ({ ...prev, [field]: value }));
@@ -657,12 +727,16 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   }
 
   return (
-    <AdminPage
-      title="Volunteer Management"
-      snackbar={snackbar}
-      onSnackbarClose={() => setSnackbar({ ...snackbar, open: false })}
-      isAdmin={isAdmin}
-    >
+    <>
+      <Head>
+        <title>{getPageTitle()}</title>
+      </Head>
+      <AdminPage
+        title="Volunteer Management"
+        snackbar={snackbar}
+        onSnackbarClose={() => setSnackbar({ ...snackbar, open: false })}
+        isAdmin={isAdmin}
+      >
       <Box sx={{ mb: 3, width: "100%" }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item>
@@ -709,7 +783,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
                 id="hackathon-select"
                 value={selectedEventId}
                 label="Hackathon Event"
-                onChange={(e) => setSelectedEventId(e.target.value)}
+                onChange={(e) => handleEventChange(e.target.value)}
               >
                 {hackathons &&
                   hackathons.map((hackathon) => (
@@ -722,6 +796,17 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
                   ))}
               </Select>
             </FormControl>
+          </Grid>
+          <Grid item>
+            <Tooltip title="Share link to this hackathon">
+              <IconButton
+                onClick={handleShareLink}
+                color="primary"
+                disabled={!selectedEventId}
+              >
+                <ShareIcon />
+              </IconButton>
+            </Tooltip>
           </Grid>
           {viewMode === "table" && (
             <Grid item xs>
@@ -903,7 +988,16 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         onComplete={handleBatchEmailComplete}
         isSelectedUsers={isSelectedUsersForEmail}
       />
+
+      {/* Share Link Snackbar */}
+      <MuiSnackbar
+        open={shareSnackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setShareSnackbar({ open: false, message: '' })}
+        message={shareSnackbar.message}
+      />
     </AdminPage>
+    </>
   );
 });
 

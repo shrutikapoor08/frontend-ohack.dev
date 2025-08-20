@@ -30,7 +30,7 @@ import {
   Business as BusinessIcon,
   Assignment as AssignmentIcon,
   CardGiftcard as GiftIcon,
-  Favorite as HeartIcon,
+  WorkspacePremium as CertificateIcon,
   Person as ProfileIcon,
   AccessTime as TimeIcon,
   Group as TeamsIcon,
@@ -76,9 +76,9 @@ const adminPages = [
     icon: <DashboardIcon color="primary" />
   },
   { 
-    path: "/admin/hearts", 
-    label: "Hearts", 
-    icon: <HeartIcon color="secondary" />
+    path: "/admin/certificates", 
+    label: "Certificates", 
+    icon: <CertificateIcon color="secondary" />
   },
   { 
     path: "/admin/nonprofit", 

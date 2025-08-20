@@ -22,7 +22,7 @@ import {
   Business as BusinessIcon,
   Assignment as AssignmentIcon,
   CardGiftcard as GiftIcon,
-  Favorite as HeartIcon,
+  WorkspacePremium as CertificateIcon,
   Person as ProfileIcon,
   AccessTime as TimeIcon,
   Group as TeamsIcon,
@@ -33,10 +33,10 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 
 const adminPages = [
   { 
-    path: "/admin/hearts", 
-    label: "Hearts", 
-    description: "Manage heart allocation and reports",
-    icon: <HeartIcon fontSize="large" color="secondary" />
+    path: "/admin/certificates", 
+    label: "Certificates", 
+    description: "Generate hearts and GitHub certificates",
+    icon: <CertificateIcon fontSize="large" color="secondary" />
   },
   { 
     path: "/admin/nonprofit", 
