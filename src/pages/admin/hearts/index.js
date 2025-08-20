@@ -130,7 +130,7 @@ const AdminHeartsPage = withRequiredAuthInfo(({ userClass }) => {
     setLoadingSlackUsers(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/slack/users/active?active_days=90`,
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/slack/users/active?active_days=10000`,
         {
           method: "GET",
           headers: {

@@ -172,7 +172,7 @@ const AdminCertificatesPage = withRequiredAuthInfo(({ userClass }) => {
     setLoadingSlackUsers(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/slack/users/active?active_days=90`,
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/slack/users/active?active_days=10000`,
         {
           method: "GET",
           headers: {
@@ -763,7 +763,7 @@ const AdminCertificatesPage = withRequiredAuthInfo(({ userClass }) => {
               📜 Generate Hearts Certificate from Slack Channel
             </Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-              Generate a hearts certificate based on Slack channel activity. This will create a certificate viewable in profiles.
+              Generate a hearts certificate based on Slack channel - we look up the team associated with this channel and then the github usernames. This will create a certificate viewable in profiles.
             </Typography>
 
             <Box component="form" onSubmit={(e) => {

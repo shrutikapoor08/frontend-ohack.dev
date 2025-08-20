@@ -180,7 +180,7 @@ const ManageTeamComponent = () => {
     console.log("Fetching active Slack users...");
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/slack/users/active?active_days=30`,
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/slack/users/active?active_days=10000`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
