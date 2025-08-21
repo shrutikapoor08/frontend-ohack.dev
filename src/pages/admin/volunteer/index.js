@@ -21,8 +21,11 @@ import {
   Tooltip,
   Alert,
   Snackbar as MuiSnackbar,
+  Typography,
 } from "@mui/material";
 import { Share as ShareIcon, ContentCopy as CopyIcon } from "@mui/icons-material";
+
+// Import components individually to avoid circular dependencies
 import AdminPage from "../../../components/admin/AdminPage";
 import VolunteerTable from "../../../components/admin/VolunteerTable";
 import VolunteerEditDialog from "../../../components/admin/VolunteerEditDialog";  
@@ -33,26 +36,36 @@ import SlackInviteDialog from "../../../components/admin/SlackInviteDialog";
 import BatchEmailDialog from "../../../components/admin/BatchEmailDialog";
 import useHackathonEvents from "../../../hooks/use-hackathon-events";
 
-import { Typography } from "@mui/material";
+// Define initial state outside component to prevent re-initialization
+const INITIAL_VOLUNTEERS_STATE = {
+  mentors: [],
+  judges: [],
+  volunteers: [],
+  hackers: [],
+  sponsors: []
+};
+
+const INITIAL_SNACKBAR_STATE = {
+  open: false,
+  message: "",
+  severity: "success",
+};
 
 const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
+  // Early returns for safety
+  if (!userClass) {
+    return <div>Loading...</div>;
+  }
+
   const { accessToken } = useAuthInfo();
   const router = useRouter();
-  const { hackathons } = useHackathonEvents(false); // Get all hackathon events, not just current
+  
+  // Defensive hook usage with fallbacks
+  const { hackathons = [] } = useHackathonEvents(false) || {};
 
-  const [volunteers, setVolunteers] = useState({
-    mentors: [],
-    judges: [],
-    volunteers: [],
-    hackers: [],
-    sponsors: []
-  });
+  const [volunteers, setVolunteers] = useState(INITIAL_VOLUNTEERS_STATE);
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+  const [snackbar, setSnackbar] = useState(INITIAL_SNACKBAR_STATE);
   const [orderBy, setOrderBy] = useState("name");
   const [order, setOrder] = useState("asc");
   const [filter, setFilter] = useState("");
@@ -75,25 +88,41 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const [isSelectedUsersForEmail, setIsSelectedUsersForEmail] = useState(true);
   const [shareSnackbar, setShareSnackbar] = useState({ open: false, message: '' });
 
-  const org = userClass.getOrgByName("Opportunity Hack Org");
-  const isAdmin = org.hasPermission("volunteer.admin");
-  const orgId = org.orgId;
+  // Defensive org access with null checks
+  const org = userClass?.getOrgByName?.("Opportunity Hack Org");
+  const isAdmin = org?.hasPermission?.("volunteer.admin") ?? false;
+  const orgId = org?.orgId;
+
+  // Early return if not admin to prevent further execution
+  if (!isAdmin) {
+    return (
+      <AdminPage title="Volunteer Management" isAdmin={false}>
+        <Typography>You do not have permission to view this page.</Typography>
+      </AdminPage>
+    );
+  }
   
-  // Handle URL parameters and set initial state
+  // Handle URL parameters and set initial state with defensive checks
   useEffect(() => {
+    if (!router?.query) return;
+    
     const { event_id, tab } = router.query;
     
-    if (event_id && hackathons && hackathons.some(h => h.event_id === event_id)) {
+    if (event_id && Array.isArray(hackathons) && hackathons.some(h => h?.event_id === event_id)) {
       setSelectedEventId(event_id);
-    } else if (hackathons && hackathons.length > 0 && !selectedEventId) {
+    } else if (Array.isArray(hackathons) && hackathons.length > 0 && !selectedEventId) {
       // Sort hackathons by date (descending) and use the most recent one
-      const sortedHackathons = [...hackathons].sort((a, b) => {
-        const dateA = new Date(a.start_date);
-        const dateB = new Date(b.start_date);
-        return dateB - dateA; // Most recent first
-      });
+      const sortedHackathons = [...hackathons]
+        .filter(h => h?.start_date) // Filter out invalid entries
+        .sort((a, b) => {
+          const dateA = new Date(a.start_date);
+          const dateB = new Date(b.start_date);
+          return dateB - dateA; // Most recent first
+        });
       
-      setSelectedEventId(sortedHackathons[0].event_id);
+      if (sortedHackathons.length > 0) {
+        setSelectedEventId(sortedHackathons[0].event_id);
+      }
     }
     
     if (tab !== undefined) {
@@ -102,113 +131,76 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         setTabValue(tabIndex);
       }
     }
-  }, [hackathons, selectedEventId, router.query]);
+  }, [hackathons, selectedEventId, router?.query]);
 
-  // Update URL when selectedEventId or tabValue changes
+  // Update URL when selectedEventId or tabValue changes with defensive checks
   useEffect(() => {
-    if (selectedEventId && hackathons && hackathons.length > 0) {
+    if (!router?.replace || !selectedEventId || !Array.isArray(hackathons) || hackathons.length === 0) {
+      return;
+    }
+    
+    try {
       const newQuery = { ...router.query, event_id: selectedEventId, tab: tabValue };
       router.replace({
         pathname: router.pathname,
         query: newQuery
       }, undefined, { shallow: true });
+    } catch (error) {
+      console.warn('Failed to update URL:', error);
     }
   }, [selectedEventId, tabValue, router, hackathons]);
 
   const fetchVolunteers = useCallback(async () => {
-    if (!selectedEventId) return;
+    if (!selectedEventId || !accessToken || !orgId) {
+      console.warn('Missing required parameters for fetchVolunteers');
+      return;
+    }
     
     setLoading(true);
     try {
-      const [mentorsResponse, judgesResponse, volunteersResponse, hackersResponse, sponsorsResponse] =
-        await Promise.all([
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedEventId}/mentor`,
-            {
-              headers: {
-                authorization: `Bearer ${accessToken}`,
-                "content-type": "application/json",
-                "X-Org-Id": orgId,
-              },
-            }
-          ),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedEventId}/judge`,
-            {
-              headers: {
-                authorization: `Bearer ${accessToken}`,
-                "content-type": "application/json",
-                "X-Org-Id": orgId,
-              },
-            }
-          ),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedEventId}/volunteer`,
-            {
-              headers: {
-                authorization: `Bearer ${accessToken}`,
-                "content-type": "application/json",
-                "X-Org-Id": orgId,
-              },
-            }
-          ),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedEventId}/hacker`,
-            {
-              headers: {
-                authorization: `Bearer ${accessToken}`,
-                "content-type": "application/json",
-                "X-Org-Id": orgId,
-              },
-            }
-          ),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedEventId}/sponsor`,
-            {
-              headers: {
-                authorization: `Bearer ${accessToken}`,
-                "content-type": "application/json",
-                "X-Org-Id": orgId,
-              },
-            }
-          ),
-          
-        ]);
+      const baseUrl = process.env.NEXT_PUBLIC_API_SERVER_URL;
+      if (!baseUrl) {
+        throw new Error('API server URL not configured');
+      }
 
-      // Process responses even if some fail
-      const responseData = {
-        mentors: [],
-        judges: [],
-        volunteers: [],
-        hackers: [],
-        sponsors: []
+      const endpoints = [
+        `${baseUrl}/api/messages/hackathon/${selectedEventId}/mentor`,
+        `${baseUrl}/api/messages/hackathon/${selectedEventId}/judge`,
+        `${baseUrl}/api/messages/hackathon/${selectedEventId}/volunteer`,
+        `${baseUrl}/api/messages/hackathon/${selectedEventId}/hacker`,
+        `${baseUrl}/api/messages/hackathon/${selectedEventId}/sponsor`,
+      ];
+
+      const headers = {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+        "X-Org-Id": orgId,
       };
-      
 
-      if (mentorsResponse.ok) {
-        const mentorsData = await mentorsResponse.json();
-        responseData.mentors = mentorsData.data || [];
-      }
+      const responses = await Promise.allSettled(
+        endpoints.map(url => fetch(url, { headers }))
+      );
 
-      if (judgesResponse.ok) {
-        const judgesData = await judgesResponse.json();
-        responseData.judges = judgesData.data || [];
-      }
+      // Process responses safely
+      const responseData = { ...INITIAL_VOLUNTEERS_STATE };
+      const keys = ['mentors', 'judges', 'volunteers', 'hackers', 'sponsors'];
 
-      console.log("Volunteers data:", volunteersResponse);
-      if (volunteersResponse.ok) {
-        const volunteersData = await volunteersResponse.json();
-        responseData.volunteers = volunteersData.data || [];
-      }
-
-      if (hackersResponse && hackersResponse.ok) {
-        const hackersData = await hackersResponse.json();
-        responseData.hackers = hackersData.data || [];
-      }
-
-      if (sponsorsResponse && sponsorsResponse.ok) {
-        const sponsorsData = await sponsorsResponse.json();
-        responseData.sponsors = sponsorsData.data || [];
+      for (let i = 0; i < responses.length; i++) {
+        const result = responses[i];
+        const key = keys[i];
+        
+        if (result.status === 'fulfilled' && result.value?.ok) {
+          try {
+            const data = await result.value.json();
+            responseData[key] = Array.isArray(data?.data) ? data.data : [];
+          } catch (jsonError) {
+            console.warn(`Failed to parse JSON for ${key}:`, jsonError);
+            responseData[key] = [];
+          }
+        } else {
+          console.warn(`Failed to fetch ${key}:`, result.reason || 'Unknown error');
+          responseData[key] = [];
+        }
       }
       
       setVolunteers(responseData);
@@ -226,10 +218,10 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   }, [accessToken, orgId, selectedEventId]);
 
   useEffect(() => {
-    if (isAdmin && selectedEventId) {
+    if (isAdmin && selectedEventId && accessToken && orgId) {
       fetchVolunteers();
     }
-  }, [isAdmin, fetchVolunteers, selectedEventId]);
+  }, [isAdmin, fetchVolunteers, selectedEventId, accessToken, orgId]);
 
   const handleRequestSort = useCallback(
     (property) => {
@@ -271,8 +263,8 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   }, [generateShareLink, getCurrentEventName]);
 
   const getCurrentEventName = useCallback(() => {
-    if (!selectedEventId || !hackathons) return 'Volunteer Management';
-    const currentEvent = hackathons.find(h => h.event_id === selectedEventId);
+    if (!selectedEventId || !Array.isArray(hackathons)) return 'Volunteer Management';
+    const currentEvent = hackathons.find(h => h?.event_id === selectedEventId);
     return currentEvent ? `${currentEvent.event_id} - ${currentEvent.start_date}` : 'Volunteer Management';
   }, [selectedEventId, hackathons]);
 
@@ -689,13 +681,17 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   }, [accessToken, orgId, fetchVolunteers, getCurrentVolunteerTypeSingular, tabValue, selectedEventId]);
 
   const sortedVolunteers = useMemo(() => {
-    const currentVolunteers =
-      volunteers[getCurrentVolunteerType(tabValue)] || [];
+    const currentVolunteers = volunteers?.[getCurrentVolunteerType(tabValue)] || [];
+
+    if (!Array.isArray(currentVolunteers)) {
+      return [];
+    }
 
     return currentVolunteers
+      .filter(volunteer => volunteer != null) // Remove null/undefined entries
       .sort((a, b) => {
-        const valueA = (a[orderBy] || "").toString().toLowerCase();
-        const valueB = (b[orderBy] || "").toString().toLowerCase();
+        const valueA = (a?.[orderBy] || "").toString().toLowerCase();
+        const valueB = (b?.[orderBy] || "").toString().toLowerCase();
         if (valueA < valueB) {
           return order === "asc" ? -1 : 1;
         }
@@ -706,24 +702,27 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       })
       .filter((volunteer) => {
         if (!volunteer) return false;
+        if (!filter) return true;
+        
         const searchValue = filter.toLowerCase();
-        return (
-          volunteer.name?.toLowerCase().includes(searchValue) ||
-          volunteer.expertise?.toLowerCase().includes(searchValue) ||
-          volunteer.company?.toLowerCase().includes(searchValue) ||
-          volunteer.email?.toLowerCase().includes(searchValue) ||
-          volunteer.title?.toLowerCase().includes(searchValue) ||
-          volunteer.companyName?.toLowerCase().includes(searchValue)
+        const searchFields = [
+          volunteer.name,
+          volunteer.expertise,
+          volunteer.company,
+          volunteer.email,
+          volunteer.title,
+          volunteer.companyName
+        ];
+        
+        return searchFields.some(field => 
+          field && field.toString().toLowerCase().includes(searchValue)
         );
       });
   }, [volunteers, getCurrentVolunteerType, orderBy, order, filter, tabValue]);
 
-  if (!isAdmin) {
-    return (
-      <AdminPage title="Volunteer Management" isAdmin={false}>
-        <Typography>You do not have permission to view this page.</Typography>
-      </AdminPage>
-    );
+  // Add error boundary-like behavior
+  if (!router) {
+    return <div>Router not available</div>;
   }
 
   return (
@@ -781,19 +780,21 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
               <Select
                 labelId="hackathon-select-label"
                 id="hackathon-select"
-                value={selectedEventId}
+                value={selectedEventId || ""}
                 label="Hackathon Event"
                 onChange={(e) => handleEventChange(e.target.value)}
               >
-                {hackathons &&
-                  hackathons.map((hackathon) => (
-                    <MenuItem
-                      key={hackathon.event_id}
-                      value={hackathon.event_id}
-                    >
-                      {hackathon.event_id} - {hackathon.start_date}
-                    </MenuItem>
-                  ))}
+                {Array.isArray(hackathons) &&
+                  hackathons
+                    .filter(hackathon => hackathon?.event_id) // Filter out invalid entries
+                    .map((hackathon) => (
+                      <MenuItem
+                        key={hackathon.event_id}
+                        value={hackathon.event_id}
+                      >
+                        {hackathon.event_id} - {hackathon.start_date || 'Unknown Date'}
+                      </MenuItem>
+                    ))}
               </Select>
             </FormControl>
           </Grid>
