@@ -346,7 +346,7 @@ const VolunteerApplicationComponent = () => {
       { 
         name: 'Check-in Registration', 
         description: 'Help participants check in and get settled',
-        slotsNeeded: 4,
+        slotsNeeded: 8,
         icon: '📋',
         availability: {
           // Only available on first day during setup and pitches periods
@@ -357,7 +357,7 @@ const VolunteerApplicationComponent = () => {
       { 
         name: 'Food Service', 
         description: 'Assist with meal coordination and service',
-        slotsNeeded: 3,
+        slotsNeeded: 6,
         icon: '🍕',
         availability: {
           // Available all days during meal periods
@@ -369,7 +369,7 @@ const VolunteerApplicationComponent = () => {
       { 
         name: 'Cleanup Crew', 
         description: 'Help maintain clean and organized spaces throughout the event',
-        slotsNeeded: 3,
+        slotsNeeded: 6,
         icon: '🧹',
         availability: {
           // Available all days, all periods
@@ -380,7 +380,7 @@ const VolunteerApplicationComponent = () => {
       { 
         name: 'Photography', 
         description: 'Capture moments and document the event with photos and videos',
-        slotsNeeded: 2,
+        slotsNeeded: 6,
         icon: '📸',
         availability: {
           // Available all days but not during overnight periods
@@ -392,7 +392,7 @@ const VolunteerApplicationComponent = () => {
       { 
         name: 'Judging Support', 
         description: 'Help to ensure smooth judging process',
-        slotsNeeded: 4,
+        slotsNeeded: 6,
         icon: '🏆',
         availability: {
           // Only available on last day during final periods
