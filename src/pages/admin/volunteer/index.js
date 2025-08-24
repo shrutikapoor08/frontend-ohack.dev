@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuthInfo, withRequiredAuthInfo } from "@propelauth/react";
 import { useRouter } from "next/router";
 import Head from "next/head";
@@ -88,6 +88,119 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   const [isSelectedUsersForEmail, setIsSelectedUsersForEmail] = useState(true);
   const [shareSnackbar, setShareSnackbar] = useState({ open: false, message: '' });
 
+  // Filter state management
+  const [filterStates, setFilterStates] = useState({
+    mentors: {
+      filter: '',
+      statusFilter: 'all',
+      inPersonFilter: 'all',
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+      showBatchActions: false
+    },
+    judges: {
+      filter: '',
+      statusFilter: 'all',
+      inPersonFilter: 'all',
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+      showBatchActions: false
+    },
+    volunteers: {
+      filter: '',
+      statusFilter: 'all',
+      inPersonFilter: 'all',
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+      showBatchActions: false
+    },
+    hackers: {
+      filter: '',
+      statusFilter: 'all',
+      inPersonFilter: 'all',
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+      showBatchActions: false
+    },
+    sponsors: {
+      filter: '',
+      statusFilter: 'all',
+      inPersonFilter: 'all',
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+      showBatchActions: false
+    }
+  });
+
+  // Refs for scroll position preservation
+  const scrollContainerRef = useRef(null);
+  const savedScrollPositionRef = useRef(0);
+  const lastUrlRef = useRef('');
+  const dataLoadedRef = useRef(false);
+
+  // Save scroll position when navigating away and restore when returning
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (scrollContainerRef.current) {
+        savedScrollPositionRef.current = scrollContainerRef.current.scrollTop;
+        // Store in sessionStorage as a backup
+        sessionStorage.setItem('volunteer-admin-scroll', savedScrollPositionRef.current.toString());
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && scrollContainerRef.current) {
+        savedScrollPositionRef.current = scrollContainerRef.current.scrollTop;
+        sessionStorage.setItem('volunteer-admin-scroll', savedScrollPositionRef.current.toString());
+      } else if (!document.hidden && scrollContainerRef.current) {
+        // Restore scroll position when page becomes visible again
+        const savedPosition = savedScrollPositionRef.current || 
+                             parseInt(sessionStorage.getItem('volunteer-admin-scroll') || '0', 10);
+        
+        if (savedPosition > 0) {
+          setTimeout(() => {
+            if (scrollContainerRef.current) {
+              scrollContainerRef.current.scrollTop = savedPosition;
+              savedScrollPositionRef.current = savedPosition;
+            }
+          }, 100);
+        }
+      }
+    };
+
+    const handlePopState = () => {
+      // Handle browser back/forward navigation
+      const savedPosition = parseInt(sessionStorage.getItem('volunteer-admin-scroll') || '0', 10);
+      if (savedPosition > 0 && scrollContainerRef.current) {
+        setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = savedPosition;
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('popstate', handlePopState);
+
+    // Restore scroll position on initial load if available
+    const savedPosition = parseInt(sessionStorage.getItem('volunteer-admin-scroll') || '0', 10);
+    if (savedPosition > 0) {
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = savedPosition;
+        }
+      }, 200);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   // Defensive org access with null checks
   const org = userClass?.getOrgByName?.("Opportunity Hack Org");
   const isAdmin = org?.hasPermission?.("volunteer.admin") ?? false;
@@ -106,7 +219,16 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   useEffect(() => {
     if (!router?.query) return;
     
-    const { event_id, tab } = router.query;
+    const { 
+      event_id, 
+      tab, 
+      filter,
+      statusFilter,
+      inPersonFilter,
+      sortBy,
+      sortOrder,
+      showBatchActions
+    } = router.query;
     
     if (event_id && Array.isArray(hackathons) && hackathons.some(h => h?.event_id === event_id)) {
       setSelectedEventId(event_id);
@@ -129,26 +251,76 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       const tabIndex = parseInt(tab, 10);
       if (tabIndex >= 0 && tabIndex <= 4) {
         setTabValue(tabIndex);
+        
+        // Restore filter state for the current tab
+        const currentType = getCurrentVolunteerType(tabIndex);
+        if (currentType && (filter || statusFilter || inPersonFilter || sortBy || sortOrder || showBatchActions)) {
+          setFilterStates(prev => ({
+            ...prev,
+            [currentType]: {
+              filter: filter || '',
+              statusFilter: statusFilter || 'all',
+              inPersonFilter: inPersonFilter || 'all',
+              sortBy: sortBy || 'timestamp',
+              sortOrder: sortOrder || 'desc',
+              showBatchActions: showBatchActions === 'true'
+            }
+          }));
+        }
       }
     }
-  }, [hackathons, selectedEventId, router?.query]);
+  }, [hackathons, selectedEventId, router?.query, getCurrentVolunteerType]);
 
-  // Update URL when selectedEventId or tabValue changes with defensive checks
+  // Update URL when selectedEventId, tabValue, or filter states change
   useEffect(() => {
     if (!router?.replace || !selectedEventId || !Array.isArray(hackathons) || hackathons.length === 0) {
       return;
     }
     
     try {
-      const newQuery = { ...router.query, event_id: selectedEventId, tab: tabValue };
-      router.replace({
-        pathname: router.pathname,
-        query: newQuery
-      }, undefined, { shallow: true });
+      const currentFilterState = getCurrentFilterState();
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.set('event_id', selectedEventId);
+      queryParams.set('tab', tabValue.toString());
+      
+      // Add filter parameters if they differ from defaults
+      if (currentFilterState.filter) {
+        queryParams.set('filter', currentFilterState.filter);
+      }
+      if (currentFilterState.statusFilter !== 'all') {
+        queryParams.set('statusFilter', currentFilterState.statusFilter);
+      }
+      if (currentFilterState.inPersonFilter !== 'all') {
+        queryParams.set('inPersonFilter', currentFilterState.inPersonFilter);
+      }
+      if (currentFilterState.sortBy !== 'timestamp') {
+        queryParams.set('sortBy', currentFilterState.sortBy);
+      }
+      if (currentFilterState.sortOrder !== 'desc') {
+        queryParams.set('sortOrder', currentFilterState.sortOrder);
+      }
+      if (currentFilterState.showBatchActions) {
+        queryParams.set('showBatchActions', 'true');
+      }
+      
+      const newUrl = `${router.pathname}?${queryParams.toString()}`;
+      
+      // Only update URL if it's actually different to prevent unnecessary re-renders
+      if (lastUrlRef.current !== newUrl) {
+        lastUrlRef.current = newUrl;
+        
+        const newQuery = Object.fromEntries(queryParams);
+        router.replace({
+          pathname: router.pathname,
+          query: newQuery
+        }, undefined, { shallow: true });
+      }
     } catch (error) {
       console.warn('Failed to update URL:', error);
     }
-  }, [selectedEventId, tabValue, router, hackathons]);
+  }, [selectedEventId, tabValue, filterStates, router, hackathons, getCurrentFilterState]);
 
   const fetchVolunteers = useCallback(async () => {
     if (!selectedEventId || !accessToken || !orgId) {
@@ -219,9 +391,19 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
 
   useEffect(() => {
     if (isAdmin && selectedEventId && accessToken && orgId) {
-      fetchVolunteers();
+      // Only fetch if we don't already have data for this event, or if data is explicitly stale
+      const hasCurrentEventData = volunteers.mentors.length > 0 || 
+                                  volunteers.judges.length > 0 || 
+                                  volunteers.volunteers.length > 0 || 
+                                  volunteers.hackers.length > 0 || 
+                                  volunteers.sponsors.length > 0;
+      
+      if (!dataLoadedRef.current || !hasCurrentEventData) {
+        fetchVolunteers();
+        dataLoadedRef.current = true;
+      }
     }
-  }, [isAdmin, fetchVolunteers, selectedEventId, accessToken, orgId]);
+  }, [isAdmin, selectedEventId, accessToken, orgId]);
 
   const handleRequestSort = useCallback(
     (property) => {
@@ -234,11 +416,22 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
 
   const handleTabChange = useCallback((event, newValue) => {
     setTabValue(newValue);
+    // Clear scroll position when switching tabs for fresh start
+    savedScrollPositionRef.current = 0;
+    sessionStorage.removeItem('volunteer-admin-scroll');
   }, []);
 
   const handleEventChange = useCallback((eventId) => {
     setSelectedEventId(eventId);
+    // Reset data loaded flag when event changes to ensure fresh data
+    dataLoadedRef.current = false;
   }, []);
+
+  const getCurrentEventName = useCallback(() => {
+    if (!selectedEventId || !Array.isArray(hackathons)) return 'Volunteer Management';
+    const currentEvent = hackathons.find(h => h?.event_id === selectedEventId);
+    return currentEvent ? `${currentEvent.event_id} - ${currentEvent.start_date}` : 'Volunteer Management';
+  }, [selectedEventId, hackathons]);
 
   const generateShareLink = useCallback(() => {
     if (!selectedEventId) return '';
@@ -261,12 +454,6 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       });
     }
   }, [generateShareLink, getCurrentEventName]);
-
-  const getCurrentEventName = useCallback(() => {
-    if (!selectedEventId || !Array.isArray(hackathons)) return 'Volunteer Management';
-    const currentEvent = hackathons.find(h => h?.event_id === selectedEventId);
-    return currentEvent ? `${currentEvent.event_id} - ${currentEvent.start_date}` : 'Volunteer Management';
-  }, [selectedEventId, hackathons]);
 
   const getPageTitle = useCallback(() => {
     const eventName = getCurrentEventName();
@@ -310,6 +497,138 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         return "sponsor";
       default:
         return "";
+    }
+  }, []);
+
+  // Filter state management helpers
+  const updateFilterState = useCallback((field, value) => {
+    const currentType = getCurrentVolunteerType(tabValue);
+    if (!currentType) return;
+
+    setFilterStates(prev => ({
+      ...prev,
+      [currentType]: {
+        ...prev[currentType],
+        [field]: value
+      }
+    }));
+  }, [tabValue, getCurrentVolunteerType]);
+
+  const getCurrentFilterState = useCallback(() => {
+    const currentType = getCurrentVolunteerType(tabValue);
+    return filterStates[currentType] || {
+      filter: '',
+      statusFilter: 'all',
+      inPersonFilter: 'all',
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+      showBatchActions: false
+    };
+  }, [tabValue, getCurrentVolunteerType, filterStates]);
+
+  // Get searchable fields for each volunteer type
+  const getSearchableFields = useCallback((volunteer, type) => {
+    // Helper function to safely get field value
+    const getFieldValue = (field) => {
+      if (field === null || field === undefined) return '';
+      if (typeof field === 'string') return field.trim();
+      if (typeof field === 'boolean') return field.toString();
+      if (Array.isArray(field)) return field.join(' ');
+      return field.toString();
+    };
+
+    const commonFields = [
+      volunteer.name,
+      volunteer.email,
+      volunteer.pronouns,
+      volunteer.company,
+      volunteer.companyName,
+      volunteer.linkedinProfile
+    ];
+
+    switch (type) {
+      case "mentors":
+        return [
+          ...commonFields,
+          volunteer.expertise,
+          volunteer.country,
+          volunteer.state,
+          volunteer.title,
+          volunteer.bio,
+          volunteer.availability,
+          volunteer.mentorshipAreas,
+          volunteer.previousMentoring
+        ].map(getFieldValue);
+
+      case "judges":
+        return [
+          ...commonFields,
+          volunteer.title,
+          volunteer.background,
+          volunteer.backgroundAreas,
+          volunteer.biography,
+          volunteer.shortBio,
+          volunteer.shortBiography,
+          volunteer.whyJudge,
+          volunteer.additionalInfo,
+          volunteer.availability,
+          volunteer.canAttendJudging,
+          volunteer.participationCount,
+          volunteer.otherBackground,
+          volunteer.country,
+          volunteer.state,
+          volunteer.inPerson
+        ].map(getFieldValue);
+
+      case "volunteers":
+        return [
+          ...commonFields,
+          volunteer.volunteerType,
+          volunteer.volunteerRole,
+          volunteer.availability,
+          volunteer.skills,
+          volunteer.previousVolunteering,
+          volunteer.motivation,
+          volunteer.bio,
+          ...(volunteer.artifacts || []).map(artifact => [
+            artifact.label,
+            artifact.comment
+          ]).flat()
+        ].map(getFieldValue);
+
+      case "hackers":
+        return [
+          ...commonFields,
+          volunteer.participantType,
+          volunteer.experienceLevel,
+          volunteer.teamStatus,
+          volunteer.primaryRoles,
+          volunteer.skills,
+          volunteer.schoolOrganization,
+          volunteer.bio,
+          volunteer.motivation,
+          volunteer.socialCauses,
+          volunteer.github,
+          volunteer.portfolio
+        ].map(getFieldValue);
+
+      case "sponsors":
+        return [
+          ...commonFields,
+          volunteer.sponsorshipTier,
+          volunteer.sponsorshipDetails,
+          volunteer.sponsorshipLevel,
+          volunteer.title,
+          volunteer.contactName,
+          volunteer.industry,
+          volunteer.employeeCount,
+          volunteer.website,
+          volunteer.specialRequests,
+          volunteer.bio
+        ].map(getFieldValue);
+
+      default:
+        return commonFields.map(getFieldValue);
     }
   }, []);
 
@@ -418,6 +737,8 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
             : "Volunteer updated successfully",
           severity: "success",
         });
+        // Reset data flag to force refresh after editing
+        dataLoadedRef.current = false;
         fetchVolunteers();
       } else {
         throw new Error(
@@ -705,20 +1026,16 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         if (!filter) return true;
         
         const searchValue = filter.toLowerCase();
-        const searchFields = [
-          volunteer.name,
-          volunteer.expertise,
-          volunteer.company,
-          volunteer.email,
-          volunteer.title,
-          volunteer.companyName
-        ];
+        const currentType = getCurrentVolunteerType(tabValue);
+        const searchableFields = getSearchableFields(volunteer, currentType);
         
-        return searchFields.some(field => 
-          field && field.toString().toLowerCase().includes(searchValue)
-        );
+        return searchableFields.some(field => {
+          // Field is already processed by getFieldValue in getSearchableFields
+          if (!field || field === '') return false;
+          return field.toLowerCase().includes(searchValue);
+        });
       });
-  }, [volunteers, getCurrentVolunteerType, orderBy, order, filter, tabValue]);
+  }, [volunteers, getCurrentVolunteerType, getSearchableFields, orderBy, order, filter, tabValue]);
 
   // Add error boundary-like behavior
   if (!router) {
@@ -739,7 +1056,15 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       <Box sx={{ mb: 3, width: "100%" }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item>
-            <Button onClick={fetchVolunteers} variant="outlined">
+            <Button 
+              onClick={() => {
+                // Force data refresh by resetting the flag
+                dataLoadedRef.current = false;
+                savedScrollPositionRef.current = 0; // Reset scroll position for fresh data
+                fetchVolunteers();
+              }} 
+              variant="outlined"
+            >
               Refresh Data
             </Button>
           </Grid>
@@ -813,7 +1138,23 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
             <Grid item xs>
               <TextField
                 fullWidth
-                label="Filter by Name, Email, Expertise, or Company"
+                label={(() => {
+                  const currentType = getCurrentVolunteerType(tabValue);
+                  switch (currentType) {
+                    case "judges":
+                      return "Search all fields (name, email, company, bio, background, etc.)";
+                    case "mentors":
+                      return "Search all fields (name, email, company, expertise, etc.)";
+                    case "hackers":
+                      return "Search all fields (name, email, skills, experience, etc.)";
+                    case "volunteers":
+                      return "Search all fields (name, email, role, skills, etc.)";
+                    case "sponsors":
+                      return "Search all fields (company, contact, tier, industry, etc.)";
+                    default:
+                      return "Search all available fields";
+                  }
+                })()}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
@@ -875,7 +1216,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
           <CircularProgress />
         </Box>
       ) : (
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2 }} ref={scrollContainerRef}>
           {viewMode === "table" ? (
             <>
               <VolunteerTable
@@ -910,6 +1251,20 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
               onBatchReject={handleBatchRejectApplications}
               isLoading={loading}
               eventId={selectedEventId}
+              // Controlled filter state
+              filter={getCurrentFilterState().filter}
+              statusFilter={getCurrentFilterState().statusFilter}
+              inPersonFilter={getCurrentFilterState().inPersonFilter}
+              sortBy={getCurrentFilterState().sortBy}
+              sortOrder={getCurrentFilterState().sortOrder}
+              showBatchActions={getCurrentFilterState().showBatchActions}
+              // Filter change callbacks
+              onFilterChange={(value) => updateFilterState('filter', value)}
+              onStatusFilterChange={(value) => updateFilterState('statusFilter', value)}
+              onInPersonFilterChange={(value) => updateFilterState('inPersonFilter', value)}
+              onSortByChange={(value) => updateFilterState('sortBy', value)}
+              onSortOrderChange={(value) => updateFilterState('sortOrder', value)}
+              onShowBatchActionsChange={(value) => updateFilterState('showBatchActions', value)}
             />
           )}
         </Box>

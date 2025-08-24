@@ -80,8 +80,8 @@ const ApplicationReviewCard = ({
       judge: {
         title: 'Judge Application',
         primaryFields: ['name', 'email', 'title', 'companyName'],
-        secondaryFields: ['participationCount', 'backgroundAreas', 'canAttendJudging', 'inPerson'],
-        additionalFields: ['biography', 'whyJudge', 'availability', 'additionalInfo', 'pronouns', 'country', 'state', 'otherBackground', 'linkedinProfile', 'photoUrl'],
+        secondaryFields: ['inPerson', 'canAttendJudging', 'participationCount', 'country', 'state', 'linkedinProfile', 'backgroundAreas'],
+        additionalFields: ['biography', 'whyJudge', 'availability', 'additionalInfo', 'pronouns', 'otherBackground', 'photoUrl'],
         statusField: 'isSelected'
       },
       volunteer: {
@@ -283,31 +283,46 @@ const ApplicationReviewCard = ({
         {!expanded && (
           <Box sx={{ mb: 2 }}>
             <Grid container spacing={2}>
-              {config.secondaryFields.slice(0, 2).map((field) => {
+              {config.secondaryFields.slice(0, 6).map((field) => {
                 const value = application[field];
                 if (!value) return null;
                 
+                const isLink = ['linkedin', 'github', 'portfolio', 'website', 'linkedinProfile'].includes(field);
+                
                 return (
                   <Grid item xs={12} sm={6} key={field}>
-                    <Typography variant="body2" color="text.secondary">
-                      {getFieldLabel(field)}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        fontWeight: 500,
-                        ...(field === 'canAttendJudging' && {
-                          p: 1,
-                          borderRadius: 1,
-                          bgcolor: value === 'Yes' ? 'success.light' : 
-                                   value === 'No' ? 'error.light' : 'warning.light',
-                          color: value === 'Yes' ? 'success.contrastText' : 
-                                 value === 'No' ? 'error.contrastText' : 'warning.contrastText'
-                        })
-                      }}
-                    >
-                      {renderField(field, value)}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {(field === 'linkedin' || field === 'linkedinProfile') && <LinkedInIcon fontSize="small" color="action" />}
+                      {field === 'country' && <LocationIcon fontSize="small" color="action" />}
+                      {field === 'state' && <LocationIcon fontSize="small" color="action" />}
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {getFieldLabel(field)}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 500,
+                            ...(field === 'canAttendJudging' && {
+                              p: 1,
+                              borderRadius: 1,
+                              bgcolor: value === 'Yes' ? 'success.light' : 
+                                       value === 'No' ? 'error.light' : 'warning.light',
+                              color: value === 'Yes' ? 'success.contrastText' : 
+                                     value === 'No' ? 'error.contrastText' : 'warning.contrastText'
+                            }),
+                            ...(field === 'inPerson' && {
+                              p: 1,
+                              borderRadius: 1,
+                              bgcolor: (value === 'Yes' || value === true) ? 'info.light' : 'grey.200',
+                              color: (value === 'Yes' || value === true) ? 'info.contrastText' : 'text.primary'
+                            })
+                          }}
+                        >
+                          {renderField(field, value, isLink)}
+                        </Typography>
+                      </Box>
+                    </Box>
                   </Grid>
                 );
               })}

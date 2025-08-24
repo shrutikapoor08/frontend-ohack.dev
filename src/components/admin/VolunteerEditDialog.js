@@ -11,7 +11,12 @@ import {
   Switch,
   IconButton,
   TextareaAutosize,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Divider,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
@@ -42,6 +47,54 @@ const VolunteerEditDialog = ({
   const handlePhotoUrlChange = (e) => {
     const transformedUrl = transformPhotoUrl(e.target.value);
     onChange("photoUrl", transformedUrl);
+  };
+
+  // Helper function to render individual fields
+  const renderField = (field, volunteer, onChange) => {
+    if (field.type === "switch") {
+      return (
+        <Box key={field.name} display="flex" alignItems="center">
+          <Typography>{field.label}:</Typography>
+          <Switch
+            checked={volunteer[field.name] || false}
+            onChange={(e) => onChange(field.name, e.target.checked)}
+          />
+        </Box>
+      );
+    } else if (field.type === "textarea") {
+      return (
+        <TextField
+          key={field.name}
+          margin="dense"
+          label={field.label}
+          multiline
+          rows={4}
+          fullWidth
+          value={volunteer[field.name] || ""}
+          onChange={(e) => onChange(field.name, e.target.value)}
+          InputProps={{
+            readOnly: field.readOnly,
+          }}
+        />
+      );
+    } else {
+      return (
+        <TextField
+          key={field.name}
+          margin="dense"
+          label={field.label}
+          type={field.type}
+          fullWidth
+          value={volunteer[field.name] || ""}
+          onChange={
+            field.onChange || ((e) => onChange(field.name, e.target.value))
+          }
+          InputProps={{
+            readOnly: field.readOnly,
+          }}
+        />
+      );
+    }
   };
 
   const commonFields = [
@@ -87,29 +140,77 @@ const VolunteerEditDialog = ({
           { name: "shirtSize", label: "Shirt Size", type: "text" },
         ];
       case "judges":
-        return [
-          { name: "title", label: "Title", type: "text" },
-          { name: "companyName", label: "Company Name", type: "text" },
-          { name: "whyJudge", label: "Why Judge", type: "textarea" },
-          {
-            name: "shortBiography",
-            label: "Short Biography",
-            type: "textarea",
-          },
-          { name: "background", label: "Background", type: "text" },
-          { name: "hasHelpedBefore", label: "Has Helped Before", type: "text" },
-          { name: "availability", label: "Availability", type: "text" },
-          {
-            name: "additionalInfo",
-            label: "Additional Info",
-            type: "textarea",
-          },
-          {
-            name: "agreedToCodeOfConduct",
-            label: "Agreed to Code of Conduct",
-            type: "switch",
-          },
-        ];
+        return {
+          basic: [
+            { name: "email", label: "Email", type: "email" },
+            { name: "title", label: "Job Title", type: "text" },
+            { name: "companyName", label: "Company Name", type: "text" },
+            { name: "country", label: "Country", type: "text" },
+            { name: "state", label: "State", type: "text" },
+          ],
+          experience: [
+            { name: "background", label: "Background", type: "text" },
+            { name: "backgroundAreas", label: "Background Areas", type: "text" },
+            { name: "otherBackground", label: "Other Background", type: "text" },
+            {
+              name: "participationCount",
+              label: "Participation Count",
+              type: "text",
+            },
+          ],
+          bios: [
+            {
+              name: "biography",
+              label: "Biography",
+              type: "textarea",
+            },
+            {
+              name: "shortBio",
+              label: "Short Bio",
+              type: "textarea",
+            },
+            {
+              name: "shortBiography",
+              label: "Short Biography",
+              type: "textarea",
+            },
+            { name: "whyJudge", label: "Why Judge", type: "textarea" },
+          ],
+          availability: [
+            { name: "availability", label: "Availability", type: "text" },
+            { name: "canAttendJudging", label: "Can Attend Judging", type: "text" },
+            {
+              name: "additionalInfo",
+              label: "Additional Info",
+              type: "textarea",
+            },
+          ],
+          agreements: [
+            {
+              name: "agreedToCodeOfConduct",
+              label: "Agreed to Code of Conduct",
+              type: "switch",
+            },
+            {
+              name: "codeOfConduct",
+              label: "Code of Conduct",
+              type: "switch",
+            },
+            { name: "selected", label: "Selected (Legacy)", type: "switch" },
+          ],
+          system: [
+            { name: "user_id", label: "User ID", type: "text", readOnly: true },
+            { name: "created_by", label: "Created By", type: "text", readOnly: true },
+            { name: "updated_by", label: "Updated By", type: "text", readOnly: true },
+            { name: "created_timestamp", label: "Created", type: "text", readOnly: true },
+            { name: "updated_timestamp", label: "Updated", type: "text", readOnly: true },
+            { name: "timestamp", label: "Timestamp", type: "text", readOnly: true },
+            { name: "event_id", label: "Event ID", type: "text", readOnly: true },
+            { name: "id", label: "ID", type: "text", readOnly: true },
+            { name: "volunteer_type", label: "Volunteer Type", type: "text", readOnly: true },
+            { name: "type", label: "Type", type: "text", readOnly: true },
+          ],
+        };
       case "volunteers":
         return [
           { name: "company", label: "Company", type: "text" },
@@ -172,7 +273,9 @@ const VolunteerEditDialog = ({
     }
   })();
 
-  const fields = [...commonFields, ...typeSpecificFields];
+  // Handle different field structures
+  const isJudgeWithSections = volunteer.type === "judges" && typeof typeSpecificFields === 'object' && !Array.isArray(typeSpecificFields);
+  const fields = isJudgeWithSections ? commonFields : [...commonFields, ...typeSpecificFields];
 
   const handleArtifactChange = (index, field, value) => {
     const newArtifacts = [...(volunteer.artifacts || [])];
@@ -281,6 +384,7 @@ const VolunteerEditDialog = ({
             </Button>
           </Box>
         )}
+        {/* Render basic fields first */}
         {fields.map((field) =>
           field.type === "switch" ? (
             <Box key={field.name} display="flex" alignItems="center">
@@ -317,6 +421,95 @@ const VolunteerEditDialog = ({
               }}
             />
           )
+        )}
+
+        {/* Render judge-specific sections */}
+        {isJudgeWithSections && (
+          <Box mt={2}>
+            {/* Basic Information */}
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Basic Information</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {typeSpecificFields.basic.map((field) =>
+                    renderField(field, volunteer, onChange)
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Experience & Background */}
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Experience & Background</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {typeSpecificFields.experience.map((field) =>
+                    renderField(field, volunteer, onChange)
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Biography & Motivation */}
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Biography & Motivation</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {typeSpecificFields.bios.map((field) =>
+                    renderField(field, volunteer, onChange)
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Availability */}
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Availability & Additional Info</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {typeSpecificFields.availability.map((field) =>
+                    renderField(field, volunteer, onChange)
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Agreements */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Agreements & Status</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {typeSpecificFields.agreements.map((field) =>
+                    renderField(field, volunteer, onChange)
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* System Information */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">System Information</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {typeSpecificFields.system.map((field) =>
+                    renderField(field, volunteer, onChange)
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
         )}
         {volunteer.type === "volunteers" && (
           <>
