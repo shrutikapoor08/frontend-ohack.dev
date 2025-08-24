@@ -64,6 +64,15 @@ const JudgeApplicationComponent = () => {
   const [profileDataLoaded, setProfileDataLoaded] = useState(false);
   const [dataLoadingStatus, setDataLoadingStatus] = useState('idle'); // 'idle', 'loading-backend', 'loading-localStorage', 'completed', 'error'
   
+  // Application constraints state
+  const [applicationConstraints, setApplicationConstraints] = useState({
+    enabled: false,
+    passcode: null,
+    isUnlocked: false
+  });
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+  
   // reCAPTCHA integration
   const { 
     initializeRecaptcha, 
@@ -291,6 +300,17 @@ const JudgeApplicationComponent = () => {
         const oneDayBuffer = 24 * 60 * 60 * 1000; // 1 day in milliseconds
         const isEventPast = new Date(endDate.getTime() + oneDayBuffer) < now;
         
+        // Process application constraints
+        const constraints = eventData.constraints || {};
+        const judgeApplicationEnabled = constraints.application_judge_enabled !== false;
+        const judgeApplicationPasscode = constraints.application_judge_enabled_code || null;
+                
+        setApplicationConstraints({
+          enabled: judgeApplicationEnabled,
+          passcode: judgeApplicationPasscode,
+          isUnlocked: judgeApplicationEnabled // Only unlock if enabled is true (passcode unlock happens via user input)
+        });
+        
         setEventData({
           name: eventData.title || `Opportunity Hack - ${event_id}`,
           description: eventData.description || "Annual hackathon for nonprofits",
@@ -301,7 +321,8 @@ const JudgeApplicationComponent = () => {
           formattedEndDate,
           location: eventData.location || "Tempe, Arizona",
           image: eventData.image_url || "https://cdn.ohack.dev/ohack.dev/2023_hackathon_2.webp",
-          isEventPast
+          isEventPast,
+          constraints: constraints
         });
         
         // Prepare base form data with user info and profile data
@@ -426,6 +447,163 @@ const JudgeApplicationComponent = () => {
       photoUrl: ''
     }));
   };
+
+  // Passcode validation function
+  const handlePasscodeSubmit = (e) => {
+    e.preventDefault();
+    setPasscodeError('');
+    
+    if (!passcodeInput.trim()) {
+      setPasscodeError('Please enter the access code');
+      return;
+    }
+    
+    if (passcodeInput.trim() === applicationConstraints.passcode) {
+      setApplicationConstraints(prev => ({
+        ...prev,
+        isUnlocked: true
+      }));
+      setPasscodeInput('');
+      setPasscodeError('');
+      
+      // Show success message briefly
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    } else {
+      setPasscodeError('Invalid access code. Please check with the event organizers.');
+    }
+  };
+
+  // Render application closed/passcode required component
+  const renderApplicationClosed = () => (
+    <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
+      {/* If there's a passcode, show it as the primary interface */}
+      {applicationConstraints.passcode ? (
+        <>
+          <Alert severity="warning" sx={{ mb: 4 }}>
+            <Typography variant="h6" component="div" sx={{ mb: 2 }}>
+              Access Code Required
+            </Typography>
+            <Typography variant="body1">
+              Judge applications are closed and require an access code for edits. If you've been provided with an access code by the event organizers, enter it below to proceed.
+            </Typography>
+          </Alert>
+          
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" component="div" sx={{ mb: 2 }}>
+              Enter Access Code
+            </Typography>
+            
+            <form onSubmit={handlePasscodeSubmit}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 3 }}>
+                <TextField
+                  label="Access Code"
+                  value={passcodeInput}
+                  onChange={(e) => setPasscodeInput(e.target.value)}
+                  error={!!passcodeError}
+                  helperText={passcodeError}
+                  size="medium"
+                  sx={{ flexGrow: 1, maxWidth: 400 }}
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Enter the access code provided by organizers"
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={!passcodeInput.trim()}
+                  sx={{ alignSelf: 'stretch', px: 3 }}
+                >
+                  Unlock Application
+                </Button>
+              </Box>
+            </form>
+          </Box>
+
+          {/* GiveButter widget when showing passcode */}
+          <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="h6" component="div" sx={{ mb: 2, textAlign: 'center' }}>
+              Support Our Mission
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
+              While you're here, consider supporting Opportunity Hack's mission to connect nonprofits with innovative tech solutions.
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <GiveButterWidget 
+                context="application_locked"
+                userId={user?.userId}
+                applicationType="judge"
+                size="medium"
+                onDonationEvent={(eventData) => {
+                  console.log('Judge application locked donation event:', eventData);
+                }}
+              />
+            </Box>
+          </Box>
+        </>
+      ) : (
+        <>
+          {/* No passcode available - applications are truly closed */}
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="h6" component="div" sx={{ mb: 2 }}>
+              Judge Applications Are Currently Closed
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              We're not accepting new judge applications at this time. This could be because:
+            </Typography>
+            <Box component="ul" sx={{ pl: 2, mb: 2 }}>
+              <li>We've reached our capacity for judges</li>
+              <li>The application period has ended</li>
+              <li>We're in the final preparation phase</li>
+            </Box>
+            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+              If you believe you should have access or have questions, please contact the event organizers.
+            </Typography>
+          </Alert>
+
+          {/* GiveButter widget when applications are closed */}
+          <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="h6" component="div" sx={{ mb: 2, textAlign: 'center' }}>
+              Support Our Mission
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
+              While applications are closed, you can still support Opportunity Hack's mission to connect nonprofits with innovative tech solutions.
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <GiveButterWidget 
+                context="application_closed"
+                userId={user?.userId}
+                applicationType="judge"
+                size="medium"
+                onDonationEvent={(eventData) => {
+                  console.log('Judge application closed donation event:', eventData);
+                }}
+              />
+            </Box>
+          </Box>
+        </>
+      )}
+
+      <Box textAlign="center" sx={{ mt: 4 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => router.push('/hack')}
+          sx={{ mr: 2 }}
+        >
+          View Other Events
+        </Button>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => router.push(`/hack/${event_id}`)}
+        >
+          Return to Event Page
+        </Button>
+      </Box>
+    </Paper>
+  );
 
   // Define steps for stepper
   const steps = ['Basic Info', 'Background & Experience', 'Availability', 'Finish'];
@@ -1393,8 +1571,20 @@ const JudgeApplicationComponent = () => {
                     </Button>
                   </Box>
                 </Paper>
+              ) : !applicationConstraints.isUnlocked ? (
+                // Show application closed UI with optional passcode unlock
+                renderApplicationClosed()
               ) : (
                 <>
+                  {/* Show success message when application is unlocked via passcode */}
+                  {applicationConstraints.passcode && applicationConstraints.isUnlocked && (
+                    <Alert severity="success" sx={{ mb: 3 }}>
+                      <Typography variant="body2">
+                        ✓ Access granted! You can now proceed with your judge application.
+                      </Typography>
+                    </Alert>
+                  )}
+                  
                   <Stepper
                     activeStep={activeStep}
                     alternativeLabel={!isMobile}
