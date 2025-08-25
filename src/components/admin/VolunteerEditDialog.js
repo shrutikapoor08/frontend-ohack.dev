@@ -15,6 +15,10 @@ import {
   AccordionSummary,
   AccordionDetails,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
@@ -60,6 +64,24 @@ const VolunteerEditDialog = ({
             onChange={(e) => onChange(field.name, e.target.checked)}
           />
         </Box>
+      );
+    } else if (field.type === "select") {
+      return (
+        <FormControl key={field.name} fullWidth margin="dense">
+          <InputLabel>{field.label}</InputLabel>
+          <Select
+            value={volunteer[field.name] || field.defaultValue || ""}
+            onChange={(e) => onChange(field.name, e.target.value)}
+            label={field.label}
+            disabled={field.readOnly}
+          >
+            {field.options && field.options.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       );
     } else if (field.type === "textarea") {
       return (
@@ -197,6 +219,21 @@ const VolunteerEditDialog = ({
               type: "switch",
             },
             { name: "selected", label: "Selected (Legacy)", type: "switch" },
+            {
+              name: "status",
+              label: "Application Status",
+              type: "select",
+              defaultValue: "pending",
+              options: [
+                { value: "pending", label: "Pending Review" },
+                { value: "approved", label: "Approved" },
+                { value: "denied", label: "Denied" },
+                { value: "verified_travel", label: "Verified Travel" },
+                { value: "confirmed", label: "Confirmed" },
+                { value: "withdrew", label: "Withdrew" },
+                { value: "no_show", label: "No Show" },
+              ],
+            },
           ],
           system: [
             { name: "user_id", label: "User ID", type: "text", readOnly: true },
@@ -385,43 +422,7 @@ const VolunteerEditDialog = ({
           </Box>
         )}
         {/* Render basic fields first */}
-        {fields.map((field) =>
-          field.type === "switch" ? (
-            <Box key={field.name} display="flex" alignItems="center">
-              <Typography>{field.label}:</Typography>
-              <Switch
-                checked={volunteer[field.name] || false}
-                onChange={(e) => onChange(field.name, e.target.checked)}
-              />
-            </Box>
-          ) : field.type === "textarea" ? (
-            <TextField
-              key={field.name}
-              margin="dense"
-              label={field.label}
-              multiline
-              rows={4}
-              fullWidth
-              value={volunteer[field.name] || ""}
-              onChange={(e) => onChange(field.name, e.target.value)}
-            />
-          ) : (
-            <TextField
-              key={field.name}
-              margin="dense"
-              label={field.label}
-              type={field.type}
-              fullWidth
-              value={volunteer[field.name] || ""}
-              onChange={
-                field.onChange || ((e) => onChange(field.name, e.target.value))
-              }
-              InputProps={{
-                readOnly: field.readOnly,
-              }}
-            />
-          )
-        )}
+        {fields.map((field) => renderField(field, volunteer, onChange))}
 
         {/* Render judge-specific sections */}
         {isJudgeWithSections && (

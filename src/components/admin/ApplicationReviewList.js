@@ -149,6 +149,9 @@ const ApplicationReviewList = ({
         filtered = filtered.filter(app => app.isSelected);
       } else if (currentStatusFilter === 'pending') {
         filtered = filtered.filter(app => !app.isSelected);
+      } else if (applicationType === 'judge') {
+        // For judges, also support filtering by specific status values
+        filtered = filtered.filter(app => app.status === currentStatusFilter);
       }
     }
 
@@ -345,6 +348,14 @@ const ApplicationReviewList = ({
                 <MenuItem value="all">All</MenuItem>
                 <MenuItem value="pending">Pending</MenuItem>
                 <MenuItem value="approved">Approved</MenuItem>
+                {/* Additional status options for judges */}
+                {applicationType === 'judge' && [
+                  <MenuItem key="denied" value="denied">Denied</MenuItem>,
+                  <MenuItem key="verified_travel" value="verified_travel">Verified Travel</MenuItem>,
+                  <MenuItem key="confirmed" value="confirmed">Confirmed</MenuItem>,
+                  <MenuItem key="withdrew" value="withdrew">Withdrew</MenuItem>,
+                  <MenuItem key="no_show" value="no_show">No Show</MenuItem>
+                ]}
               </Select>
             </FormControl>
           </Grid>

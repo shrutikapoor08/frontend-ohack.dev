@@ -63,6 +63,31 @@ const NotSelectedChip = styled(Chip)(({ theme }) => ({
   color: theme.palette.common.white,
 }));
 
+const StatusChip = styled(Chip)(({ theme, statustype }) => {
+  const getStatusColors = (status) => {
+    switch (status) {
+      case 'pending':
+        return { backgroundColor: theme.palette.grey[500], color: theme.palette.common.white };
+      case 'approved':
+        return { backgroundColor: theme.palette.success.main, color: theme.palette.common.white };
+      case 'denied':
+        return { backgroundColor: theme.palette.error.main, color: theme.palette.common.white };
+      case 'verified_travel':
+        return { backgroundColor: theme.palette.info.main, color: theme.palette.common.white };
+      case 'confirmed':
+        return { backgroundColor: theme.palette.primary.main, color: theme.palette.common.white };
+      case 'withdrew':
+        return { backgroundColor: theme.palette.warning.main, color: theme.palette.common.white };
+      case 'no_show':
+        return { backgroundColor: theme.palette.error.dark, color: theme.palette.common.white };
+      default:
+        return { backgroundColor: theme.palette.grey[300], color: theme.palette.text.primary };
+    }
+  };
+  
+  return getStatusColors(statustype);
+});
+
 const VolunteerTable = ({
   volunteers,
   type,
@@ -99,6 +124,7 @@ const VolunteerTable = ({
     } else if (type === "judges") {
       return [
         ...baseColumns,
+        { id: "status", label: "Status", minWidth: 120 },
         { id: "title", label: "Title", minWidth: 150 },
         { id: "background", label: "Background", minWidth: 150 },
       ];
@@ -167,6 +193,24 @@ const VolunteerTable = ({
           <NotSelectedChip
             icon={<CancelIcon />}
             label="Not Selected"
+            size="small"
+          />
+        );
+      case "status":
+        const status = volunteer.status || "pending";
+        const statusLabels = {
+          pending: "Pending Review",
+          approved: "Approved",
+          denied: "Denied",
+          verified_travel: "Verified Travel",
+          confirmed: "Confirmed",
+          withdrew: "Withdrew",
+          no_show: "No Show",
+        };
+        return (
+          <StatusChip
+            statustype={status}
+            label={statusLabels[status] || status}
             size="small"
           />
         );

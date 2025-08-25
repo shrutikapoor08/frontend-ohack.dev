@@ -29,7 +29,8 @@ import {
   Language as WebsiteIcon,
   School as SchoolIcon,
   LocationOn as LocationIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Gavel as StatusIcon
 } from '@mui/icons-material';
 
 const ApplicationReviewCard = ({ 
@@ -79,7 +80,7 @@ const ApplicationReviewCard = ({
       },
       judge: {
         title: 'Judge Application',
-        primaryFields: ['name', 'email', 'title', 'companyName'],
+        primaryFields: ['name', 'email', 'title', 'companyName', 'status'],
         secondaryFields: ['inPerson', 'canAttendJudging', 'participationCount', 'country', 'state', 'linkedinProfile', 'backgroundAreas'],
         additionalFields: ['biography', 'whyJudge', 'availability', 'additionalInfo', 'pronouns', 'otherBackground', 'photoUrl'],
         statusField: 'isSelected'
@@ -104,6 +105,20 @@ const ApplicationReviewCard = ({
 
   const config = getFieldConfig(applicationType);
   const isApproved = application[config.statusField];
+
+  // Helper function to get status chip configuration
+  const getStatusChipConfig = (status) => {
+    const statusConfigs = {
+      pending: { label: "Pending Review", color: "default", icon: null },
+      approved: { label: "Approved", color: "success", icon: <CheckIcon /> },
+      denied: { label: "Denied", color: "error", icon: <CloseIcon /> },
+      verified_travel: { label: "Verified Travel", color: "info", icon: <StatusIcon /> },
+      confirmed: { label: "Confirmed", color: "primary", icon: <CheckIcon /> },
+      withdrew: { label: "Withdrew", color: "warning", icon: <CloseIcon /> },
+      no_show: { label: "No Show", color: "error", icon: <CloseIcon /> },
+    };
+    return statusConfigs[status] || statusConfigs.pending;
+  };
 
   // Helper function to format field values
   const formatFieldValue = (field, value) => {
@@ -206,7 +221,8 @@ const ApplicationReviewCard = ({
       state: 'State',
       otherBackground: 'Other Background',
       linkedinProfile: 'LinkedIn Profile',
-      photoUrl: 'Photo'
+      photoUrl: 'Photo',
+      status: 'Status'
     };
     return labelMap[field] || field.charAt(0).toUpperCase() + field.slice(1);
   };
@@ -239,7 +255,13 @@ const ApplicationReviewCard = ({
             </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isApproved && (
+            {/* Show status for judges, or approval status for others */}
+            {applicationType === 'judge' && application.status ? (
+              <Chip 
+                {...getStatusChipConfig(application.status)}
+                size="small"
+              />
+            ) : isApproved && (
               <Chip 
                 label="APPROVED" 
                 color="success" 
@@ -265,13 +287,22 @@ const ApplicationReviewCard = ({
                   {field === 'email' && <EmailIcon fontSize="small" color="action" />}
                   {field === 'schoolOrganization' && <SchoolIcon fontSize="small" color="action" />}
                   {field === 'company' && <SchoolIcon fontSize="small" color="action" />}
+                  {field === 'status' && <StatusIcon fontSize="small" color="action" />}
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       {getFieldLabel(field)}
                     </Typography>
-                    <Typography variant="body1">
-                      {renderField(field, value)}
-                    </Typography>
+                    {field === 'status' ? (
+                      <Chip 
+                        {...getStatusChipConfig(value)}
+                        size="small"
+                        sx={{ mt: 0.5 }}
+                      />
+                    ) : (
+                      <Typography variant="body1">
+                        {renderField(field, value)}
+                      </Typography>
+                    )}
                   </Box>
                 </Box>
               </Grid>
