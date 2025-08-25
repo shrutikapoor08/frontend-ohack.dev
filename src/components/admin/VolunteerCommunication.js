@@ -44,6 +44,13 @@ const MESSAGE_TEMPLATES = {
         icon: "🎯"
       },
       {
+        id: "judge_travel_confirmation",
+        title: "Judge Application Approved - Please Confirm Travel",
+        applicableRoles: ["judge", "judges"],
+        message: "⚖️ Congratulations! Your judge application has been approved!\n\nWe're excited to have you evaluate the innovative solutions our teams will create for nonprofits. However, we need your confirmation for an important detail:\n\n✈️ **All judging for Opportunity Hack 2025 Fall is done IN PERSON at Arizona State University in Tempe, Arizona.**\n\n📍 Location Details:\n• Event location: ASU Tempe campus\n• More info & hotel recommendations: https://ohack.dev/about/locations/asu-tempe-arizona\n• Full schedule of events: https://www.ohack.dev/hack/2025_fall#countdown\n• Add yourself to our LinkedIn event: https://www.linkedin.com/events/opportunityhack20257364157552420401152/\n\n⏰ **ACTION REQUIRED by August 28th at 5:00 PM PST:**\nPlease reply to this email at questions@ohack.org to confirm:\n✅ \"I confirm I can attend in person at ASU Tempe\" OR\n❌ \"I need to decline due to travel constraints\"\n\n✏️ **Need to edit your application?**\nGo to: https://www.ohack.dev/hack/2025_fall/judge-application\nUse code: \"2025\"\n\nWe understand travel requirements may not work for everyone. We just need to know by the deadline to finalize our judging panel.\n\nThank you for your interest in supporting nonprofit innovation! 🌟",
+        icon: "✈️"
+      },
+      {
         id: "judge_approved",
         title: "Judge Application Approved",
         applicableRoles: ["judge", "judges"],
