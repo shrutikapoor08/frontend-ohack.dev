@@ -51,6 +51,41 @@ const INITIAL_SNACKBAR_STATE = {
   severity: "success",
 };
 
+// Move this function outside component to avoid circular dependency issues
+const getCurrentVolunteerType = (currentTabValue) => {
+  switch (currentTabValue) {
+    case 0:
+      return "mentors";
+    case 1:
+      return "judges";
+    case 2:
+      return "volunteers";
+    case 3:
+      return "hackers";
+    case 4:
+      return "sponsors";
+    default:
+      return "";
+  }
+};
+
+const getCurrentVolunteerTypeSingular = (currentTabValue) => {
+  switch (currentTabValue) {
+    case 0:
+      return "mentor";
+    case 1:
+      return "judge";
+    case 2:
+      return "volunteer";
+    case 3:
+      return "hacker";
+    case 4:
+      return "sponsor";
+    default:
+      return "";
+  }
+};
+
 const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
   // Early returns for safety
   if (!userClass) {
@@ -269,7 +304,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         }
       }
     }
-  }, [hackathons, selectedEventId, router?.query, getCurrentVolunteerType]);
+  }, [hackathons, selectedEventId, router?.query]);
 
   // Update URL when selectedEventId, tabValue, or filter states change
   useEffect(() => {
@@ -466,40 +501,6 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     setEditingVolunteer((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const getCurrentVolunteerType = useCallback((currentTabValue) => {
-    switch (currentTabValue) {
-      case 0:
-        return "mentors";
-      case 1:
-        return "judges";
-      case 2:
-        return "volunteers";
-      case 3:
-        return "hackers";
-      case 4:
-        return "sponsors";
-      default:
-        return "";
-    }
-  }, []);
-
-  const getCurrentVolunteerTypeSingular = useCallback((currentTabValue) => {
-    switch (currentTabValue) {
-      case 0:
-        return "mentor";
-      case 1:
-        return "judge";
-      case 2:
-        return "volunteer";
-      case 3:
-        return "hacker";
-      case 4:
-        return "sponsor";
-      default:
-        return "";
-    }
-  }, []);
-
   // Filter state management helpers
   const updateFilterState = useCallback((field, value) => {
     const currentType = getCurrentVolunteerType(tabValue);
@@ -512,7 +513,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         [field]: value
       }
     }));
-  }, [tabValue, getCurrentVolunteerType]);
+  }, [tabValue]);
 
   const getCurrentFilterState = useCallback(() => {
     const currentType = getCurrentVolunteerType(tabValue);
@@ -524,7 +525,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       sortOrder: 'desc',
       showBatchActions: false
     };
-  }, [tabValue, getCurrentVolunteerType, filterStates]);
+  }, [tabValue, filterStates]);
 
   // Get searchable fields for each volunteer type
   const getSearchableFields = useCallback((volunteer, type) => {
@@ -641,7 +642,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       setIsAdding(false);
       setEditDialogOpen(true);
     },
-    [tabValue, getCurrentVolunteerType]
+    [tabValue]
   );
 
   const handleMessageVolunteer = useCallback((volunteer) => {
@@ -650,7 +651,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       type: getCurrentVolunteerType(tabValue),
     });
     setCommunicationDialogOpen(true);
-  }, [tabValue, getCurrentVolunteerType]);
+  }, [tabValue]);
 
   const handleSlackInvite = useCallback((volunteers, type) => {
     setVolunteersForSlackInvite(volunteers);
@@ -702,7 +703,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     });
     setIsAdding(true);
     setEditDialogOpen(true);
-  }, [tabValue, getCurrentVolunteerType]);
+  }, [tabValue]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!selectedEventId) return;
@@ -761,7 +762,6 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     accessToken,
     orgId,
     fetchVolunteers,
-    getCurrentVolunteerTypeSingular,
     tabValue,
     selectedEventId,
   ]);
@@ -810,7 +810,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, orgId, fetchVolunteers, getCurrentVolunteerTypeSingular, tabValue, selectedEventId]);
+  }, [accessToken, orgId, fetchVolunteers, tabValue, selectedEventId]);
 
   const handleRejectApplication = useCallback(async (application) => {
     if (!selectedEventId) return;
@@ -855,7 +855,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, orgId, fetchVolunteers, getCurrentVolunteerTypeSingular, tabValue, selectedEventId]);
+  }, [accessToken, orgId, fetchVolunteers, tabValue, selectedEventId]);
 
   const handleBatchApproveApplications = useCallback(async (applications) => {
     if (!selectedEventId || applications.length === 0) return;
@@ -903,7 +903,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, orgId, fetchVolunteers, getCurrentVolunteerTypeSingular, tabValue, selectedEventId]);
+  }, [accessToken, orgId, fetchVolunteers, tabValue, selectedEventId]);
 
   const handleBatchRejectApplications = useCallback(async (applications) => {
     if (!selectedEventId || applications.length === 0) return;
@@ -951,7 +951,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, orgId, fetchVolunteers, getCurrentVolunteerTypeSingular, tabValue, selectedEventId]);
+  }, [accessToken, orgId, fetchVolunteers, tabValue, selectedEventId]);
 
   // Application edit functions
   const handleEditApplication = useCallback((application) => {
@@ -999,7 +999,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, orgId, fetchVolunteers, getCurrentVolunteerTypeSingular, tabValue, selectedEventId]);
+  }, [accessToken, orgId, fetchVolunteers, tabValue, selectedEventId]);
 
   const sortedVolunteers = useMemo(() => {
     const currentVolunteers = volunteers?.[getCurrentVolunteerType(tabValue)] || [];
@@ -1035,7 +1035,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
           return field.toLowerCase().includes(searchValue);
         });
       });
-  }, [volunteers, getCurrentVolunteerType, getSearchableFields, orderBy, order, filter, tabValue]);
+  }, [volunteers, getSearchableFields, orderBy, order, filter, tabValue]);
 
   // Add error boundary-like behavior
   if (!router) {
