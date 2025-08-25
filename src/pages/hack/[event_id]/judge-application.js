@@ -43,6 +43,13 @@ import { useRecaptcha } from '../../../hooks/use-recaptcha';
 import GiveButterWidget from '../../../components/GiveButterWidget';
 import useProfileApi from '../../../hooks/use-profile-api';
 import UploadPhoto from '../../../components/UploadPhoto';
+import { SchoolRounded, 
+  WorkRounded,  
+  TrendingUpRounded,
+  PersonRounded,
+  GroupsRounded,
+  CheckCircleRounded
+ } from '@mui/icons-material';
 
 const JudgeApplicationComponent = () => {
   const router = useRouter();
@@ -521,6 +528,89 @@ const JudgeApplicationComponent = () => {
             </form>
           </Box>
 
+          {/* Mentoring suggestion section */}
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 4, 
+              mb: 4, 
+              bgcolor: 'secondary.light', 
+              color: 'white',
+              textAlign: 'center'
+            }}
+          >
+            <SchoolRounded sx={{ fontSize: 56, mb: 3 }} />
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
+              Consider Mentoring Instead!
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 3, maxWidth: '700px', mx: 'auto', fontSize: '1.1rem', lineHeight: 1.6 }}>
+              Many of our most valued <strong>mentors started as aspiring judges</strong>. Mentoring offers similar professional benefits with even greater impact on your career development.
+            </Typography>
+            
+            <Box sx={{ mb: 4, textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Professional Recognition:</strong>&nbsp;Demonstrate leadership and expertise
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Resume Enhancement:</strong>&nbsp;Show community involvement and technical leadership
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Network Building:</strong>&nbsp;Connect directly with innovative teams and industry professionals
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Skill Validation:</strong>&nbsp;Showcase your expertise while helping others grow
+              </Typography>
+            </Box>
+
+            <Typography variant="h6" sx={{ mb: 4, opacity: 0.95, fontSize: '1rem' }}>
+              💡 <strong>Pro tip:</strong> Mentors often get priority consideration for future judging opportunities!
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button 
+                variant="contained" 
+                size="large"
+                href={`/hack/${event_id}/mentor-application`}
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'secondary.main',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  py: 1.5,
+                  px: 3,
+                  '&:hover': { 
+                    bgcolor: 'grey.100',
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+                startIcon={<SchoolRounded />}
+              >
+                Apply to Mentor
+              </Button>
+              <Button 
+                variant="outlined" 
+                size="large"
+                href="/about/mentors"
+                sx={{ 
+                  borderColor: 'white', 
+                  color: 'white',
+                  fontSize: '1rem',
+                  py: 1.5,
+                  px: 3,
+                  '&:hover': { 
+                    bgcolor: 'rgba(255,255,255,0.1)'
+                  }
+                }}
+              >
+                Learn About Mentoring
+              </Button>
+            </Box>
+          </Paper>
+
           {/* GiveButter widget when showing passcode */}
           <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="h6" component="div" sx={{ mb: 2, textAlign: 'center' }}>
@@ -561,6 +651,92 @@ const JudgeApplicationComponent = () => {
               If you believe you should have access or have questions, please contact the event organizers.
             </Typography>
           </Alert>
+
+          {/* Mentoring suggestion for closed applications */}
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 4, 
+              mb: 4, 
+              bgcolor: 'secondary.light', 
+              color: 'white',
+              textAlign: 'center'
+            }}
+          >
+            <SchoolRounded sx={{ fontSize: 56, mb: 3 }} />
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
+              Perfect Timing to Become a Mentor!
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 3, maxWidth: '700px', mx: 'auto', fontSize: '1.1rem', lineHeight: 1.6 }}>
+              Since judging spots are full, this is an excellent opportunity to <strong>mentor instead</strong>. 
+              Our most successful professionals often prefer mentoring for the <strong>direct impact and career benefits</strong>.
+            </Typography>
+            
+            <Box sx={{ mb: 4, textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <TrendingUpRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Career Advancement:</strong>&nbsp;Showcase leadership skills that employers value
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <PersonRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Professional Development:</strong>&nbsp;Build coaching and communication abilities
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <GroupsRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Industry Connections:</strong>&nbsp;Work closely with teams and other mentors
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+                <WorkRounded sx={{ mr: 2, fontSize: 24 }} />
+                <strong>Resume Impact:</strong>&nbsp;Demonstrate community leadership and technical expertise
+              </Typography>
+            </Box>
+
+            <Alert severity="success" sx={{ mb: 4, bgcolor: 'rgba(255,255,255,0.95)', color: 'text.primary' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                🚀 Many mentors report that the experience was more valuable than judging for their professional growth!
+              </Typography>
+            </Alert>
+            
+            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button 
+                variant="contained" 
+                size="large"
+                href={`/hack/${event_id}/mentor-application`}
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'secondary.main',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  py: 1.5,
+                  px: 3,
+                  '&:hover': { 
+                    bgcolor: 'grey.100',
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+                startIcon={<SchoolRounded />}
+              >
+                Apply to Mentor Instead
+              </Button>
+              <Button 
+                variant="outlined" 
+                size="large"
+                href="/about/mentors"
+                sx={{ 
+                  borderColor: 'white', 
+                  color: 'white',
+                  fontSize: '1rem',
+                  py: 1.5,
+                  px: 3,
+                  '&:hover': { 
+                    bgcolor: 'rgba(255,255,255,0.1)'
+                  }
+                }}
+              >
+                Learn About Mentoring Benefits
+              </Button>
+            </Box>
+          </Paper>
 
           {/* GiveButter widget when applications are closed */}
           <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
