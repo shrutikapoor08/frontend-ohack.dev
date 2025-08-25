@@ -355,7 +355,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
     } catch (error) {
       console.warn('Failed to update URL:', error);
     }
-  }, [selectedEventId, tabValue, filterStates, router, hackathons, getCurrentFilterState]);
+  }, [selectedEventId, tabValue, filterStates, router, hackathons]);
 
   const fetchVolunteers = useCallback(async () => {
     if (!selectedEventId || !accessToken || !orgId) {
