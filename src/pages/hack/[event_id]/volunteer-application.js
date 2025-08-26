@@ -695,17 +695,21 @@ const VolunteerApplicationComponent = () => {
         // Format dates for display
         const startDate = new Date(eventData.start_date);
         const endDate = new Date(eventData.end_date);
-        const formattedStartDate = startDate.toLocaleDateString('en-US', {
+         
+        // Use UTC methods to avoid timezone conversion issues
+        const formattedStartDate = new Date(eventData.start_date + 'T00:00:00Z').toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
-          day: 'numeric'
+          day: 'numeric',
+          timeZone: 'UTC'
         });
-        const formattedEndDate = endDate.toLocaleDateString('en-US', {
+        const formattedEndDate = new Date(eventData.end_date + 'T00:00:00Z').toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
-          day: 'numeric'
+          day: 'numeric',
+          timeZone: 'UTC'
         });
         
         // Check if event is in the past (with 1-day buffer)
