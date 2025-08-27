@@ -33,6 +33,7 @@ import {
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
+import VolunteerCheckInQR from '../../../components/VolunteerCheckInQR';
 import LoginOrRegister from '../../../components/LoginOrRegister/LoginOrRegister2';
 import ApplicationNav from '../../../components/ApplicationNav/ApplicationNav';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -70,6 +71,8 @@ const JudgeApplicationComponent = () => {
   const [eventData, setEventData] = useState(null);
   const [profileDataLoaded, setProfileDataLoaded] = useState(false);
   const [dataLoadingStatus, setDataLoadingStatus] = useState('idle'); // 'idle', 'loading-backend', 'loading-localStorage', 'completed', 'error'
+  // Store volunteer ID for QR code generation
+  const [volunteerId, setVolunteerId] = useState(null);
   
   // Application constraints state
   const [applicationConstraints, setApplicationConstraints] = useState({
@@ -488,6 +491,15 @@ const JudgeApplicationComponent = () => {
       {/* If there's a passcode, show it as the primary interface */}
       {applicationConstraints.passcode ? (
         <>
+          {/* QR Code for Check-in - Show if user has existing data */}
+          <VolunteerCheckInQR
+            eventId={event_id}
+            volunteerId={volunteerId}            
+            volunteerType="judge"
+            isSubmitted={!!volunteerId}
+            sx={{ mb: 4 }}
+          />
+          
           <Alert severity="warning" sx={{ mb: 4 }}>
             <Typography variant="h6" component="div" sx={{ mb: 2 }}>
               Access Code Required
@@ -962,10 +974,20 @@ const JudgeApplicationComponent = () => {
         
         const responseData = await response.json();
         console.log('Submission successful:', responseData); // Debug log
+        
+        // Extract volunteer ID from response for QR code generation
+        if (responseData?.volunteer_id || responseData?.id) {
+          setVolunteerId(responseData.volunteer_id || responseData.id);
+        } else {
+          // Fallback: use user ID if no specific volunteer ID is returned
+          setVolunteerId(user?.userId);
+        }
       } else {
         // In a test environment, log the data and simulate API delay
         console.log("Submitting judge application:", submissionData);
         await new Promise((resolve) => setTimeout(resolve, 1500));
+        // In test environment, use user ID as volunteer ID
+        setVolunteerId(user?.userId);
       }
 
       // Clear saved form data after successful submission only if they are logged in
@@ -1528,7 +1550,7 @@ const JudgeApplicationComponent = () => {
           
           <Alert severity="success" sx={{ mb: 4, mx: 'auto', maxWidth: 600 }}>
             Thank you for applying to be a judge at Opportunity Hack. We'll review your application and contact you soon.
-          </Alert>
+          </Alert>         
           
           <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
             <GiveButterWidget 
@@ -1749,7 +1771,7 @@ const JudgeApplicationComponent = () => {
                 </Paper>
               ) : !applicationConstraints.isUnlocked ? (
                 // Show application closed UI with optional passcode unlock
-                renderApplicationClosed()
+                renderApplicationClosed()                
               ) : (
                 <>
                   {/* Show success message when application is unlocked via passcode */}

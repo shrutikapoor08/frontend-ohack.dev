@@ -41,6 +41,7 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
+import VolunteerCheckInQR from '../../../components/VolunteerCheckInQR';
 import ApplicationNav from '../../../components/ApplicationNav/ApplicationNav';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import InfoIcon from '@mui/icons-material/Info';
@@ -64,6 +65,8 @@ const VolunteerApplicationComponent = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [eventData, setEventData] = useState(null);
+  // Store volunteer ID for QR code generation
+  const [volunteerId, setVolunteerId] = useState(null);
   
   // reCAPTCHA integration
   const { 
@@ -1275,10 +1278,21 @@ const VolunteerApplicationComponent = () => {
           }
           throw new Error(`Failed to submit application: ${response.status}`);
         }
+
+        // Extract volunteer ID from response for QR code generation
+        const responseData = await response.json().catch(() => null);
+        if (responseData?.volunteer_id || responseData?.id) {
+          setVolunteerId(responseData.volunteer_id || responseData.id);
+        } else {
+          // Fallback: use user ID if no specific volunteer ID is returned
+          setVolunteerId(user?.userId);
+        }
       } else {
         // In a test environment, log the data and simulate API delay
         console.log('Submitting volunteer application:', submissionData);
         await new Promise(resolve => setTimeout(resolve, 1500));
+        // In test environment, use user ID as volunteer ID
+        setVolunteerId(user?.userId);
       }
       
       // Clear saved form data after successful submission only if they are logged in
@@ -2241,6 +2255,16 @@ const VolunteerApplicationComponent = () => {
                       </Step>
                     ))}
                   </Stepper>
+
+                  {/* QR Code for Check-in */}
+                  <VolunteerCheckInQR
+                    eventId={event_id}
+                    volunteerId={volunteerId}                    
+                    volunteerType="volunteer"
+                    isSubmitted={true}
+                    qrSize={200}
+                    sx={{ mx: 'auto', maxWidth: 500 }}
+                  />
 
                   <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                     <Typography variant="body1" paragraph>

@@ -32,6 +32,7 @@ import {
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
+import VolunteerCheckInQR from '../../../components/VolunteerCheckInQR';
 import LoginOrRegister from '../../../components/LoginOrRegister/LoginOrRegister2';
 import ApplicationNav from '../../../components/ApplicationNav/ApplicationNav';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -77,6 +78,8 @@ const MentorApplicationComponent = () => {
   const [eventData, setEventData] = useState(null);
   // Add missing submitting state
   const [submitting, setSubmitting] = useState(false);
+  // Store volunteer ID for QR code generation
+  const [volunteerId, setVolunteerId] = useState(null);
   
   // Initial form state
   const initialFormData = {
@@ -353,7 +356,11 @@ const MentorApplicationComponent = () => {
           const prevData = await loadPreviousSubmission();
           if (prevData && !confirmationShownRef.current) {
             confirmationShownRef.current = true;
-            // If the user has submitted before, ask if they want to load it
+            
+            // Set volunteer ID if we have previous submission data
+            setVolunteerId(prevData.volunteer_id || prevData.id || user?.userId);
+            
+            // If the user has submitted before, ask if they want to load it for editing?
             if (
               window.confirm(
                 "We found a previous application. Would you like to load it for editing?"
@@ -840,10 +847,21 @@ const MentorApplicationComponent = () => {
           }
           throw new Error(`Failed to submit application: ${response.status}`);
         }
+
+        // Extract volunteer ID from response for QR code generation
+        const responseData = await response.json().catch(() => null);
+        if (responseData?.volunteer_id || responseData?.id) {
+          setVolunteerId(responseData.volunteer_id || responseData.id);
+        } else {
+          // Fallback: use user ID if no specific volunteer ID is returned
+          setVolunteerId(user?.userId);
+        }
       } else {
         // In a test environment, log the data and simulate API delay
         console.log("Submitting mentor application:", submissionData);
         await new Promise((resolve) => setTimeout(resolve, 1500));
+        // In test environment, use user ID as volunteer ID
+        setVolunteerId(user?.userId);
       }
 
       // Clear saved form data after successful submission only if they are logged in
@@ -1537,6 +1555,7 @@ const MentorApplicationComponent = () => {
           <Alert severity="success" sx={{ mb: 4, mx: 'auto', maxWidth: 600 }}>
             Thank you for applying to be a mentor at Opportunity Hack. We'll review your application and contact you soon.
           </Alert>
+      
           
           <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
             <GiveButterWidget 
@@ -1617,6 +1636,7 @@ const MentorApplicationComponent = () => {
       ]
     }
   } : null;
+
 
   const renderApplicationForm = () => {
     return (
@@ -1782,6 +1802,14 @@ const MentorApplicationComponent = () => {
 
               {/* Add ApplicationNav component */}
               <ApplicationNav eventId={event_id} currentType="mentor" />
+
+              {/* QR Code Section - Show early if user has data */}
+              <VolunteerCheckInQR
+                eventId={event_id}
+                volunteerId={volunteerId}                
+                volunteerType="mentor"
+                isSubmitted={!!volunteerId}
+              />
 
               <Box sx={{ mb: 4 }}>
                 {eventData && eventData.isEventPast ? (
@@ -1993,7 +2021,7 @@ const MentorApplicationPage = ({ seoMetadata }) => {
                   "@type": "ListItem",
                   "position": 1,
                   "name": "Home",
-                  "item": "https://ohack.dev"
+                  "item": "https://ohack.dev/"
                 },
                 {
                   "@type": "ListItem",

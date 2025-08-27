@@ -262,7 +262,9 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       inPersonFilter,
       sortBy,
       sortOrder,
-      showBatchActions
+      showBatchActions,
+      volunteer_id,
+      volunteer_type
     } = router.query;
     
     if (event_id && Array.isArray(hackathons) && hackathons.some(h => h?.event_id === event_id)) {
@@ -282,18 +284,40 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       }
     }
     
-    if (tab !== undefined) {
+    // Handle volunteer_type parameter to set correct tab
+    if (volunteer_type && !tab) {
+      const typeToTabMap = {
+        mentor: 0,
+        judge: 1,
+        volunteer: 2,
+        hacker: 3,
+        sponsor: 4
+      };
+      if (typeToTabMap[volunteer_type] !== undefined) {
+        setTabValue(typeToTabMap[volunteer_type]);
+      }
+    } else if (tab !== undefined) {
       const tabIndex = parseInt(tab, 10);
       if (tabIndex >= 0 && tabIndex <= 4) {
         setTabValue(tabIndex);
+      }
+    }
+
+    // Handle filter state restoration and volunteer_id filtering
+    const finalTabValue = volunteer_type && !tab ? 
+      ({ mentor: 0, judge: 1, volunteer: 2, hacker: 3, sponsor: 4 })[volunteer_type] || tabValue : 
+      (tab !== undefined ? parseInt(tab, 10) : tabValue);
+
+    if (finalTabValue >= 0 && finalTabValue <= 4) {
+      const currentType = getCurrentVolunteerType(finalTabValue);
+      if (currentType) {
+        const filterToApply = volunteer_id ? volunteer_id : (filter || '');
         
-        // Restore filter state for the current tab
-        const currentType = getCurrentVolunteerType(tabIndex);
-        if (currentType && (filter || statusFilter || inPersonFilter || sortBy || sortOrder || showBatchActions)) {
+        if (filterToApply || statusFilter || inPersonFilter || sortBy || sortOrder || showBatchActions) {
           setFilterStates(prev => ({
             ...prev,
             [currentType]: {
-              filter: filter || '',
+              filter: filterToApply,
               statusFilter: statusFilter || 'all',
               inPersonFilter: inPersonFilter || 'all',
               sortBy: sortBy || 'timestamp',
@@ -301,6 +325,11 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
               showBatchActions: showBatchActions === 'true'
             }
           }));
+        }
+
+        // If we have volunteer_id, also set the global filter
+        if (volunteer_id) {
+          setFilter(volunteer_id);
         }
       }
     }

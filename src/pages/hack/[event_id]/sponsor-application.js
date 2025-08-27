@@ -41,6 +41,7 @@ import UploadPhoto from '../../../components/UploadPhoto';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEnv } from '../../../context/env.context';
+import VolunteerCheckInQR from '../../../components/VolunteerCheckInQR';
 import ApplicationNav from '../../../components/ApplicationNav/ApplicationNav';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import FormPersistenceControls from '../../../components/FormPersistenceControls';
@@ -207,6 +208,8 @@ const SponsorApplicationComponent = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [eventData, setEventData] = useState(null);
+  // Store volunteer ID for QR code generation
+  const [volunteerId, setVolunteerId] = useState(null);
   // Use ref to store uploaded logo URL to avoid race conditions
   const uploadedLogoUrlRef = useRef('');
   const [error, setError] = useState('');
@@ -385,6 +388,8 @@ const SponsorApplicationComponent = () => {
                   otherRole = prevData.volunteerType;
                 }
                 
+                setVolunteerId(prevData.id || null);
+
                 const transformedData = {
                   ...initialFormData,
                   email: prevData.email || user.email || '',
@@ -408,8 +413,8 @@ const SponsorApplicationComponent = () => {
                   event_id
                 };
                 
-                setFormData(transformedData);
-                
+                setFormData(transformedData);                
+
                 // If there's a logo URL, set it in the ref
                 if (prevData.photoUrl || prevData.logoUrl) {
                   uploadedLogoUrlRef.current = prevData.photoUrl || prevData.logoUrl;
@@ -660,10 +665,19 @@ const SponsorApplicationComponent = () => {
             `Failed to submit application: ${response.status}${errorData ? ` - ${errorData.message}` : ""}`
           );
         }
+
+        // Extract volunteer ID from response for QR code generation
+        const responseData = await response.json().catch(() => null);
+        if (responseData?.volunteer_id || responseData?.id) {
+          setVolunteerId(responseData.volunteer_id || responseData.id);
+        }
+        
       } else {
         // In a test environment or when API isn't available
         console.log("Submitting sponsor application:", submissionData);
         await new Promise((resolve) => setTimeout(resolve, 1500));
+        // In test environment, use user ID as volunteer ID
+        setVolunteerId(user?.userId);
       }
 
       // Clear saved form data after successful submission only if they are logged in
@@ -1700,7 +1714,17 @@ const SponsorApplicationComponent = () => {
                     ))}
                   </Stepper>
                   
+                  <VolunteerCheckInQR
+                    eventId={event_id}
+                    volunteerId={volunteerId}                    
+                    volunteerType="sponsor"
+                    isSubmitted={true}
+                    qrSize={200}
+                    sx={{ mx: 'auto', maxWidth: 500 }}
+                  />
+
                   <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
+                    {/* QR Code for Check-in */}                                    
                     {(error || recaptchaError) && (
                       <Alert severity="error" sx={{ mb: 4 }}>
                         {error || recaptchaError}
