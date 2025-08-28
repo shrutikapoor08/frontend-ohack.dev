@@ -73,7 +73,7 @@ const VolunteerCheckInQR = ({
 
   const getMessage = () => {
     if (isSubmitted) {
-      return 'Your application has been submitted! Use this QR code to check in at the event.';
+      return 'Your application has been submitted! Use this QR code to check in at the event (if you are attending in-person)';
     }
     return 'Save this QR code for quick check-in at the event (available after application submission).';
   };

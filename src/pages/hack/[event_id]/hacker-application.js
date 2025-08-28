@@ -723,7 +723,7 @@ const HackerApplicationComponent = () => {
                     additionalInfo: prevData.additionalInfo || prevData.comments || '',
                     event_id: event_id
                   };
-                  
+                  setVolunteerId(prevData.id || null);
                   setFormData(transformedData);
                   setPreviouslySubmitted(true);
                   return;

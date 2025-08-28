@@ -225,7 +225,7 @@ const JudgeApplicationComponent = () => {
               // Ensure event_id is always set
               event_id: event_id
             };
-            
+            setVolunteerId(prevData.id || null);
             console.log('Successfully loaded previous submission from backend API:', transformedData);
             setFormData(transformedData);
 
