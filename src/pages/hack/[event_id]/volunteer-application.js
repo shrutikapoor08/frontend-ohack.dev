@@ -200,8 +200,7 @@ const VolunteerApplicationComponent = () => {
   const getVolunteerTypeOptions = () => {
     const isVirtual = isVirtualEvent();
     
-    const baseOptions = [
-      "Volunteer Product Manager (vPM)",
+    const baseOptions = [      
       "Marketing/Communications",
       "Other"
     ];
@@ -330,18 +329,18 @@ const VolunteerApplicationComponent = () => {
 
     // Base volunteer roles available for both virtual and in-person events
     const baseVolunteerRoles = [
-      { 
-        name: 'Volunteer Product Manager (vPM)', 
-        description: 'Represent a nonprofit and answer questions about their problem statement',
-        slotsNeeded: 8,
-        icon: '🎯',
-        availability: {
-          // Available all days during active hacking periods
-          days: 'all',
-          periods: 'all',
-          excludePeriods: ['setup','judging']
-        }
-      }
+      // { 
+      //   name: 'Volunteer Product Manager (vPM)', 
+      //   description: 'Represent a nonprofit and answer questions about their problem statement',
+      //   slotsNeeded: 8,
+      //   icon: '🎯',
+      //   availability: {
+      //     // Available all days during active hacking periods
+      //     days: 'all',
+      //     periods: 'all',
+      //     excludePeriods: ['setup','judging']
+      //   }
+      // }
     ];
 
     // In-person only volunteer roles
@@ -883,6 +882,8 @@ const VolunteerApplicationComponent = () => {
                     ),
                   ];
 
+                  setVolunteerId(prevData.id || null);
+
                   const transformedData = {
                     ...initialFormData,
                     email: prevData.email || user.email || "",
@@ -1254,7 +1255,7 @@ const VolunteerApplicationComponent = () => {
           .join(", "),
         // Add reCAPTCHA token
         recaptchaToken
-      };
+      };      
       
       if (apiServerUrl) {
         // Submit to API
@@ -1283,9 +1284,6 @@ const VolunteerApplicationComponent = () => {
         const responseData = await response.json().catch(() => null);
         if (responseData?.volunteer_id || responseData?.id) {
           setVolunteerId(responseData.volunteer_id || responseData.id);
-        } else {
-          // Fallback: use user ID if no specific volunteer ID is returned
-          setVolunteerId(user?.userId);
         }
       } else {
         // In a test environment, log the data and simulate API delay

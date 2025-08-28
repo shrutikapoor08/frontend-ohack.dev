@@ -151,21 +151,19 @@ const MentorApplicationComponent = () => {
   
   // Common expertise areas for mentors
   const expertiseOptions = [
-    "Software Development",
-    "Product Management",
+    "Software Engineering",
+    "Product Management (vPM)",
     "UX/UI Design",
     "Data Science & Analytics",
     "Cloud Architecture",
-    "DevOps",
-    "Mobile Development",
+    "DevOps",    
     "Nonprofit Technology",
     "Entrepreneurship",
     "Digital Marketing",
     "Project Management",
     "Business Strategy",
     "Cybersecurity",
-    "Database Management",
-    "AI/Machine Learning",
+    "Database Management",    
     "Other" // Option to specify custom expertise
   ];
   
@@ -548,9 +546,10 @@ const MentorApplicationComponent = () => {
       return false;
     }
     
-    // Validate array fields
-    if (!formData.engineeringSpecifics || formData.engineeringSpecifics.length === 0) {
-      setError('Please select at least one engineering specific');
+    // Only validate engineering specifics if Software Development is selected
+    if (formData.expertise.includes('Software Development') && 
+        (!formData.engineeringSpecifics || formData.engineeringSpecifics.length === 0)) {
+      setError('Please select at least one software engineering specific since you selected Software Development');
       return false;
     }
     
@@ -1044,32 +1043,35 @@ const MentorApplicationComponent = () => {
           />
         )}
         
-        <FormControl fullWidth required sx={{ mb: 3 }}>
-          <InputLabel id="engineering-specifics-label">Software Engineering Specifics</InputLabel>
-          <Select
-            labelId="engineering-specifics-label"
-            id="engineering-specifics"
-            multiple
-            value={formData.engineeringSpecifics}
-            onChange={(e) => customHandleMultiSelectChange(e, 'engineeringSpecifics')}
-            input={<OutlinedInput label="Software Engineering Specifics" />}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip key={value} label={value} />
-                ))}
-              </Box>
-            )}
-          >
-            {engineeringOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                <Checkbox checked={formData.engineeringSpecifics.indexOf(option) > -1} />
-                <ListItemText primary={option} />
-              </MenuItem>
-            ))}
-          </Select>
-          <FormHelperText>Select the technologies and areas you can mentor in</FormHelperText>
-        </FormControl>
+        {/* Conditional Software Engineering Specifics field that appears when "Software Development" is selected */}
+        {formData.expertise.includes('Software Development') && (
+          <FormControl fullWidth required sx={{ mb: 3 }}>
+            <InputLabel id="engineering-specifics-label">Software Engineering Specifics</InputLabel>
+            <Select
+              labelId="engineering-specifics-label"
+              id="engineering-specifics"
+              multiple
+              value={formData.engineeringSpecifics}
+              onChange={(e) => customHandleMultiSelectChange(e, 'engineeringSpecifics')}
+              input={<OutlinedInput label="Software Engineering Specifics" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => (
+                    <Chip key={value} label={value} />
+                  ))}
+                </Box>
+              )}
+            >
+              {engineeringOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  <Checkbox checked={formData.engineeringSpecifics.indexOf(option) > -1} />
+                  <ListItemText primary={option} />
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>Select the technologies and areas you can mentor in</FormHelperText>
+          </FormControl>
+        )}
         
         <FormControl fullWidth required sx={{ mb: 3 }}>
           <InputLabel id="participation-count-label">How many times have you participated in Opportunity Hack?</InputLabel>
