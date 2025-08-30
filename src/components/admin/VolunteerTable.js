@@ -218,13 +218,82 @@ const VolunteerTable = ({
         const messageCount = Array.isArray(volunteer.messages_sent) 
           ? volunteer.messages_sent.length 
           : 0;
+        
+        if (messageCount === 0) {
+          return (
+            <Chip 
+              label={0} 
+              size="small" 
+              variant="outlined"
+              color="default"
+            />
+          );
+        }
+
+        const tooltipContent = (
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Recent Messages ({messageCount})
+            </Typography>
+            {volunteer.messages_sent.slice(0, 5).map((message, idx) => (
+              <Box key={idx} sx={{ mb: 1, pb: 1, borderBottom: idx < Math.min(4, messageCount - 1) ? '1px solid rgba(255,255,255,0.2)' : 'none' }}>
+                <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold' }}>
+                  {new Date(message.timestamp).toLocaleString()}
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                  Subject: {message.subject}
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block' }}>
+                  Sent by: {message.sent_by}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                  {message.delivery_status.email_sent && (
+                    <Chip label="Email ✓" size="small" sx={{ fontSize: '0.6rem', height: '16px' }} color="success" />
+                  )}
+                  {message.delivery_status.slack_sent && (
+                    <Chip label="Slack ✓" size="small" sx={{ fontSize: '0.6rem', height: '16px' }} color="info" />
+                  )}
+                  {message.delivery_status.email_error && (
+                    <Chip label="Email ✗" size="small" sx={{ fontSize: '0.6rem', height: '16px' }} color="error" />
+                  )}
+                  {message.delivery_status.slack_error && (
+                    <Chip label="Slack ✗" size="small" sx={{ fontSize: '0.6rem', height: '16px' }} color="error" />
+                  )}
+                </Box>
+              </Box>
+            ))}
+            {messageCount > 5 && (
+              <Typography variant="caption" sx={{ fontStyle: 'italic' }}>
+                ...and {messageCount - 5} more messages
+              </Typography>
+            )}
+          </Box>
+        );
+
         return (
-          <Chip 
-            label={messageCount} 
-            size="small" 
-            variant="outlined"
-            color={messageCount > 0 ? "primary" : "default"}
-          />
+          <Tooltip 
+            title={tooltipContent} 
+            arrow 
+            placement="bottom-start"
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  maxWidth: 400,
+                  '& .MuiTooltip-arrow': {
+                    color: 'rgba(97, 97, 97, 0.9)',
+                  },
+                },
+              },
+            }}
+          >
+            <Chip 
+              label={messageCount} 
+              size="small" 
+              variant="outlined"
+              color="primary"
+              sx={{ cursor: 'pointer' }}
+            />
+          </Tooltip>
         );
       case "artifacts":
         return volunteer.artifacts?.map((artifact, index) => (
