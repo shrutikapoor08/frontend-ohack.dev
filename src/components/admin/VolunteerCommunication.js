@@ -122,6 +122,13 @@ const MESSAGE_TEMPLATES = {
         applicableRoles: ["hacker", "hackers"],
         message: "Ready to find your dream team? 👥\n\nThe best solutions come from diverse minds working together!\n\n🎯 Team tips:\n• 2-6 members work best\n• Mix skills: code + design + strategy\n• Track your journey: https://www.ohack.dev/volunteer/track\n\nTeam formation activities start soon. Prepare to meet your future collaborators! ⚡",
         icon: "👥"
+      },
+      {
+        id: "checkin_information",
+        title: "Check-in Information",
+        applicableRoles: ["hacker", "hackers", "mentor", "mentors", "judge", "judges", "volunteer", "volunteers"],
+        message: "📱 Ready for check-in? Here's everything you need!\n\nFor in-person participants, we've made check-in super easy with your personal QR code below:\n\n[QRCode:[EVENT_ID]|[VOLUNTEER_ID]|[VOLUNTEER_TYPE]]\n\n**How to use your QR code:**\n• Simply show this QR code when you arrive at the venue\n• Our volunteers will scan it for instant check-in\n• No need to remember names, emails, or confirmation numbers!\n\n**Can't see the QR code?** No worries! You can also access it anytime from your application page:\n[View Your Application](https://www.ohack.dev/hack/[EVENT_ID]/[VOLUNTEER_TYPE]-application)\n\n📍 **Venue Information:**\nGet directions, parking details, and venue specifics at:\n[ASU Tempe Location Details](https://www.ohack.dev/about/locations/asu-tempe-arizona)\n\n🎯 **What to bring:**\n• This QR code (screenshot or bookmark this email)\n• Your laptop and charger\n• Enthusiasm for making an impact!\n\nSee you soon! 🚀",
+        icon: "📱"
       }
     ]
   }
@@ -204,6 +211,17 @@ const VolunteerCommunication = ({
     // Replace [EVENT_ID] placeholder if present
     if (eventId && message.includes('[EVENT_ID]')) {
       message = message.replace(/\[EVENT_ID\]/g, eventId);
+    }
+    
+    // Replace [VOLUNTEER_ID] placeholder if present
+    if (volunteer?.id && message.includes('[VOLUNTEER_ID]')) {
+      message = message.replace(/\[VOLUNTEER_ID\]/g, volunteer.id);
+    }
+    
+    // Replace [VOLUNTEER_TYPE] placeholder if present
+    const volType = volunteerType || volunteer?.type;
+    if (volType && message.includes('[VOLUNTEER_TYPE]')) {
+      message = message.replace(/\[VOLUNTEER_TYPE\]/g, volType);
     }
     
     setMessageText(message);
