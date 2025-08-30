@@ -85,6 +85,32 @@ const MESSAGE_TEMPLATES = {
       }
     ]
   },
+  WAITLIST: {
+    category: "Waitlist Management",
+    templates: [
+      {
+        id: "hacker_waitlisted",
+        title: "You're on the Waitlist - Stay Tuned!",
+        applicableRoles: ["hacker", "hackers"],
+        message: "⏳ You're on our hacker waitlist!\n\nThank you for your interest in Opportunity Hack! While we've reached capacity for initial registrations, we've added you to our waitlist.\n\n🔄 **What happens next:**\n• We'll complete check-in process at 9:00 AM on event day\n• If spots open up, you'll get an immediate notification\n• Keep your phone handy and stay ready to join!\n\n🎒 **Stay prepared:**\n• Keep your laptop charged and ready\n• Review the nonprofit projects: https://www.ohack.dev/hack/[EVENT_ID]#nonprofits\n• Join our Slack for real-time updates\n• Track your preparation time: https://www.ohack.dev/volunteer/track\n\nWe appreciate your patience and enthusiasm for nonprofit innovation. Whether you join us this time or next, you're already part of our community! 🌟\n\nStay connected: @opportunityhack on all socials",
+        icon: "⏳"
+      },
+      {
+        id: "hacker_waitlist_accepted",
+        title: "🎉 You're In! Come Join Us Now!",
+        applicableRoles: ["hacker", "hackers"],
+        message: "🎉 Amazing news - you're off the waitlist and INTO the hackathon!\n\nA spot just opened up and we want YOU to fill it! Time to grab your laptop and join us for an incredible day of building solutions for nonprofits.\n\n📱 **Your Check-in QR Code:**\n[QRCode:[EVENT_ID]|[VOLUNTEER_ID]|[VOLUNTEER_TYPE]]\n\n🏃‍♂️ **Come NOW - Here's what to do:**\n• Head to the venue immediately\n• Bring this QR code for instant check-in\n• Get your laptop, charger, and enthusiasm ready!\n\n📍 **Venue Information:**\n[ASU Tempe Location Details](https://www.ohack.dev/about/locations/asu-tempe-arizona)\n\n🎯 **What's happening:**\n• Team formation is in progress\n• Nonprofit presentations are starting soon\n• Amazing prizes and impact awaiting!\n\n**Can't see the QR code?** Access it anytime at:\n[Your Application](https://www.ohack.dev/hack/[EVENT_ID]/hacker-application)\n\n⏱️ Track your impact: https://www.ohack.dev/volunteer/track\n\nLet's build something incredible together! 🚀",
+        icon: "🎉"
+      },
+      {
+        id: "hacker_waitlist_full",
+        title: "Waitlist Update - This Event is Full",
+        applicableRoles: ["hacker", "hackers"],
+        message: "💙 Thank you for your interest in Opportunity Hack!\n\nWe've completed our check-in process and unfortunately don't have any remaining spots available for today's hackathon. We truly appreciate your enthusiasm and patience.\n\n🌟 **You're still part of our community:**\n• Follow us for future hackathon announcements\n• Join our Slack to stay connected with the community\n• Consider other ways to get involved with nonprofits year-round\n• Track any volunteer hours: https://www.ohack.dev/volunteer/track\n\n📅 **Future opportunities:**\n• We host multiple hackathons throughout the year\n• Volunteer opportunities at future events\n• Mentor roles for experienced developers\n• Stay updated on all events at https://www.ohack.dev\n\n💡 **Get involved now:**\n• Share our mission with your network\n• Follow our social impact stories\n• Connect with nonprofits in your area\n\nYour interest in using technology for social good means everything to us. We hope to hack together at a future event! 💫\n\nStay connected: @opportunityhack on all socials",
+        icon: "💙"
+      }
+    ]
+  },
   FOLLOW_UP: {
     category: "Follow-up & Information",
     templates: [
