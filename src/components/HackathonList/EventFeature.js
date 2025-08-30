@@ -63,27 +63,27 @@ function EventFeature(props) {
   return (
     <EventCards container direction="column">      
       <Link href={`/hack/${event_id}`} passHref>
-        <div style={{ cursor: 'pointer', width: '100%' }}>
-          <EventLink variant="h3">{title}</EventLink>
-          <EventText variant="h3">{description}</EventText>
+        <div style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <EventLink variant="h3">{title}</EventLink>
+            <EventText variant="h3">{description}</EventText>
+          </div>
           
-          <br />
-          
-          {
-            Moment(new Date()).format("YYYY") === Moment(start_date).format('YYYY') && 
-            <EventText variant="h3">
-              {Moment(start_date).format('MMM Do')} to {Moment(end_date).format('MMM Do YYYY')}
-            </EventText>      
-          }
+          <div style={{ marginBottom: '16px' }}>
+            {
+              Moment(new Date()).format("YYYY") === Moment(start_date).format('YYYY') && 
+              <Typography variant="body1" sx={{ fontSize: '1rem', color: '#333', marginBottom: '8px' }}>
+                {Moment(start_date).format('MMM Do')} to {Moment(end_date).format('MMM Do YYYY')}
+              </Typography>      
+            }
 
-          {
-            Moment(new Date()).format("YYYY") !== Moment(start_date).format('YYYY') &&
-            <EventText variant="h3">
-              {Moment(start_date).format('MMM Do YYYY')} to {Moment(end_date).format('MMM Do YYYY')}
-            </EventText>
-          }
-          
-          <br/>
+            {
+              Moment(new Date()).format("YYYY") !== Moment(start_date).format('YYYY') &&
+              <Typography variant="body1" sx={{ fontSize: '1rem', color: '#333', marginBottom: '8px' }}>
+                {Moment(start_date).format('MMM Do YYYY')} to {Moment(end_date).format('MMM Do YYYY')}
+              </Typography>
+            }
+          </div>
         
           <EventGreyText variant="button">{location}</EventGreyText>                    
           
@@ -93,72 +93,67 @@ function EventFeature(props) {
               container
               justifyContent="space-around"
               direction="column"
-              style={{ height: '160px' }} // Fixed height to prevent layout shifts
             >
-              <BlankContainer container justifyContent="center" direction="row" gap="20px">
+              <BlankContainer 
+                container 
+                justifyContent="center" 
+                direction="row" 
+                sx={{ 
+                  gap: { xs: '8px', sm: '16px', md: '20px' }, 
+                  flexWrap: 'wrap',
+                  '@media (max-width: 400px)': {
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }
+                }}
+              >
                 {donationCurrent?.food > 0 && (
                   <ProgressBarHolder container justifyContent="center">
-                    <Typography variant="h5" marginBottom="12%" fontWeight="bold">
+                    <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '0.9rem', textAlign: 'center' }}>
                       Food
                     </Typography>
-                    <CircularProgressbar
-                      styles={{
-                        path: {
-                          stroke: "#003486",
-                        },
-                        trail: {
-                          stroke: "#ffffff",
-                        },
-                        text: {
-                          fill: "#003486",
-                        },
-                      }}
-                      value={(donationCurrent.food / donationGoals.food) * 100}
-                      text={`${(
-                        (donationCurrent.food / donationGoals.food) *
-                        100
-                      ).toFixed(0)}%`}
-                    />
-                    <TypographyStyled variant="body1" sx={{ marginTop: "5%" }}>
+                    <Box sx={{ width: '60px', height: '60px' }}>
+                      <CircularProgressbar
+                        styles={{
+                          path: {
+                            stroke: "#003486",
+                          },
+                          trail: {
+                            stroke: "#ffffff",
+                          },
+                          text: {
+                            fill: "#003486",
+                            fontSize: "20px",
+                            fontWeight: "bold"
+                          },
+                        }}
+                        value={(donationCurrent.food / donationGoals.food) * 100}
+                        text={`${(
+                          (donationCurrent.food / donationGoals.food) *
+                          100
+                        ).toFixed(0)}%`}
+                      />
+                    </Box>
+                    <Typography variant="caption" sx={{ 
+                      fontSize: '0.7rem', 
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                      wordBreak: 'break-all',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
+                    }}>
                       ${donationCurrent.food}/{donationGoals.food}
-                    </TypographyStyled>
+                    </Typography>
                   </ProgressBarHolder>
                 )}
 
                 {donationCurrent?.prize > 0 && (
                 <ProgressBarHolder container justifyContent="center">
-                  <Typography variant="h5" marginBottom="12%" fontWeight="bold">
+                  <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '0.9rem', textAlign: 'center' }}>
                     Prize
                   </Typography>
-                  <CircularProgressbar
-                    styles={{
-                      path: {
-                        stroke: "#003486",
-                      },
-                      trail: {
-                        stroke: "#ffffff",
-                      },
-                      text: {
-                        fill: "#003486",
-                      },
-                    }}
-                    value={(donationCurrent.prize / donationGoals.prize) * 100}
-                    text={`${(
-                      (donationCurrent.prize / donationGoals.prize) *
-                      100
-                    ).toFixed(0)}%`}
-                  />
-                  <TypographyStyled variant="body1" sx={{ marginTop: "5%" }}>
-                    ${donationCurrent?.prize}/{donationGoals?.prize}
-                  </TypographyStyled>
-                </ProgressBarHolder>
-                )}
-
-                {donationCurrent?.swag > 0 && (
-                  <ProgressBarHolder container justifyContent="center">
-                    <Typography variant="h5" marginBottom="12%" fontWeight="bold">
-                      Swag
-                    </Typography>
+                  <Box sx={{ width: '60px', height: '60px' }}>
                     <CircularProgressbar
                       styles={{
                         path: {
@@ -169,40 +164,86 @@ function EventFeature(props) {
                         },
                         text: {
                           fill: "#003486",
+                          fontSize: "20px",
+                          fontWeight: "bold"
                         },
                       }}
-                      value={(donationCurrent?.swag / donationGoals?.swag) * 100}
+                      value={(donationCurrent.prize / donationGoals.prize) * 100}
                       text={`${(
-                        (donationCurrent?.swag / donationGoals?.swag) *
+                        (donationCurrent.prize / donationGoals.prize) *
                         100
                       ).toFixed(0)}%`}
                     />
-                    <TypographyStyled variant="body1" sx={{ marginTop: "5%" }}>
+                  </Box>
+                  <Typography variant="caption" sx={{ 
+                    fontSize: '0.7rem', 
+                    textAlign: 'center',
+                    lineHeight: '1.2',
+                    wordBreak: 'break-all',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
+                  }}>
+                    ${donationCurrent?.prize}/{donationGoals?.prize}
+                  </Typography>
+                </ProgressBarHolder>
+                )}
+
+                {donationCurrent?.swag > 0 && (
+                  <ProgressBarHolder container justifyContent="center">
+                    <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '0.9rem', textAlign: 'center' }}>
+                      Swag
+                    </Typography>
+                    <Box sx={{ width: '60px', height: '60px' }}>
+                      <CircularProgressbar
+                        styles={{
+                          path: {
+                            stroke: "#003486",
+                          },
+                          trail: {
+                            stroke: "#ffffff",
+                          },
+                          text: {
+                            fill: "#003486",
+                            fontSize: "20px",
+                            fontWeight: "bold"
+                          },
+                        }}
+                        value={(donationCurrent?.swag / donationGoals?.swag) * 100}
+                        text={`${(
+                          (donationCurrent?.swag / donationGoals?.swag) *
+                          100
+                        ).toFixed(0)}%`}
+                      />
+                    </Box>
+                    <Typography variant="caption" sx={{ 
+                      fontSize: '0.7rem', 
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                      wordBreak: 'break-all',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
+                    }}>
                       ${donationCurrent.swag}/{donationGoals.swag}
-                    </TypographyStyled>
+                    </Typography>
                   </ProgressBarHolder>
                 )}
               </BlankContainer>
 
-              <ThankYouContainer>
-                <TypographyStyled variant="h6">
-                  {donationCurrent?.thank_you?.length > 0
-                    ? `Special thanks to: ${donationCurrent?.thank_you} for donating!`
-                    : ""}
-                </TypographyStyled>
-              </ThankYouContainer>
+              {donationCurrent?.thank_you?.length > 0 && (
+                <ThankYouContainer>
+                  <Typography variant="caption" sx={{ fontSize: '0.8rem', textAlign: 'center', fontStyle: 'italic', mt: 1 }}>
+                    Special thanks to: {donationCurrent?.thank_you} for donating!
+                  </Typography>
+                </ThankYouContainer>
+              )}
             </ProgressContainer>
-          )}
-          {/* Empty placeholder with fixed height when no donation data */}
-          {!donationCurrent?.food && !donationCurrent?.prize && !donationCurrent?.swag && (
-            <div style={{ height: '20px' }} /> // Small spacer when no donation data
           )}
 
           <ButtonContainer
             container
             direction="row"
-            justifyContent="space-around"
-            gap="5px"
+            justifyContent="center"
+            sx={{ mt: 'auto', gap: '8px', flexWrap: 'wrap', pt: 2 }}
           >
             {
               eventLinks?.map((alink) => {
