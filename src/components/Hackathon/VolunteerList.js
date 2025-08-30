@@ -44,6 +44,102 @@ import LaunchIcon from "@mui/icons-material/Launch";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
+// Field configuration for data-driven rendering
+const FIELD_CONFIG = {
+  company: {
+    fields: ['company', 'schoolOrganization', 'companyName'],
+    type: 'chip',
+    icon: WorkIcon,
+    label: 'Organization'
+  },
+  bio: {
+    fields: ['shortBio', 'shortBiography'],
+    type: 'expandable_text',
+    maxLength: 150
+  },
+  expertise: {
+    fields: ['expertise', 'background'],
+    type: 'text',
+    label: 'Expertise'
+  },
+  softwareSpecifics: {
+    fields: ['softwareEngineeringSpecifics'],
+    type: 'text',
+    label: 'Software Specifics'
+  },
+  whyJudge: {
+    fields: ['whyJudge'],
+    type: 'expandable_text',
+    label: 'Why volunteering',
+    maxLength: 150
+  },
+  primaryRoles: {
+    fields: ['primaryRoles'],
+    type: 'text',
+    label: 'Primary Skills'
+  },
+  skills: {
+    fields: ['skills'],
+    type: 'text',
+    label: 'Technical Skills'
+  },
+  socialCauses: {
+    fields: ['socialCauses'],
+    type: 'chip_list',
+    icon: FavoriteIcon,
+    label: 'Passionate About',
+    maxItems: 3,
+    color: 'secondary',
+    variant: 'outlined'
+  },
+  location: {
+    fields: ['state'],
+    type: 'chip',
+    icon: LocationOnIcon
+  },
+  participationCount: {
+    fields: ['participationCount'],
+    type: 'chip',
+    icons: {
+      mentor: VolunteerActivismIcon,
+      hacker: EmojiEventsIcon
+    }
+  },
+  teamStatus: {
+    fields: ['teamStatus'],
+    type: 'team_status_chip',
+    icon: GroupIcon
+  },
+  linkedinProfile: {
+    fields: ['linkedinProfile'],
+    type: 'link_chip',
+    icon: LinkedInIcon,
+    label: 'LinkedIn'
+  },
+  github: {
+    fields: ['github'],
+    type: 'link_chip',
+    icon: GitHubIcon,
+    label: 'GitHub'
+  },
+  portfolio: {
+    fields: ['portfolio'],
+    type: 'link_chip',
+    icon: LaunchIcon,
+    label: 'Portfolio'
+  },
+  availability: {
+    fields: ['availability'],
+    type: 'availability',
+    requiredType: 'mentor'
+  },
+  artifacts: {
+    fields: ['artifacts'],
+    type: 'artifacts',
+    requiredType: 'volunteer'
+  }
+};
+
 const ArtifactList = styled(List)({
   padding: 0,
 });
@@ -272,6 +368,31 @@ const ReadMoreButton = styled(Button)(({ theme }) => ({
   },
 }));
 
+// Utility functions for field-based rendering
+const getFieldValue = (volunteer, fieldConfig) => {
+  if (!volunteer || !fieldConfig?.fields) return null;
+  
+  for (const field of fieldConfig.fields) {
+    if (volunteer[field] != null && volunteer[field] !== '') {
+      return volunteer[field];
+    }
+  }
+  return null;
+};
+
+const shouldRenderField = (volunteer, fieldKey, type) => {
+  const fieldConfig = FIELD_CONFIG[fieldKey];
+  if (!fieldConfig) return false;
+  
+  // Check if field has a type requirement
+  if (fieldConfig.requiredType && fieldConfig.requiredType !== type) {
+    return false;
+  }
+  
+  const value = getFieldValue(volunteer, fieldConfig);
+  return value != null && value !== '';
+};
+
 const VolunteerList = ({ event_id, type }) => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
@@ -279,6 +400,147 @@ const VolunteerList = ({ event_id, type }) => {
   const [availableMentors, setAvailableMentors] = React.useState([]);
   const [expandedAvailability, setExpandedAvailability] = React.useState({});
   const [expandedBios, setExpandedBios] = React.useState({});
+
+  // Field rendering functions
+  const renderFieldChip = (value, fieldConfig) => {
+    if (!value) return null;
+    const IconComponent = fieldConfig.icon;
+    return (
+      <Chip
+        icon={IconComponent ? <IconComponent /> : null}
+        label={value}
+        size="small"
+      />
+    );
+  };
+
+  const renderFieldText = (value, fieldConfig) => {
+    if (!value) return null;
+    return (
+      <Typography variant="body2" paragraph sx={{ mb: 1.5 }}>
+        <strong>{fieldConfig.label}:</strong> {value}
+      </Typography>
+    );
+  };
+
+  const renderChipList = (value, fieldConfig) => {
+    if (!value) return null;
+    
+    const items = Array.isArray(value) ? value : value.split(",").map(c => c.trim());
+    const maxItems = fieldConfig.maxItems || 3;
+    const IconComponent = fieldConfig.icon;
+    
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>{fieldConfig.label}:</strong>
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+          {items.slice(0, maxItems).map((item, index) => (
+            <Chip
+              key={index}
+              icon={IconComponent ? <IconComponent /> : null}
+              label={item}
+              size="small"
+              color={fieldConfig.color || "primary"}
+              variant={fieldConfig.variant || "filled"}
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderTeamStatusChip = (value) => {
+    if (!value) return null;
+    
+    const getTeamLabel = (status) => {
+      switch (status) {
+        case "I have a team": return "Has Team";
+        case "I'm looking for team members": return "Seeking Members";
+        case "I'd like to be matched with a team": return "Looking for Team";
+        default: return "Solo";
+      }
+    };
+    
+    const getTeamColor = (status) => {
+      return status === "I have a team" ? "success" : "primary";
+    };
+    
+    return (
+      <Chip
+        icon={<GroupIcon />}
+        label={getTeamLabel(value)}
+        size="small"
+        color={getTeamColor(value)}
+      />
+    );
+  };
+
+  const renderLinkChip = (value, fieldConfig) => {
+    if (!value) return null;
+    const IconComponent = fieldConfig.icon;
+    
+    return (
+      <Link href={value} target="_blank" rel="noopener noreferrer">
+        <Chip
+          icon={IconComponent ? <IconComponent /> : null}
+          label={fieldConfig.label}
+          size="small"
+          clickable
+        />
+      </Link>
+    );
+  };
+
+  const renderField = (volunteer, fieldKey, type) => {
+    if (!shouldRenderField(volunteer, fieldKey, type)) return null;
+    
+    const fieldConfig = FIELD_CONFIG[fieldKey];
+    const value = getFieldValue(volunteer, fieldConfig);
+    
+    switch (fieldConfig.type) {
+      case 'chip':
+        // Handle participation count with different icons based on type
+        if (fieldKey === 'participationCount' && fieldConfig.icons) {
+          const IconComponent = fieldConfig.icons[type] || fieldConfig.icons.mentor;
+          return (
+            <Chip
+              icon={<IconComponent />}
+              label={value}
+              size="small"
+            />
+          );
+        }
+        return renderFieldChip(value, fieldConfig);
+        
+      case 'text':
+        // Handle array values by joining them
+        const displayValue = Array.isArray(value) ? value.join(", ") : value;
+        return renderFieldText(displayValue, fieldConfig);
+        
+      case 'expandable_text':
+        return renderExpandableText(value, volunteer.name, fieldKey, fieldConfig.label);
+        
+      case 'chip_list':
+        return renderChipList(value, fieldConfig);
+        
+      case 'team_status_chip':
+        return renderTeamStatusChip(value);
+        
+      case 'link_chip':
+        return renderLinkChip(value, fieldConfig);
+        
+      case 'availability':
+        return renderAvailability(value, volunteer.name);
+        
+      case 'artifacts':
+        return renderArtifacts(value);
+        
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     // Call API to get data based on type
@@ -770,10 +1032,6 @@ const VolunteerList = ({ event_id, type }) => {
     // Check if volunteer exists
     if (!volunteer) return null;
 
-    const isMentor = type === "mentor";
-    const isJudge = type === "judge";
-    const isVolunteer = type === "volunteer";
-    const isHacker = type === "hacker";
     const isSelected = !!volunteer.isSelected;
 
     // Skip rendering if not selected
@@ -804,7 +1062,7 @@ const VolunteerList = ({ event_id, type }) => {
               image={imageToDisplay}
               title={volunteer.name || "Volunteer"}
             />
-            {type !== "judge" && (volunteer.isInPerson ? (
+            {volunteer.isInPerson !== undefined && (volunteer.isInPerson ? (
               <InPersonBadge>In-Person</InPersonBadge>
             ) : (
               <RemoteBadge>Remote</RemoteBadge>
@@ -832,193 +1090,30 @@ const VolunteerList = ({ event_id, type }) => {
               <ShareVolunteer volunteer={volunteer} type={type} />
             </Box>
             <Typography variant="subtitle1" color="text.secondary">
-              {isMentor
-                ? volunteer.company || ""
-                : isHacker
-                  ? volunteer.schoolOrganization || ""
-                  : volunteer.companyName || ""}
-              {!isMentor &&
-                !isHacker &&
-                volunteer.title &&
+              {getFieldValue(volunteer, FIELD_CONFIG.company) || ""}
+              {volunteer.title && !volunteer.experienceLevel &&
                 ` - ${volunteer.title}`}
-              {isHacker &&
-                volunteer.experienceLevel &&
+              {volunteer.experienceLevel &&
                 ` • ${volunteer.experienceLevel}`}
             </Typography>
             <ChipContainer>
-              {volunteer.company && !isHacker && (
-                <Chip
-                  icon={<WorkIcon />}
-                  label={volunteer.company}
-                  size="small"
-                />
-              )}
-              {volunteer.state && (
-                <Chip
-                  icon={<LocationOnIcon />}
-                  label={volunteer.state}
-                  size="small"
-                />
-              )}
-              {isMentor &&
-                typeof volunteer.participationCount !== "undefined" && (
-                  <Chip
-                    icon={<VolunteerActivismIcon />}
-                    label={volunteer.participationCount}
-                    size="small"
-                  />
-                )}
-              {isHacker && volunteer.participationCount && (
-                <Chip
-                  icon={<EmojiEventsIcon />}
-                  label={volunteer.participationCount}
-                  size="small"
-                />
-              )}
-              {isHacker && volunteer.teamStatus && (
-                <Chip
-                  icon={<GroupIcon />}
-                  label={
-                    volunteer.teamStatus === "I have a team"
-                      ? "Has Team"
-                      : volunteer.teamStatus === "I'm looking for team members"
-                        ? "Seeking Members"
-                        : volunteer.teamStatus ===
-                            "I'd like to be matched with a team"
-                          ? "Looking for Team"
-                          : "Solo"
-                  }
-                  size="small"
-                  color={
-                    volunteer.teamStatus === "I have a team"
-                      ? "success"
-                      : "primary"
-                  }
-                />
-              )}
-              {volunteer.linkedinProfile && (
-                <Link
-                  href={volunteer.linkedinProfile}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Chip
-                    icon={<LinkedInIcon />}
-                    label="LinkedIn"
-                    size="small"
-                    clickable
-                  />
-                </Link>
-              )}
-              {isHacker && volunteer.github && (
-                <Link
-                  href={volunteer.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Chip
-                    icon={<GitHubIcon />}
-                    label="GitHub"
-                    size="small"
-                    clickable
-                  />
-                </Link>
-              )}
-              {isHacker && volunteer.portfolio && (
-                <Link
-                  href={volunteer.portfolio}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Chip
-                    icon={<LaunchIcon />}
-                    label="Portfolio"
-                    size="small"
-                    clickable
-                  />
-                </Link>
-              )}
+              {renderField(volunteer, 'company', type)}
+              {renderField(volunteer, 'location', type)}
+              {renderField(volunteer, 'participationCount', type)}
+              {renderField(volunteer, 'teamStatus', type)}
+              {renderField(volunteer, 'linkedinProfile', type)}
+              {renderField(volunteer, 'github', type)}
+              {renderField(volunteer, 'portfolio', type)}
             </ChipContainer>
-            {renderExpandableText(
-              volunteer.shortBio || volunteer.shortBiography,
-              volunteer.name,
-              'bio'
-            )}
-            {isMentor && (
-              <>
-                <Typography variant="body2" paragraph sx={{ mb: 1.5 }}>
-                  <strong>Expertise:</strong>{" "}
-                  {volunteer.expertise || "Not specified"}
-                </Typography>
-                {volunteer.softwareEngineeringSpecifics && (
-                  <Typography variant="body2" paragraph sx={{ mb: 1.5 }}>
-                    <strong>Software Specifics:</strong>{" "}
-                    {volunteer.softwareEngineeringSpecifics}
-                  </Typography>
-                )}
-              </>
-            )}
-            {isJudge && volunteer.background && (
-              <>
-                <Typography variant="body2" paragraph sx={{ mb: 1.5 }}>
-                  <strong>Expertise:</strong> {volunteer.background}
-                </Typography>
-              </>
-            )}
-            {isJudge && volunteer.whyJudge && 
-              renderExpandableText(
-                volunteer.whyJudge,
-                volunteer.name,
-                'whyJudge',
-                'Why volunteering'
-              )
-            }
-            {isHacker && (
-              <>
-                {volunteer.primaryRoles && (
-                  <Typography variant="body1" paragraph>
-                    <strong>Primary Skills:</strong>{" "}
-                    {Array.isArray(volunteer.primaryRoles)
-                      ? volunteer.primaryRoles.join(", ")
-                      : volunteer.primaryRoles}
-                  </Typography>
-                )}
-                {volunteer.skills && (
-                  <Typography variant="body1" paragraph>
-                    <strong>Technical Skills:</strong>{" "}
-                    {Array.isArray(volunteer.skills)
-                      ? volunteer.skills.join(", ")
-                      : volunteer.skills}
-                  </Typography>
-                )}
-                {volunteer.socialCauses && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Passionate About:</strong>
-                    </Typography>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {(Array.isArray(volunteer.socialCauses)
-                        ? volunteer.socialCauses
-                        : volunteer.socialCauses.split(",").map((c) => c.trim())
-                      )
-                        .slice(0, 3)
-                        .map((cause, index) => (
-                          <Chip
-                            key={index}
-                            icon={<FavoriteIcon />}
-                            label={cause}
-                            size="small"
-                            color="secondary"
-                            variant="outlined"
-                          />
-                        ))}
-                    </Box>
-                  </Box>
-                )}                
-              </>
-            )}
-            {isMentor && renderAvailability(volunteer.availability, volunteer.name)}
-            {isVolunteer && renderArtifacts(volunteer.artifacts)}
+            {renderField(volunteer, 'bio', type)}
+            {renderField(volunteer, 'expertise', type)}
+            {renderField(volunteer, 'softwareSpecifics', type)}
+            {renderField(volunteer, 'whyJudge', type)}
+            {renderField(volunteer, 'primaryRoles', type)}
+            {renderField(volunteer, 'skills', type)}
+            {renderField(volunteer, 'socialCauses', type)}
+            {renderField(volunteer, 'availability', type)}
+            {renderField(volunteer, 'artifacts', type)}
           </VolunteerContent>
         </VolunteerCard>
       </Grid>
