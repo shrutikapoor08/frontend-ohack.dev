@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -14,33 +14,44 @@ import {
   Chip,
   Tooltip,
   Box,
+  IconButton,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { FaPaperPlane, FaSlack } from 'react-icons/fa';
+import EditIcon from "@mui/icons-material/Edit";
 import { Email as EmailIcon } from '@mui/icons-material';
+import { FaPaperPlane, FaSlack } from 'react-icons/fa';
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   width: "100%",
   overflowX: "auto",
   "& .MuiTable-root": {
     minWidth: "100%",
+    tableLayout: "fixed", // Enable fixed layout for better control
   },
 }));
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  padding: theme.spacing(1, 2),
+  padding: theme.spacing(0.5, 1), // Reduced padding
+  fontSize: "0.875rem", // Smaller font size
+  overflow: "hidden", // Prevent overflow
+  textOverflow: "ellipsis", // Add ellipsis for long text
+  whiteSpace: "nowrap", // Prevent text wrapping by default
   [theme.breakpoints.down("md")]: {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
     borderBottom: "none",
-    padding: theme.spacing(1, 2),
+    padding: theme.spacing(0.5, 1),
+    whiteSpace: "normal", // Allow wrapping on mobile
     "&:before": {
       content: "attr(data-label)",
       fontWeight: "bold",
       marginBottom: theme.spacing(0.5),
+      fontSize: "0.75rem",
     },
   },
 }));
@@ -88,6 +99,23 @@ const StatusChip = styled(Chip)(({ theme, statustype }) => {
   return getStatusColors(statustype);
 });
 
+const ClickableCell = styled(Typography)(({ theme }) => ({
+  cursor: 'pointer',
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  padding: theme.spacing(0.25, 0.5),
+  borderRadius: theme.spacing(0.5),
+  transition: 'background-color 0.2s ease',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  '&:active': {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
+
 const VolunteerTable = ({
   volunteers,
   type,
@@ -100,54 +128,90 @@ const VolunteerTable = ({
   onBatchEmail,
   onBatchEmailNotSelected,
 }) => {
-  console.log("VolunteerTable", volunteers);
+  const [copyFeedback, setCopyFeedback] = useState({ open: false, message: '' });
+
+  const handleCopyToClipboard = async (text, fieldName) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      
+      setCopyFeedback({ 
+        open: true, 
+        message: `${fieldName} copied: ${text.length > 30 ? text.substring(0, 30) + '...' : text}` 
+      });
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      setCopyFeedback({ 
+        open: true, 
+        message: `Failed to copy ${fieldName}` 
+      });
+    }
+  };
+
+  const handleCloseFeedback = () => {
+    setCopyFeedback({ open: false, message: '' });
+  };
+
   const columns = useMemo(() => {
     const baseColumns = [
-      { id: "id", label: "ID", minWidth: 100 },
-      { id: "name", label: "Name", minWidth: 120 },
-      { id: "email", label: "Email", minWidth: 150 },
-      { id: "messages_sent", label: "Messages Sent", minWidth: 120 },
-      { id: "pronouns", label: "Pronouns", minWidth: 100 },
-      { id: "company", label: "Company", minWidth: 120 },
-      { id: "isInPerson", label: "In Person", minWidth: 100 },
-      { id: "isSelected", label: "Selected", minWidth: 100 },
-      { id: "slack_user_id", label: "SlackID", minWidth: 50 },
+      { id: "id", label: "ID", minWidth: 60 }, // Reduced from 100
+      { id: "name", label: "Name", minWidth: 100 }, // Reduced from 120
+      { id: "messages_sent", label: "Msgs", minWidth: 20 }, // Reduced from 120, shorter label
+      { id: "email", label: "Email", minWidth: 140, priority: 2 }, // Increased from 100 to prevent overlap
+      { id: "pronouns", label: "Pronouns", minWidth: 80, priority: 3 }, // Increased from 70 for better spacing
+      { id: "company", label: "Company", minWidth: 90, priority: 2 }, // Reduced from 120
+      { id: "isInPerson", label: "In Person", minWidth: 70 }, // Reduced from 100
+      { id: "isSelected", label: "Selected", minWidth: 80 }, // Reduced from 100
+      { id: "slack_user_id", label: "Slack", minWidth: 40, priority: 3 }, // Reduced from 50
     ];
 
     if (type === "mentors") {
       return [
         ...baseColumns,
-        { id: "expertise", label: "Expertise", minWidth: 150 },
-        { id: "country", label: "Country", minWidth: 100 },
-        { id: "state", label: "State", minWidth: 100 },
+        { id: "expertise", label: "Expertise", minWidth: 120, priority: 2 }, // Reduced from 150
+        { id: "country", label: "Country", minWidth: 70, priority: 3 }, // Reduced from 100
+        { id: "state", label: "State", minWidth: 60, priority: 3 }, // Reduced from 100
       ];
     } else if (type === "judges") {
       return [
         ...baseColumns,
-        { id: "status", label: "Status", minWidth: 120 },
-        { id: "title", label: "Title", minWidth: 150 },
-        { id: "background", label: "Background", minWidth: 150 },
+        { id: "status", label: "Status", minWidth: 90 }, // Reduced from 120
+        { id: "title", label: "Title", minWidth: 100, priority: 2 }, // Reduced from 150
+        { id: "background", label: "Background", minWidth: 120, priority: 3 }, // Reduced from 150
       ];
     } else if (type === "volunteers") {
       return [
         ...baseColumns,
-        { id: "volunteerType", label: "Volunteer Type", minWidth: 150 },
-        { id: "artifacts", label: "Contributions", minWidth: 200 },
+        { id: "volunteerType", label: "Vol. Type", minWidth: 90 }, // Reduced from 150, shorter label
+        { id: "artifacts", label: "Contrib.", minWidth: 100, priority: 2 }, // Reduced from 200, shorter label
       ];
     } else if (type === "hackers") {
       return [
         ...baseColumns,
-        { id: "participantType", label: "Participant Type", minWidth: 120 },
-        { id: "experienceLevel", label: "Experience", minWidth: 120 },
-        { id: "teamStatus", label: "Team Status", minWidth: 120 },
-        { id: "primaryRoles", label: "Roles", minWidth: 150 },
+        { id: "participantType", label: "Type", minWidth: 80 }, // Reduced from 120, shorter label
+        { id: "experienceLevel", label: "Exp.", minWidth: 60 }, // Reduced from 120, shorter label
+        { id: "teamStatus", label: "Team", minWidth: 80 }, // Reduced from 120, shorter label
+        { id: "primaryRoles", label: "Roles", minWidth: 100, priority: 2 }, // Reduced from 150
       ];
     } else if (type === "sponsors") {
       return [
         ...baseColumns,
-        { id: "sponsorshipTier", label: "Tier", minWidth: 120 },
-        { id: "sponsorshipDetails", label: "Details", minWidth: 150 },
-        { id: "title", label: "Title", minWidth: 120 },
+        { id: "sponsorshipTier", label: "Tier", minWidth: 80 }, // Reduced from 120
+        { id: "sponsorshipDetails", label: "Details", minWidth: 100, priority: 2 }, // Reduced from 150
+        { id: "title", label: "Title", minWidth: 90 }, // Reduced from 120
       ];
     }
 
@@ -179,30 +243,83 @@ const VolunteerTable = ({
   const renderCellContent = (volunteer, column) => {
     switch (column.id) {
       case "id":
-        return volunteer.id || "N/A";
+        const id = volunteer.id || "N/A";
+        return (
+          <Tooltip title="Click to copy ID">
+            <ClickableCell
+              variant="caption"
+              onClick={() => handleCopyToClipboard(id, 'ID')}
+            >
+              {id}
+            </ClickableCell>
+          </Tooltip>
+        );
+      case "name":
+        const name = volunteer.name || "";
+        return (
+          <Tooltip title="Click to copy name">
+            <ClickableCell
+              variant="caption"
+              onClick={() => handleCopyToClipboard(name, 'Name')}
+              sx={{ maxWidth: '90px' }}
+            >
+              {name}
+            </ClickableCell>
+          </Tooltip>
+        );
+      case "email":
+        const email = volunteer.email || "";
+        const displayEmail = email.length > 25;
+        return (
+          <Tooltip title={displayEmail ? `${email} (Click to copy)` : "Click to copy email"}>
+            <ClickableCell
+              variant="caption" 
+              onClick={() => handleCopyToClipboard(email, 'Email')}
+              sx={{ maxWidth: '130px' }}
+            >
+              {email}
+            </ClickableCell>
+          </Tooltip>
+        );
+      case "pronouns":
+        const pronouns = volunteer.pronouns || "";
+        return (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '70px'
+            }}
+          >
+            {pronouns}
+          </Typography>
+        );
       case "isInPerson":
-        return volunteer[column.id] ? "Yes" : "No";
+        return volunteer[column.id] ? (
+          <Chip label="Yes" size="small" color="success" sx={{ minWidth: 45, fontSize: '0.75rem' }} />
+        ) : (
+          <Chip label="No" size="small" color="default" sx={{ minWidth: 45, fontSize: '0.75rem' }} />
+        );
       case "isSelected":
         return volunteer[column.id] ? (
-          <SelectedChip
-            icon={<CheckCircleIcon />}
-            label="Selected"
-            size="small"
-          />
+          <Tooltip title="Selected">
+            <CheckCircleIcon color="success" fontSize="small" />
+          </Tooltip>
         ) : (
-          <NotSelectedChip
-            icon={<CancelIcon />}
-            label="Not Selected"
-            size="small"
-          />
+          <Tooltip title="Not Selected">
+            <CancelIcon color="error" fontSize="small" />
+          </Tooltip>
         );
       case "status":
         const status = volunteer.status || "pending";
         const statusLabels = {
-          pending: "Pending Review",
+          pending: "Pending",
           approved: "Approved",
           denied: "Denied",
-          verified_travel: "Verified Travel",
+          verified_travel: "Verified",
           confirmed: "Confirmed",
           withdrew: "Withdrew",
           no_show: "No Show",
@@ -212,6 +329,7 @@ const VolunteerTable = ({
             statustype={status}
             label={statusLabels[status] || status}
             size="small"
+            sx={{ fontSize: '0.7rem', minWidth: 60 }}
           />
         );
       case "messages_sent":
@@ -222,10 +340,10 @@ const VolunteerTable = ({
         if (messageCount === 0) {
           return (
             <Chip 
-              label={0} 
+              label="0" 
               size="small" 
               variant="outlined"
-              color="default"
+              sx={{ minWidth: 32, fontSize: '0.75rem' }}
             />
           );
         }
@@ -291,83 +409,177 @@ const VolunteerTable = ({
               size="small" 
               variant="outlined"
               color="primary"
-              sx={{ cursor: 'pointer' }}
+              sx={{ cursor: 'pointer', minWidth: 32, fontSize: '0.75rem' }}
             />
           </Tooltip>
         );
-      case "artifacts":
-        return volunteer.artifacts?.map((artifact, index) => (
-          <Tooltip key={index} title={artifact.comment}>
-            <Chip label={artifact.label} size="small" style={{ margin: 2 }} />
+      case "slack_user_id":
+        return volunteer.slack_user_id && volunteer.slack_user_id.trim() !== '' ? (
+          <Tooltip title="Has Slack ID">
+            <FaSlack size={14} color="#4A154B" />
           </Tooltip>
-        ));
+        ) : (
+          <Tooltip title="No Slack ID">
+            <Box sx={{ width: 14, height: 14, backgroundColor: '#ccc', borderRadius: '50%' }} />
+          </Tooltip>
+        );
+      case "artifacts":
+        return (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {volunteer.artifacts?.slice(0, 3).map((artifact, index) => (
+              <Tooltip key={index} title={artifact.comment}>
+                <Chip 
+                  label={artifact.label} 
+                  size="small" 
+                  sx={{ fontSize: '0.65rem', height: 20 }}
+                />
+              </Tooltip>
+            ))}
+            {volunteer.artifacts?.length > 3 && (
+              <Chip 
+                label={`+${volunteer.artifacts.length - 3}`} 
+                size="small" 
+                variant="outlined"
+                sx={{ fontSize: '0.65rem', height: 20 }}
+              />
+            )}
+          </Box>
+        );
       default:
-        return volunteer[column.id];
+        const value = volunteer[column.id];
+        if (typeof value === 'string' && value.length > 15) {
+          return (
+            <Tooltip title={value}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  cursor: 'pointer',
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {value.substring(0, 12)}...
+              </Typography>
+            </Tooltip>
+          );
+        }
+        return (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {value}
+          </Typography>
+        );
     }
   };
 
   return (
     <>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">
-          Total {type}: {volunteers.length} | Selected: {selectedCount}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+        <Typography variant="subtitle1" sx={{ fontSize: '0.95rem' }}>
+          {type}: {volunteers.length} | Selected: {selectedCount}
         </Typography>
-        <Box display="flex" gap={1} flexWrap="wrap">
+        <Box display="flex" gap={0.5} flexWrap="wrap">
           {onBatchEmail && eligibleForEmailCount > 0 && (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<EmailIcon />}
-              onClick={() => onBatchEmail(volunteers, type, true)}
-              size="small"
-            >
-              Send Email ({eligibleForEmailCount})
-            </Button>
+            <Tooltip title={`Send Email to ${eligibleForEmailCount} selected`}>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => onBatchEmail(volunteers, type, true)}
+                size="small"
+                sx={{ minWidth: 'auto', px: 1 }}
+              >
+                <EmailIcon fontSize="small" />
+                <Typography variant="caption" sx={{ ml: 0.5 }}>
+                  {eligibleForEmailCount}
+                </Typography>
+              </Button>
+            </Tooltip>
           )}
           {onSlackInvite && eligibleForSlackCount > 0 && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<FaSlack />}
-              onClick={() => onSlackInvite(volunteers, type)}
-              size="small"
-            >
-              Invite to Slack ({eligibleForSlackCount})
-            </Button>
+            <Tooltip title={`Invite ${eligibleForSlackCount} to Slack`}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => onSlackInvite(volunteers, type)}
+                size="small"
+                sx={{ minWidth: 'auto', px: 1 }}
+              >
+                <FaSlack size={14} />
+                <Typography variant="caption" sx={{ ml: 0.5 }}>
+                  {eligibleForSlackCount}
+                </Typography>
+              </Button>
+            </Tooltip>
           )}
           {onBatchEmailNotSelected && notSelectedForEmailCount > 0 && (
-            <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<EmailIcon />}
-              onClick={() => onBatchEmailNotSelected(volunteers, type, false)}
-              size="small"
-            >
-              Send Rejection Email ({notSelectedForEmailCount})
-            </Button>
+            <Tooltip title={`Send rejection email to ${notSelectedForEmailCount}`}>
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={() => onBatchEmailNotSelected(volunteers, type, false)}
+                size="small"
+                sx={{ minWidth: 'auto', px: 1 }}
+              >
+                <EmailIcon fontSize="small" />
+                <Typography variant="caption" sx={{ ml: 0.5 }}>
+                  {notSelectedForEmailCount}
+                </Typography>
+              </Button>
+            </Tooltip>
           )}
         </Box>
       </Box>
       <StyledTableContainer component={Paper}>
-        <Table stickyHeader>
+        <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <StyledTableCell style={{ minWidth: 50 }}>#</StyledTableCell>
-              <StyledTableCell style={{ minWidth: 80 }}>Photo</StyledTableCell>
-              <StyledTableCell style={{ minWidth: 100 }}>
+              <StyledTableCell style={{ width: 40 }}>#</StyledTableCell>
+              <StyledTableCell style={{ width: 50 }}>
+                <Tooltip title="Photo">
+                  <Avatar sx={{ width: 24, height: 24 }} />
+                </Tooltip>
+              </StyledTableCell>
+              <StyledTableCell style={{ width: 80 }}>
                 Actions
               </StyledTableCell>
               {columns.map((column) => (
                 <StyledTableCell
                   key={column.id}
-                  style={{ minWidth: column.minWidth }}
+                  style={{ 
+                    minWidth: column.minWidth,
+                    display: column.priority === 3 ? { xs: 'none', lg: 'table-cell' } : 
+                             column.priority === 2 ? { xs: 'none', md: 'table-cell' } : 'table-cell'
+                  }}
                 >
                   <TableSortLabel
                     active={orderBy === column.id}
                     direction={orderBy === column.id ? order : "asc"}
                     onClick={() => onRequestSort(column.id)}
                   >
-                    {column.label}
+                    <Typography variant="caption" fontWeight="bold">
+                      {column.label}
+                      {['id', 'name', 'email'].includes(column.id) && (
+                        <Chip 
+                          label="📋" 
+                          size="small" 
+                          sx={{ 
+                            ml: 0.5, 
+                            height: 16, 
+                            fontSize: '0.6rem',
+                            '& .MuiChip-label': { px: 0.5 }
+                          }} 
+                        />
+                      )}
+                    </Typography>
                   </TableSortLabel>
                 </StyledTableCell>
               ))}
@@ -381,38 +593,49 @@ const VolunteerTable = ({
                   backgroundColor: volunteer.isSelected ? "#e8f5e9" : "inherit",
                 }}
               >
-                <StyledTableCell>{index + 1}</StyledTableCell>
+                <StyledTableCell>
+                  <Typography variant="caption">{index + 1}</Typography>
+                </StyledTableCell>
                 <StyledTableCell>
                   <Avatar
                     src={volunteer.photoUrl}
                     alt={volunteer.name}
                     key={`${volunteer.name}-${volunteer.photoUrl}`}
+                    sx={{ width: 32, height: 32 }}
                   />
                 </StyledTableCell>
                 <StyledTableCell data-label="Actions">
-                  <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
-                    <Button 
-                      onClick={() => onEditVolunteer(volunteer)}
-                      size="small"
-                      variant="outlined"
-                    >
-                      Edit
-                    </Button>
-                    {onMessageVolunteer && (
-                      <Button 
-                        onClick={() => onMessageVolunteer(volunteer)}
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="Edit">
+                      <IconButton 
+                        onClick={() => onEditVolunteer(volunteer)}
                         size="small"
-                        variant="contained"
-                        color="primary"
-                        startIcon={<FaPaperPlane size={12} />}
                       >
-                        Message
-                      </Button>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    {onMessageVolunteer && (
+                      <Tooltip title="Send Message">
+                        <IconButton 
+                          onClick={() => onMessageVolunteer(volunteer)}
+                          size="small"
+                          color="primary"
+                        >
+                          <FaPaperPlane size={12} />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </Box>
                 </StyledTableCell>
                 {columns.map((column) => (
-                  <StyledTableCell key={column.id} data-label={column.label}>
+                  <StyledTableCell 
+                    key={column.id} 
+                    data-label={column.label}
+                    style={{ 
+                      display: column.priority === 3 ? { xs: 'none', lg: 'table-cell' } : 
+                               column.priority === 2 ? { xs: 'none', md: 'table-cell' } : 'table-cell'
+                    }}
+                  >
                     {renderCellContent(volunteer, column)}
                   </StyledTableCell>
                 ))}
@@ -421,6 +644,22 @@ const VolunteerTable = ({
           </TableBody>
         </Table>
       </StyledTableContainer>
+      
+      <Snackbar 
+        open={copyFeedback.open} 
+        autoHideDuration={2000} 
+        onClose={handleCloseFeedback}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseFeedback} 
+          severity="success" 
+          variant="filled"
+          sx={{ fontSize: '0.875rem' }}
+        >
+          {copyFeedback.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
