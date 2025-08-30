@@ -77,9 +77,16 @@ const MESSAGE_TEMPLATES = {
     category: "Application Denial",
     templates: [
       {
+        id: "judge_application_denied",
+        title: "Judge Application - Alternative Opportunity Available!",
+        applicableRoles: ["judge", "judges"],
+        message: "Thank you for your interest in judging at Opportunity Hack! 🙏\n\nWhile our judging panel is at capacity for this event, we have an exciting alternative that offers even more meaningful volunteer experience and community impact.\n\n🌟 **Consider becoming a MENTOR instead!**\n\nHere's why mentoring might be perfect for you:\n• **More volunteer hours** - Mentors typically contribute 8-12 hours vs 2-4 for judges\n• **Direct community impact** - Guide teams solving real nonprofit problems\n• **Professional development** - Share your expertise while learning from diverse teams\n• **Networking opportunities** - Work closely with passionate developers and nonprofit leaders\n• **Recognition** - All mentor contributions are documented for professional/visa purposes\n• **🏠 Remote-friendly** - Mentor virtually from anywhere! No travel required - support teams through Slack, video calls, and code reviews\n• **Flexible schedule** - Choose when and how much you engage throughout the hackathon weekend\n• **Deeper relationships** - Build lasting connections with teams as you guide their entire project journey\n\n📝 **Ready to make an even bigger impact?**\nApply to be a mentor: [Mentor Application](https://www.ohack.dev/hack/[EVENT_ID]/mentor-application)\n\n⏱️ All mentoring hours can be tracked at: https://www.ohack.dev/volunteer/track\n\n🚀 **Still want to judge future events?** Keep an eye out for our next hackathon announcements!\n\nYour expertise can transform ideas into lasting solutions. We'd love to have you on our mentor team! 💡\n\nStay connected: @opportunityhack on all socials",
+        icon: "🎯"
+      },
+      {
         id: "application_denied",
         title: "Application Not Approved",
-        applicableRoles: ["mentor", "mentors", "judge", "judges", "volunteer", "volunteers", "hacker", "hackers", "sponsor", "sponsors"],
+        applicableRoles: ["mentor", "mentors", "volunteer", "volunteers", "hacker", "hackers", "sponsor", "sponsors"],
         message: "Thank you for wanting to join our mission! 🙏\n\nWhile we can't accommodate your application this time due to capacity, your interest in helping nonprofits means everything.\n\n🌟 Stay involved:\n• Apply for future events\n• Follow @opportunityhack for opportunities\n• Share our mission with your network\n\nEvery action towards social good counts. We hope to work together soon! 💫",
         icon: "💫"
       }
