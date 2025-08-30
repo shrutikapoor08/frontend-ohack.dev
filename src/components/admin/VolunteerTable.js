@@ -588,7 +588,7 @@ const VolunteerTable = ({
           <TableBody>
             {volunteers.map((volunteer, index) => (
               <StyledTableRow
-                key={volunteer.name}
+                key={volunteer.id || `${volunteer.name}-${index}`}
                 style={{
                   backgroundColor: volunteer.isSelected ? "#e8f5e9" : "inherit",
                 }}
