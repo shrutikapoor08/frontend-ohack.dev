@@ -87,9 +87,9 @@ const ApplicationReviewCard = ({
       },
       volunteer: {
         title: 'Volunteer Application',
-        primaryFields: ['name', 'email', 'volunteerRole', 'availability'],
-        secondaryFields: ['skills', 'previousVolunteering'],
-        additionalFields: ['bio', 'linkedin', 'motivation'],
+        primaryFields: ['name', 'email', 'title', 'company', 'experienceLevel'],
+        secondaryFields: ['socialCauses', 'availability', 'availableDays', 'skills', 'previousVolunteering'],
+        additionalFields: ['bio', 'shortBio', 'motivation', 'linkedin', 'linkedinProfile', 'portfolio', 'otherSocialCause', 'additionalInfo'],
         statusField: 'isSelected'
       },
       sponsor: {
@@ -163,6 +163,48 @@ const ApplicationReviewCard = ({
     
     if (field === 'preferredContact') {
       return value === 'email' ? '📧 Email' : value === 'phone' ? '📞 Phone' : value;
+    }
+    
+    // Handle volunteer-specific field formatting
+    if (field === 'experienceLevel') {
+      if (value.includes('First time')) return '🔰 First Timer';
+      if (value.includes('Some experience')) return '💪 Experienced';
+      if (value.includes('Experienced volunteer')) return '⭐ Expert Volunteer';
+      return value;
+    }
+    
+    if (field === 'availableDays') {
+      if (Array.isArray(value)) {
+        const roleTypes = [...new Set(value.map(day => {
+          const parts = day.split('-');
+          return parts[parts.length - 1];
+        }).filter(Boolean))];
+        
+        const roleIcons = {
+          'Photography': '📸 Photography',
+          'Cleanup Crew': '🧹 Cleanup',
+          'Judging Support': '🏆 Judging',
+          'Registration': '📋 Registration',
+          'Setup': '🔧 Setup'
+        };
+        
+        return roleTypes.map(role => roleIcons[role] || role).join(', ');
+      }
+      return value;
+    }
+    
+    if (field === 'availability') {
+      if (typeof value === 'string' && value.includes(',')) {
+        const slots = value.split(',').map(s => s.trim());
+        const dayCount = slots.length;
+        const uniqueDays = [...new Set(slots.map(slot => {
+          const match = slot.match(/(Saturday|Sunday)/);
+          return match ? match[1] : null;
+        }).filter(Boolean))];
+        
+        return `${dayCount} time slots across ${uniqueDays.join(' & ')}`;
+      }
+      return value;
     }
     
     if (Array.isArray(value)) {
@@ -253,7 +295,12 @@ const ApplicationReviewCard = ({
       useLogo: 'Use Logo',
       howHeard: 'How Heard About Event',
       otherInvolvement: 'Other Involvement',
-      logoUrl: 'Logo URL'
+      logoUrl: 'Logo URL',
+      // Volunteer-specific fields
+      availableDays: 'Time Slots',
+      otherSocialCause: 'Other Social Cause',
+      shortBio: 'Short Bio',
+      previousVolunteering: 'Previous Volunteering'
     };
     return labelMap[field] || field.charAt(0).toUpperCase() + field.slice(1);
   };
@@ -473,7 +520,7 @@ const ApplicationReviewCard = ({
                               }} 
                             />
                           </Box>
-                        ) : field === 'biography' || field === 'whyJudge' ? (
+                        ) : field === 'biography' || field === 'whyJudge' || field === 'motivation' || field === 'bio' || field === 'shortBio' ? (
                           <Typography 
                             variant="body2" 
                             sx={{ 
@@ -481,11 +528,267 @@ const ApplicationReviewCard = ({
                               p: 2, 
                               bgcolor: 'grey.50', 
                               borderRadius: 1,
-                              fontStyle: field === 'whyJudge' ? 'italic' : 'normal'
+                              fontStyle: (field === 'whyJudge' || field === 'motivation') ? 'italic' : 'normal',
+                              fontWeight: field === 'shortBio' ? 500 : 'normal'
                             }}
                           >
                             {renderField(field, value, isLink)}
                           </Typography>
+                        ) : field === 'availability' && value ? (
+                          <Box sx={{ mt: 1 }}>
+                            {/* Availability Timeline Visualization */}
+                            {(() => {
+                              // Parse availability into structured data
+                              const parseAvailability = (availStr) => {
+                                const slots = availStr.split(',').map(s => s.trim());
+                                const parsed = [];
+                                
+                                slots.forEach(slot => {
+                                  const dayMatch = slot.match(/(Saturday|Sunday), (\w+ \d+)/);
+                                  const timeMatch = slot.match(/\(([^)]+)\)/);
+                                  const roleMatch = slot.match(/(📸|🧹|🏆|📋|🔧)/);
+                                  const roleNameMatch = slot.match(/(?:📸|🧹|🏆|📋|🔧)\s*([^(]+)/);
+                                  const sessionMatch = slot.match(/: ([^-]+) -/);
+                                  
+                                  if (dayMatch && timeMatch) {
+                                    const [, dayName, date] = dayMatch;
+                                    const timeRange = timeMatch[1];
+                                    const roleIcon = roleMatch ? roleMatch[1] : '👥';
+                                    const roleName = roleNameMatch ? roleNameMatch[1].trim() : 'General';
+                                    const sessionName = sessionMatch ? sessionMatch[1].trim() : '';
+                                    
+                                    // Parse start and end times
+                                    const [startStr, endStr] = timeRange.split(' - ');
+                                    const parseTime = (timeStr) => {
+                                      const match = timeStr.match(/(\d+):(\d+)(am|pm)/);
+                                      if (!match) return 0;
+                                      let [, hours, minutes, ampm] = match;
+                                      hours = parseInt(hours);
+                                      minutes = parseInt(minutes);
+                                      if (ampm === 'pm' && hours !== 12) hours += 12;
+                                      if (ampm === 'am' && hours === 12) hours = 0;
+                                      return hours * 60 + minutes;
+                                    };
+                                    
+                                    parsed.push({
+                                      day: dayName,
+                                      date,
+                                      startTime: parseTime(startStr),
+                                      endTime: parseTime(endStr),
+                                      timeRange,
+                                      roleIcon,
+                                      roleName: roleName.replace(/^\w+\s*-\s*/, ''),
+                                      sessionName
+                                    });
+                                  }
+                                });
+                                
+                                return parsed;
+                              };
+                              
+                              const slots = parseAvailability(value);
+                              const saturdaySlots = slots.filter(s => s.day === 'Saturday').sort((a, b) => a.startTime - b.startTime);
+                              const sundaySlots = slots.filter(s => s.day === 'Sunday').sort((a, b) => a.startTime - b.startTime);
+                              
+                              const totalHours = slots.reduce((total, slot) => {
+                                return total + ((slot.endTime - slot.startTime) / 60);
+                              }, 0);
+                              
+                              const roleStats = slots.reduce((acc, slot) => {
+                                acc[slot.roleIcon] = (acc[slot.roleIcon] || 0) + ((slot.endTime - slot.startTime) / 60);
+                                return acc;
+                              }, {});
+                              
+                              const roleColors = {
+                                '📸': '#2196f3',
+                                '🧹': '#4caf50',
+                                '🏆': '#ff9800',
+                                '📋': '#9c27b0',
+                                '🔧': '#f44336',
+                                '👥': '#757575'
+                              };
+                              
+                              const roleNames = {
+                                '📸': 'Photography',
+                                '🧹': 'Cleanup',
+                                '🏆': 'Judging',
+                                '📋': 'Registration',
+                                '🔧': 'Setup',
+                                '👥': 'General'
+                              };
+                              
+                              const createDetailedTimeline = (daySlots, dayName) => {
+                                if (daySlots.length === 0) return null;
+                                
+                                const minTime = Math.min(...daySlots.map(s => s.startTime));
+                                const maxTime = Math.max(...daySlots.map(s => s.endTime));
+                                const totalMinutes = maxTime - minTime;
+                                const timelineHeight = 40;
+                                
+                                return (
+                                  <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Box sx={{ 
+                                        width: 8, 
+                                        height: 8, 
+                                        borderRadius: '50%', 
+                                        bgcolor: dayName === 'Saturday' ? 'primary.main' : 'secondary.main' 
+                                      }} />
+                                      {dayName} ({daySlots.length} time slots)
+                                    </Typography>
+                                    
+                                    {/* Timeline bar */}
+                                    <Box sx={{ position: 'relative', height: timelineHeight, bgcolor: 'grey.100', borderRadius: 2, mb: 1 }}>
+                                      {daySlots.map((slot, idx) => {
+                                        const left = ((slot.startTime - minTime) / totalMinutes) * 100;
+                                        const width = ((slot.endTime - slot.startTime) / totalMinutes) * 100;
+                                        
+                                        return (
+                                          <Box
+                                            key={idx}
+                                            sx={{
+                                              position: 'absolute',
+                                              left: `${left}%`,
+                                              width: `${width}%`,
+                                              height: '70%',
+                                              bgcolor: roleColors[slot.roleIcon] || roleColors['👥'],
+                                              borderRadius: 1,
+                                              top: `${15 + (idx % 2) * 5}%`,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontSize: '0.9rem',
+                                              color: 'white',
+                                              fontWeight: 500,
+                                              border: '2px solid rgba(255,255,255,0.3)',
+                                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                            }}
+                                          >
+                                            {slot.roleIcon}
+                                          </Box>
+                                        );
+                                      })}
+                                    </Box>
+                                    
+                                    {/* Time labels */}
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'text.secondary' }}>
+                                      <span>{new Date(minTime * 60000).toLocaleTimeString('en-US', { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit',
+                                        hour12: true 
+                                      })}</span>
+                                      <span>{new Date(maxTime * 60000).toLocaleTimeString('en-US', { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit',
+                                        hour12: true 
+                                      })}</span>
+                                    </Box>
+                                  </Box>
+                                );
+                              };
+                              
+                              return (
+                                <Box>
+                                  {/* Summary stats */}
+                                  <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                                    <Box sx={{ bgcolor: 'success.light', p: 1, borderRadius: 1 }}>
+                                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.contrastText' }}>
+                                        Total: {Math.round(totalHours * 10) / 10} hours
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ bgcolor: 'info.light', p: 1, borderRadius: 1 }}>
+                                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'info.contrastText' }}>
+                                        {slots.length} time slots
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ bgcolor: 'primary.light', p: 1, borderRadius: 1 }}>
+                                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.contrastText' }}>
+                                        {Object.keys(roleStats).length} roles
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                  
+                                  {/* Role breakdown */}
+                                  <Box sx={{ mb: 2 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
+                                      Role Distribution:
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                      {Object.entries(roleStats).map(([role, hours]) => (
+                                        <Box 
+                                          key={role} 
+                                          sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: 0.5,
+                                            bgcolor: 'grey.50',
+                                            px: 1,
+                                            py: 0.5,
+                                            borderRadius: 1,
+                                            border: `2px solid ${roleColors[role]}`,
+                                          }}
+                                        >
+                                          <span>{role}</span>
+                                          <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                                            {roleNames[role]}: {Math.round(hours * 10) / 10}h
+                                          </Typography>
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                  
+                                  {/* Day timelines */}
+                                  {createDetailedTimeline(saturdaySlots, 'Saturday')}
+                                  {createDetailedTimeline(sundaySlots, 'Sunday')}
+                                  
+                                  {/* Detailed schedule */}
+                                  <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 2, mt: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                      Complete Schedule:
+                                    </Typography>
+                                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                                      {[...saturdaySlots, ...sundaySlots].map((slot, idx) => (
+                                        <Box 
+                                          key={idx} 
+                                          sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: 1,
+                                            fontSize: '0.8rem',
+                                            p: 0.5,
+                                            borderLeft: `3px solid ${roleColors[slot.roleIcon]}`,
+                                            pl: 1
+                                          }}
+                                        >
+                                          <Box sx={{ minWidth: 60 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                              {slot.day.substring(0, 3)}
+                                            </Typography>
+                                          </Box>
+                                          <Box sx={{ minWidth: 100 }}>
+                                            <Typography variant="caption">
+                                              {slot.timeRange}
+                                            </Typography>
+                                          </Box>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <span>{slot.roleIcon}</span>
+                                            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                                              {slot.roleName}
+                                            </Typography>
+                                          </Box>
+                                          {slot.sessionName && (
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                              ({slot.sessionName})
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              );
+                            })()}
+                          </Box>
                         ) : (
                           <Typography variant="body2" sx={{ mt: 0.5 }}>
                             {renderField(field, value, isLink)}

@@ -613,13 +613,22 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       case "volunteers":
         return [
           ...commonFields,
+          volunteer.title,
           volunteer.volunteerType,
           volunteer.volunteerRole,
+          volunteer.experienceLevel,
           volunteer.availability,
+          volunteer.availableDays,
           volunteer.skills,
           volunteer.previousVolunteering,
           volunteer.motivation,
           volunteer.bio,
+          volunteer.shortBio,
+          volunteer.socialCauses,
+          volunteer.otherSocialCause,
+          volunteer.linkedin,
+          volunteer.linkedinProfile,
+          volunteer.portfolio,
           ...(volunteer.artifacts || []).map(artifact => [
             artifact.label,
             artifact.comment
