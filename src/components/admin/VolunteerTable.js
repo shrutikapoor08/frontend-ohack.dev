@@ -209,9 +209,14 @@ const VolunteerTable = ({
     } else if (type === "sponsors") {
       return [
         ...baseColumns,
-        { id: "sponsorshipTier", label: "Tier", minWidth: 80 }, // Reduced from 120
-        { id: "sponsorshipDetails", label: "Details", minWidth: 100, priority: 2 }, // Reduced from 150
-        { id: "title", label: "Title", minWidth: 90 }, // Reduced from 120
+        { id: "sponsorshipTypes", label: "Sponsorship", minWidth: 100 },
+        { id: "title", label: "Title", minWidth: 90 },
+        { id: "volunteerType", label: "Vol. Type", minWidth: 90 },
+        { id: "volunteerCount", label: "Vol. Count", minWidth: 70 },
+        { id: "volunteerHours", label: "Vol. Hours", minWidth: 70 },
+        { id: "phoneNumber", label: "Phone", minWidth: 100, priority: 2 },
+        { id: "preferredContact", label: "Pref. Contact", minWidth: 80, priority: 3 },
+        { id: "useLogo", label: "Use Logo", minWidth: 70, priority: 3 },
       ];
     }
 
@@ -444,6 +449,98 @@ const VolunteerTable = ({
               />
             )}
           </Box>
+        );
+      case "phoneNumber":
+        const phone = volunteer.phoneNumber || "";
+        return (
+          <Tooltip title="Click to copy phone number">
+            <ClickableCell
+              variant="caption"
+              onClick={() => handleCopyToClipboard(phone, 'Phone Number')}
+              sx={{ maxWidth: '90px' }}
+            >
+              {phone}
+            </ClickableCell>
+          </Tooltip>
+        );
+      case "preferredContact":
+        const contact = volunteer.preferredContact || "";
+        return (
+          <Chip 
+            label={contact} 
+            size="small" 
+            color={contact === 'email' ? 'primary' : contact === 'phone' ? 'secondary' : 'default'}
+            sx={{ fontSize: '0.7rem', minWidth: 60 }}
+          />
+        );
+      case "useLogo":
+        const logoUsage = volunteer.useLogo || "";
+        return (
+          <Chip 
+            label={logoUsage} 
+            size="small" 
+            color={logoUsage === 'Yes' ? 'success' : logoUsage === 'No' ? 'error' : 'warning'}
+            sx={{ fontSize: '0.7rem', minWidth: 45 }}
+          />
+        );
+      case "volunteerType":
+        const volType = volunteer.volunteerType || "";
+        return (
+          <Tooltip title={volType}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '80px'
+              }}
+            >
+              {volType}
+            </Typography>
+          </Tooltip>
+        );
+      case "volunteerCount":
+        const count = volunteer.volunteerCount || "0";
+        return (
+          <Chip 
+            label={count} 
+            size="small" 
+            variant="outlined"
+            color="primary"
+            sx={{ fontSize: '0.75rem', minWidth: 32 }}
+          />
+        );
+      case "volunteerHours":
+        const hours = volunteer.volunteerHours || "0";
+        return (
+          <Chip 
+            label={`${hours}h`} 
+            size="small" 
+            variant="outlined"
+            color="secondary"
+            sx={{ fontSize: '0.75rem', minWidth: 40 }}
+          />
+        );
+      case "sponsorshipTypes":
+        const sponsorship = volunteer.sponsorshipTypes || volunteer.sponsorshipTier || volunteer.sponsorshipLevel || "";
+        return (
+          <Tooltip title={sponsorship}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '90px',
+                fontWeight: 500
+              }}
+            >
+              {sponsorship}
+            </Typography>
+          </Tooltip>
         );
       default:
         const value = volunteer[column.id];

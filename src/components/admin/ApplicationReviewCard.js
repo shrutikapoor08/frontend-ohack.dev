@@ -94,9 +94,9 @@ const ApplicationReviewCard = ({
       },
       sponsor: {
         title: 'Sponsor Application',
-        primaryFields: ['companyName', 'contactName', 'email', 'sponsorshipLevel'],
-        secondaryFields: ['industry', 'employeeCount'],
-        additionalFields: ['bio', 'website', 'specialRequests'],
+        primaryFields: ['companyName', 'name', 'email', 'sponsorshipTypes', 'title'],
+        secondaryFields: ['volunteerType', 'volunteerCount', 'volunteerHours', 'phoneNumber', 'preferredContact', 'useLogo'],
+        additionalFields: ['company', 'industry', 'employeeCount', 'bio', 'website', 'specialRequests', 'howHeard', 'otherInvolvement', 'logoUrl'],
         statusField: 'isSelected'
       }
     };
@@ -143,6 +143,26 @@ const ApplicationReviewCard = ({
       if (value === 'No') return '❌ Cannot attend';
       if (value === 'Partial') return '⚠️ Partial attendance';
       return value;
+    }
+    
+    // Handle sponsor-specific field formatting
+    if (field === 'useLogo') {
+      if (value === 'Yes') return '✅ Yes';
+      if (value === 'No') return '❌ No';
+      if (value === 'Not sure') return '❓ Not sure';
+      return value;
+    }
+    
+    if (field === 'volunteerCount') {
+      return `${value} volunteer${value !== '1' ? 's' : ''}`;
+    }
+    
+    if (field === 'volunteerHours') {
+      return `${value} hour${value !== '1' ? 's' : ''}`;
+    }
+    
+    if (field === 'preferredContact') {
+      return value === 'email' ? '📧 Email' : value === 'phone' ? '📞 Phone' : value;
     }
     
     if (Array.isArray(value)) {
@@ -222,7 +242,18 @@ const ApplicationReviewCard = ({
       otherBackground: 'Other Background',
       linkedinProfile: 'LinkedIn Profile',
       photoUrl: 'Photo',
-      status: 'Status'
+      status: 'Status',
+      // Sponsor-specific fields
+      sponsorshipTypes: 'Sponsorship Types',
+      volunteerType: 'Volunteer Type',
+      volunteerCount: 'Volunteer Count',
+      volunteerHours: 'Volunteer Hours',
+      phoneNumber: 'Phone Number',
+      preferredContact: 'Preferred Contact',
+      useLogo: 'Use Logo',
+      howHeard: 'How Heard About Event',
+      otherInvolvement: 'Other Involvement',
+      logoUrl: 'Logo URL'
     };
     return labelMap[field] || field.charAt(0).toUpperCase() + field.slice(1);
   };
@@ -427,6 +458,18 @@ const ApplicationReviewCard = ({
                               style={{ 
                                 borderRadius: '8px',
                                 objectFit: 'cover'
+                              }} 
+                            />
+                          </Box>
+                        ) : field === 'logoUrl' && value ? (
+                          <Box sx={{ mt: 1, position: 'relative', width: '120px', height: '120px' }}>
+                            <Image 
+                              src={value} 
+                              alt="Company logo" 
+                              fill
+                              style={{ 
+                                borderRadius: '8px',
+                                objectFit: 'contain'
                               }} 
                             />
                           </Box>

@@ -645,6 +645,7 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       case "sponsors":
         return [
           ...commonFields,
+          volunteer.sponsorshipTypes,
           volunteer.sponsorshipTier,
           volunteer.sponsorshipDetails,
           volunteer.sponsorshipLevel,
@@ -654,7 +655,15 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
           volunteer.employeeCount,
           volunteer.website,
           volunteer.specialRequests,
-          volunteer.bio
+          volunteer.bio,
+          volunteer.volunteerType,
+          volunteer.volunteerCount,
+          volunteer.volunteerHours,
+          volunteer.phoneNumber,
+          volunteer.preferredContact,
+          volunteer.useLogo,
+          volunteer.howHeard,
+          volunteer.otherInvolvement
         ].map(getFieldValue);
 
       default:
