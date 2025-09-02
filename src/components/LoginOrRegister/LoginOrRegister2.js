@@ -1,8 +1,7 @@
-
 import React, { useEffect } from 'react';
 import {useRedirectFunctions} from "@propelauth/react"
 import { useAuthInfo } from '@propelauth/react'
-import { Alert, AlertTitle, Stack, Typography } from '@mui/material';
+import { Alert, AlertTitle, Stack, Typography, Box, Divider } from '@mui/material';
 import { SocialLoginProvider } from "@propelauth/frontend-apis";
 import { useAuthFrontendApis } from "@propelauth/frontend-apis-react";
 import { useEnv } from "../../context/env.context";
@@ -52,29 +51,69 @@ export default function LoginOrRegister({ introText, previousPage }) {
         );
     } else {    
     return (
-      <Stack alignItems="center" paddingTop={5}>
-        <Alert variant="outlined" severity="info">
-          <AlertTitle>{introText}</AlertTitle>
-          <Stack alignItems="center" spacing={2}>
-            <Stack direction="column" spacing={1}>
-              <ButtonStyled onClick={handleLoginClick}>
-                Log In to opportunity-hack.slack.com
-              </ButtonStyled>
-              <Typography>
-                We use Slack to collaborate, login if you already have an account
+      <Stack alignItems="center" paddingTop={5} maxWidth={600} margin="0 auto">
+        <Alert variant="outlined" severity="info" sx={{ width: '100%' }}>
+          <AlertTitle sx={{ fontSize: '1.2rem', fontWeight: 600 }}>
+            {introText}
+          </AlertTitle>
+          
+          <Box sx={{ mt: 2, mb: 3 }}>
+            <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
+              <strong>Why Slack?</strong> Opportunity Hack uses Slack as our community hub where 
+              volunteers, nonprofits, and mentors collaborate year-round. By joining, you'll get 
+              access to:
+            </Typography>
+            <Typography component="ul" sx={{ pl: 2, mb: 0 }}>
+              <li>Direct communication with team members and nonprofits</li>
+              <li>Project updates and hackathon announcements</li>
+              <li>Networking with 1000+ volunteers and tech professionals</li>
+              <li>Mentorship opportunities and career advice</li>
+            </Typography>
+          </Box>
+
+          <Stack spacing={3}>
+            {/* Existing Users Section */}
+            <Box>
+              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>
+                Already have a Slack account?
               </Typography>
-            </Stack>
-            <Stack direction="column" spacing={1}>
-              <ButtonStyled onClick={handleSignupClick}>
-                <ButtonStyledWithLink href={`${slackSignupUrl}`} target="_blank" rel="noopener noreferrer">
-                  Create a Slack account
-                </ButtonStyledWithLink>
-              </ButtonStyled>
-              <Typography>
-                If you don't have an account, you will need to create an account
+              <Stack direction="column" spacing={1} alignItems="center">
+                <ButtonStyled onClick={handleLoginClick} sx={{ minWidth: 280 }}>
+                  Continue with Slack
+                </ButtonStyled>
+                <Typography variant="body2" color="text.secondary">
+                  Sign in to opportunity-hack.slack.com
+                </Typography>
+              </Stack>
+            </Box>
+
+            <Divider sx={{ my: 2 }}>OR</Divider>
+
+            {/* New Users Section */}
+            <Box>
+              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600, color: 'secondary.main' }}>
+                New to Opportunity Hack?
               </Typography>
-            </Stack>
+              <Stack direction="column" spacing={1} alignItems="center">
+                <ButtonStyled onClick={handleSignupClick} sx={{ minWidth: 280 }}>
+                  <ButtonStyledWithLink href={`${slackSignupUrl}`} target="_blank" rel="noopener noreferrer">
+                    Join Our Slack Community
+                  </ButtonStyledWithLink>
+                </ButtonStyled>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Create your free account to get started.<br/>
+                  After joining Slack, come back here to sign in.
+                </Typography>
+              </Stack>
+            </Box>
           </Stack>
+
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              <strong>Need help?</strong> Slack is free and takes less than 2 minutes to set up. 
+              No credit card required.
+            </Typography>
+          </Box>
         </Alert>
       </Stack>
     );

@@ -387,7 +387,7 @@ const VolunteerTable = ({
           );
         }
 
-        const tooltipContent = (
+        const messagesToolTipContent = (
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Recent Messages ({messageCount})
@@ -429,7 +429,7 @@ const VolunteerTable = ({
 
         return (
           <Tooltip 
-            title={tooltipContent} 
+            title={messagesToolTipContent} 
             arrow 
             placement="bottom-start"
             componentsProps={{
@@ -626,202 +626,130 @@ const VolunteerTable = ({
         );
       case "availability":
         const availability = volunteer.availability || "";
-        if (!availability) return <Typography variant="caption">No availability</Typography>;
+        if (!availability) return <Typography variant="caption" color="text.secondary">No slots</Typography>;
         
-        // Parse availability into structured data
-        const parseAvailability = (availStr) => {
-          if (!availStr) return [];
+        // Simple slot parsing - just extract the essential info without complex time calculations
+        const parseSlots = (availStr) => {
+          if (!availStr) return { saturday: [], sunday: [], total: 0 };
           
           const slots = availStr.split(',').map(s => s.trim()).filter(s => s);
-          const parsed = [];
+          const saturday = [];
+          const sunday = [];
           
           slots.forEach(slot => {
-            // More flexible regex patterns
+            // Extract day, session name, role, and time
             const dayMatch = slot.match(/(Saturday|Sunday)[,\s]+(\w+\s+\d+)/);
-            const timeMatch = slot.match(/\(([^)]+)\)/);
-            const roleMatch = slot.match(/(📸|🧹|🏆|📋|🔧)/);
-            const roleNameMatch = slot.match(/(?:📸|🧹|🏆|📋|🔧)\s*([^(]+)/);
+            const sessionMatch = slot.match(/:\s*([^-]+?)\s*-/); // Get session name
+            const timeMatch = slot.match(/\(([^)]+)\)/); // Get time range
             
-            if (dayMatch && timeMatch) {
-              const [, dayName, date] = dayMatch;
-              const timeRange = timeMatch[1];
-              const roleIcon = roleMatch ? roleMatch[1] : '👥';
-              const roleName = roleNameMatch ? roleNameMatch[1].trim() : 'General';
-              
-              // Parse start and end times - more robust parsing
-              const [startStr, endStr] = timeRange.split(' - ');
-              const parseTime = (timeStr) => {
-                if (!timeStr) return 0;
-                
-                // Handle different time formats: 2:30pm, 12:00pm, 11:30pm, etc.
-                let match = timeStr.trim().match(/(\d{1,2}):(\d{2})(am|pm)/i);
-                if (!match) {
-                  // Try without minutes (e.g., "2pm")
-                  match = timeStr.trim().match(/(\d{1,2})(am|pm)/i);
-                  if (match) {
-                    match = [match[0], match[1], '00', match[2]]; // Add 00 minutes
-                  }
-                }
-                
-                if (!match) {
-                  return 0;
-                }
-                
-                let [, hours, minutes, ampm] = match;
-                hours = parseInt(hours);
-                minutes = parseInt(minutes);
-                ampm = ampm.toLowerCase();
-                
-                if (ampm === 'pm' && hours !== 12) hours += 12;
-                if (ampm === 'am' && hours === 12) hours = 0;
-                
-                const totalMinutes = hours * 60 + minutes;
-                return totalMinutes;
+            // Get role icon and name
+            let roleIcon = '👥';
+            let roleName = 'General';
+            
+            if (slot.includes('📸') || slot.includes('Photography')) {
+              roleIcon = '📸';
+              roleName = 'Photography';
+            } else if (slot.includes('🧹') || slot.includes('Cleanup')) {
+              roleIcon = '🧹';
+              roleName = 'Cleanup';
+            } else if (slot.includes('🏆') || slot.includes('Judging')) {
+              roleIcon = '🏆';
+              roleName = 'Judging';
+            } else if (slot.includes('📋') || slot.includes('Registration')) {
+              roleIcon = '📋';
+              roleName = 'Registration';
+            } else if (slot.includes('🔧') || slot.includes('Setup')) {
+              roleIcon = '🔧';
+              roleName = 'Setup';
+            }
+            
+            if (dayMatch) {
+              const slotInfo = {
+                day: dayMatch[1],
+                session: sessionMatch ? sessionMatch[1].trim() : 'Session',
+                time: timeMatch ? timeMatch[1] : '',
+                roleIcon,
+                roleName,
+                full: slot
               };
               
-              const startTime = parseTime(startStr);
-              const endTime = parseTime(endStr);
-              
-              if (startTime >= 0 && endTime > startTime) {
-                parsed.push({
-                  day: dayName,
-                  date,
-                  startTime,
-                  endTime,
-                  timeRange,
-                  roleIcon,
-                  roleName: roleName.replace(/^\w+\s*-\s*/, '') // Remove session prefix
-                });
+              if (dayMatch[1] === 'Saturday') {
+                saturday.push(slotInfo);
+              } else if (dayMatch[1] === 'Sunday') {
+                sunday.push(slotInfo);
               }
             }
           });
           
-          return parsed;
-        };
-        
-        const slots = parseAvailability(availability);
-        const saturdaySlots = slots.filter(s => s.day === 'Saturday').sort((a, b) => a.startTime - b.startTime);
-        const sundaySlots = slots.filter(s => s.day === 'Sunday').sort((a, b) => a.startTime - b.startTime);
-        
-        // Create timeline visualization
-        const createDayTimeline = (daySlots, dayName) => {
-          if (daySlots.length === 0) return null;
-          
-          const minTime = Math.min(...daySlots.map(s => s.startTime));
-          const maxTime = Math.max(...daySlots.map(s => s.endTime));
-          const totalMinutes = maxTime - minTime;
-          
-          // Group overlapping slots
-          const timelineHeight = 20;
-          const roleColors = {
-            '📸': '#2196f3', // Blue for Photography
-            '🧹': '#4caf50', // Green for Cleanup
-            '🏆': '#ff9800', // Orange for Judging
-            '📋': '#9c27b0', // Purple for Registration
-            '🔧': '#f44336', // Red for Setup
-            '👥': '#757575'  // Gray for General
+          return { 
+            saturday, 
+            sunday, 
+            total: saturday.length + sunday.length 
           };
-          
-          return (
-            <Box sx={{ mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, display: 'block' }}>
-                {dayName.substring(0, 3)}
-              </Typography>
-              <Box sx={{ position: 'relative', height: timelineHeight, bgcolor: 'grey.100', borderRadius: 1 }}>
-                {daySlots.map((slot, idx) => {
-                  const left = ((slot.startTime - minTime) / totalMinutes) * 100;
-                  const width = ((slot.endTime - slot.startTime) / totalMinutes) * 100;
-                  
-                  return (
-                    <Tooltip 
-                      key={idx}
-                      title={`${slot.roleIcon} ${slot.roleName} (${slot.timeRange})`}
-                      arrow
-                    >
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          left: `${left}%`,
-                          width: `${width}%`,
-                          height: '100%',
-                          bgcolor: roleColors[slot.roleIcon] || roleColors['👥'],
-                          borderRadius: 0.5,
-                          opacity: 0.8,
-                          cursor: 'pointer',
-                          border: '1px solid rgba(255,255,255,0.3)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.7rem',
-                          top: `${(idx % 2) * 2}px` // Slight vertical offset for overlapping slots
-                        }}
-                      >
-                        {slot.roleIcon}
-                      </Box>
-                    </Tooltip>
-                  );
-                })}
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
-                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
-                  {daySlots.length > 0 && (() => {
-                    const hours = Math.floor(minTime / 60);
-                    const minutes = minTime % 60;
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
-                    return `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`;
-                  })()}
-                </Typography>
-                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
-                  {daySlots.length > 0 && (() => {
-                    const hours = Math.floor(maxTime / 60);
-                    const minutes = maxTime % 60;
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
-                    return `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`;
-                  })()}
-                </Typography>
-              </Box>
-            </Box>
-          );
         };
         
-        const totalHours = slots.reduce((total, slot) => {
-          return total + ((slot.endTime - slot.startTime) / 60);
-        }, 0);
+        const slotData = parseSlots(availability);
         
+        // Get unique roles for display
+        const allSlots = [...slotData.saturday, ...slotData.sunday];
+        const roleIcons = [...new Set(allSlots.map(s => s.roleIcon))];
+        
+        // Create tooltip content
         const availabilityTooltipContent = (
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Volunteer Availability ({Math.round(totalHours * 10) / 10} hours)
+          <Box sx={{ minWidth: 280 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              Volunteer Schedule ({slotData.total} slots)
             </Typography>
-            {saturdaySlots.length > 0 && (
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
-                  Saturday ({saturdaySlots.length} slots):
+            
+            {slotData.saturday.length > 0 && (
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5, color: 'primary.main' }}>
+                  Saturday, Oct 11
                 </Typography>
-                {saturdaySlots.map((slot, idx) => (
-                  <Typography key={idx} variant="caption" sx={{ display: 'block', fontSize: '0.75rem' }}>
-                    • {slot.roleIcon} {slot.roleName} ({slot.timeRange})
-                  </Typography>
+                {slotData.saturday.map((slot, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ mr: 1, minWidth: 20 }}>
+                      {slot.roleIcon}
+                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 500 }}>
+                        {slot.session}
+                      </Typography>
+                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.7rem' }}>
+                        {slot.time}
+                      </Typography>
+                    </Box>
+                  </Box>
                 ))}
               </Box>
             )}
-            {sundaySlots.length > 0 && (
+            
+            {slotData.sunday.length > 0 && (
               <Box>
-                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
-                  Sunday ({sundaySlots.length} slots):
+                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5, color: 'primary.main' }}>
+                  Sunday, Oct 12
                 </Typography>
-                {sundaySlots.map((slot, idx) => (
-                  <Typography key={idx} variant="caption" sx={{ display: 'block', fontSize: '0.75rem' }}>
-                    • {slot.roleIcon} {slot.roleName} ({slot.timeRange})
-                  </Typography>
+                {slotData.sunday.map((slot, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ mr: 1, minWidth: 20 }}>
+                      {slot.roleIcon}
+                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 500 }}>
+                        {slot.session}
+                      </Typography>
+                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.7rem' }}>
+                        {slot.time}
+                      </Typography>
+                    </Box>
+                  </Box>
                 ))}
               </Box>
             )}
           </Box>
         );
         
+        // Simple table cell display
         return (
           <Tooltip 
             title={availabilityTooltipContent}
@@ -830,7 +758,7 @@ const VolunteerTable = ({
             componentsProps={{
               tooltip: {
                 sx: {
-                  maxWidth: 350,
+                  maxWidth: 400,
                   '& .MuiTooltip-arrow': {
                     color: 'rgba(97, 97, 97, 0.9)',
                   },
@@ -838,17 +766,52 @@ const VolunteerTable = ({
               },
             }}
           >
-            <Box sx={{ minWidth: 110, cursor: 'pointer' }}>
-              {createDayTimeline(saturdaySlots, 'Saturday')}
-              {createDayTimeline(sundaySlots, 'Sunday')}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
-                <Chip 
-                  label={`${Math.round(totalHours * 10) / 10}h`} 
-                  size="small" 
-                  variant="outlined"
-                  color="primary"
-                  sx={{ fontSize: '0.7rem', height: 18 }}
-                />
+            <Box sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {/* Slot count badge */}
+              <Chip 
+                label={slotData.total}
+                size="small" 
+                color="primary"
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  height: 22,
+                  minWidth: 32,
+                  fontWeight: 600
+                }}
+              />
+              
+              {/* Role icons */}
+              <Box sx={{ display: 'flex', gap: 0.25 }}>
+                {roleIcons.slice(0, 3).map((icon, idx) => (
+                  <Typography key={idx} variant="caption" sx={{ fontSize: '0.9rem' }}>
+                    {icon}
+                  </Typography>
+                ))}
+                {roleIcons.length > 3 && (
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                    +{roleIcons.length - 3}
+                  </Typography>
+                )}
+              </Box>
+              
+              {/* Day indicators */}
+              <Box sx={{ display: 'flex', gap: 0.25 }}>
+                {slotData.saturday.length > 0 && (
+                  <Chip 
+                    label="S" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ fontSize: '0.65rem', height: 18, minWidth: 20 }}
+                  />
+                )}
+                {slotData.sunday.length > 0 && (
+                  <Chip 
+                    label="S" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ fontSize: '0.65rem', height: 18, minWidth: 20 }}
+                  />
+                )}
               </Box>
             </Box>
           </Tooltip>
