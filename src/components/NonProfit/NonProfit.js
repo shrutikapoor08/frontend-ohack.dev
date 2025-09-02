@@ -19,7 +19,6 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 
 // Analytics
 import { trackEvent, initFacebookPixel } from '../../lib/ga';
-import { useFeatureValue } from "@growthbook/growthbook-react";
 
 import {
   ChannelChip,
@@ -50,7 +49,7 @@ const LoadingPlaceholder = () => (
 );
 
 const NonProfit = React.memo(function NonProfit(props) {
-  const nonprofit_cta_text = useFeatureValue("nonprofit_page_cta_text", "Hey there, it looks like there are no active projects with this organization. Let us know how we can help:");
+  const nonprofit_cta_text = "Hey there, it looks like there are no active projects with this organization.";
   const { nonprofit_id } = props;
   const { user } = useAuthInfo();
   
