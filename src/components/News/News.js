@@ -329,7 +329,7 @@ function News({ newsData, frontpage, loading }) {
                 </ButtonContainersSmall>
               </Box>
             )}
-            <Divider sx={{ mt: 3 }} aria-hidden="true" />
+            
           </BlankContainer>
         ))
       )}

@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 
 // Button
-export const ButtonStyled = styled(Button)({
+export const ButtonStyled = styled(Button)((props) => ({
   borderRadius: "2rem",
   paddingLeft: "1.5rem",
   paddingRight: "1.5rem",
@@ -17,14 +17,20 @@ export const ButtonStyled = styled(Button)({
   textTransform: "unset !important",
   backgroundColor: "#003486",
   color: "#ffffff",
-  minWidth: "25rem",
+  minWidth: "auto",
+  minHeight: "44px",
+  whiteSpace: "nowrap",
+  
+  [props.theme.breakpoints.down("md")]: {
+    minWidth: "25rem",
+  },
 
   "&:hover": {
     backgroundColor: `var(--blue)`,
   },
-});
+}));
 
-export const ButtonGoldStyle = styled(Button)({
+export const ButtonGoldStyle = styled(Button)((props) => ({
   borderRadius: "2rem",
   paddingLeft: "1.5rem",
   paddingRight: "1.5rem",
@@ -33,14 +39,20 @@ export const ButtonGoldStyle = styled(Button)({
   textTransform: "unset !important",
   backgroundColor: "#FFD700",
   color: "#000000",
-  minWidth: "25rem",
+  minWidth: "auto",
+  minHeight: "44px",
+  whiteSpace: "nowrap",
+  
+  [props.theme.breakpoints.down("md")]: {
+    minWidth: "25rem",
+  },
 
   "&:hover": {
     backgroundColor: `var(--blue)`,
   },
-});
+}));
 
-export const ButtonBasicStyle = styled(Button)({
+export const ButtonBasicStyle = styled(Button)((props) => ({
   borderRadius: "2rem",
   paddingLeft: "1.5rem",
   paddingRight: "1.5rem",
@@ -49,27 +61,34 @@ export const ButtonBasicStyle = styled(Button)({
   textTransform: "unset !important",
   backgroundColor: "#E0E0E0",
   color: "#000000",
-  minWidth: "25rem",
+  minWidth: "auto",
+  minHeight: "44px",
+  whiteSpace: "nowrap",
+  
+  [props.theme.breakpoints.down("md")]: {
+    minWidth: "25rem",
+  },
 
   "&:hover": {
     backgroundColor: `var(--blue)`,
   },
-});
+}));
 
 // Grid
 export const GridStyled = styled(Grid)((props) => ({
-  padding: "2rem",
+  padding: "1rem",
   height: "100%",
-  width: "80%",
+  width: "100%",
   margin: "auto",
   justifyContent: "center",
 
   [props.theme.breakpoints.down("lg")]: {
-    padding: "2rem 0rem 2rem 0rem",
+    padding: "1rem 0rem 1rem 0rem",
   },
 
   [props.theme.breakpoints.down("md")]: {
     width: "100%",
+    padding: "2rem",
   },
 }));
 
@@ -82,16 +101,17 @@ export const BlankContainer = styled(Grid)({
 });
 
 export const TitleContainer = styled(Grid)((props) => ({
-  padding: "1rem 5% 0px 0px",
+  padding: "0.5rem 2% 0px 0px",
   marginTop: "0rem",
-  minHeight: '200px',
+  minHeight: '120px',
   alignItems: "center",
   justifyContent: "center",
 
   [props.theme.breakpoints.down("md")]: {
-    padding: props.right === "true" ? "15% 5% 5% 5%" : "3rem 2px 0 10px",
+    padding: props.right === "true" ? "10% 5% 5% 5%" : "2rem 2px 0 10px",
     justifyContent: "center",
     textAlign: "center",
+    minHeight: '180px',
   },
 }));
 
@@ -113,17 +133,23 @@ export const CaptionContainer = styled(Grid)((props) => ({
 
 export const ButtonContainers = styled(Grid)((props) => ({
   display: "flex",
-  flexDirection: "column",
+  flexDirection: "row",
+  flexWrap: "wrap",
   width: "auto",
   gap: "1rem",
   justifyContent: "center",
+  
+  [props.theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+    alignItems: "center",
+  },
 }));
 
 
 export const TitleStyled = styled(Typography)(({ theme }) => ({
   fontDisplay: "swap",
-  fontSize: "clamp(19px, 3vw, 22px)",
-  lineHeight: 1.2,
+  fontSize: "clamp(17px, 2.5vw, 20px)",
+  lineHeight: 1.15,
   fontWeight: 250,
   color: "#333333",
   textShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
@@ -131,7 +157,7 @@ export const TitleStyled = styled(Typography)(({ theme }) => ({
   textAlign: "center",
   maxWidth: "100%",
   margin: "0 auto",
-  padding: "14px",
+  padding: "8px 14px",
 
   "& .highlight": {
     color: theme.palette.primary.main,

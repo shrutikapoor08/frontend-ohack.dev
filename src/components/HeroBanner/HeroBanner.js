@@ -1,6 +1,5 @@
 import React, {useEffect} from "react";
 import { useAuthInfo, useRedirectFunctions } from "@propelauth/react";
-import { useFeatureIsOn } from "@growthbook/growthbook-react";
 import {
   BlankContainer,
   ButtonBasicStyle,
@@ -21,7 +20,6 @@ const HeroBanner = ({ children }) => {
   const { slackSignupUrl } = useEnv();
   const { isLoggedIn } = useAuthInfo();
   const { redirectToLoginPage } = useRedirectFunctions();
-  const enabled = useFeatureIsOn("afeature");
 
   useEffect(() => {
     // Initialize tracking
@@ -32,9 +30,9 @@ const HeroBanner = ({ children }) => {
       'home_page',
       'hero_banner',
       ga.EventAction.VIEW,
-      { has_feature_enabled: enabled }
+      { has_feature_enabled: false }
     );
-  }, [enabled]);
+  }, []);
 
   /**
    * Enhanced tracking for button clicks using the new structured approach
@@ -87,14 +85,7 @@ const HeroBanner = ({ children }) => {
     <GridStyled container direction="row" justifyContent="center" spacing={2}>
       <BlankContainer xs={12} md={7} lg={7}>
         {children}
-        <CaptionContainer right={true} container>
-          {enabled && (
-            <TextStyled>
-              Want to code for social good?
-              <br />
-              Join us!
-            </TextStyled>
-          )}
+        <CaptionContainer right={true} container>          
 
           <ButtonContainers container>
             <ButtonBasicStyle
