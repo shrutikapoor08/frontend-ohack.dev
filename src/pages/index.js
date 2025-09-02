@@ -2,18 +2,8 @@ import React, { Fragment, Suspense } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import { useAuthInfo } from "@propelauth/react";
-// Separate GrowthBook initialization
-import { initGrowthBook } from "../lib/growthbook";
-import { Skeleton, Box, Grid, Container } from "@mui/material";
 
-// Dynamically import GrowthBook components
-const GrowthBookProvider = dynamic(
-  () =>
-    import("@growthbook/growthbook-react").then(
-      (mod) => mod.GrowthBookProvider
-    ),
-  { ssr: false }
-);
+import { Skeleton, Box, Grid, Container } from "@mui/material";
 
 // Simplified loading placeholder - avoiding detailed skeletons to prevent layout shifts
 const SimplePlaceholder = () => (
@@ -101,15 +91,10 @@ const PageSkeleton = () => (
 // Main Home component
 export default function Home() {
   const { user } = useAuthInfo();
-  const growthbook = React.useMemo(() => initGrowthBook(user?.userId), [user]);
-  const [isLoading, setIsLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    growthbook.init({ streaming: true });
-    
-    // Don't delay rendering to improve FCP
-    setIsLoading(false);
-  }, [growthbook]);
+  const [isLoading, setIsLoading] = React.useState(false);
+
+
 
   if (isLoading) {
     return <PageSkeleton />;
@@ -126,8 +111,7 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
         
-        {/* Performance optimizations */}
-        <link rel="preconnect" href="https://cdn.growthbook.io" />
+        {/* Performance optimizations */}        
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
@@ -143,15 +127,37 @@ export default function Home() {
         {/* For better caching */}
         <meta httpEquiv="Cache-Control" content="max-age=86400" />
       </Head>
-      <GrowthBookProvider growthbook={growthbook}>
-        {/* Eliminate Suspense outer wrapper - rely on SSR instead */}
+      
+        {/* Optimized layout for better above-the-fold content */}
         <BackgroundGrid />
-        <LeadForm />
-        <Logo />
-        <TitleStyled />
-        <HeroBanner />
-      </GrowthBookProvider>
-      <HackathonList />
+        <Container maxWidth="xl" sx={{ mt: { xs: 8, sm: 9, md: 10 }, px: { xs: 2, sm: 3, md: 4 } }}>
+          <Grid container spacing={3} alignItems="stretch">
+            {/* Hero section - left side on desktop, full width on mobile */}
+            <Grid item xs={12} lg={5}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                height: '100%',
+                minHeight: { xs: 'auto', lg: '600px' },
+                justifyContent: 'center'
+              }}>
+                <Logo />
+                <TitleStyled />
+                <HeroBanner />
+              </Box>
+            </Grid>
+            
+            {/* Events section - right side on desktop, below hero on mobile */}
+            <Grid item xs={12} lg={7}>
+              <Box sx={{ height: '100%' }}>
+                <HackathonList compact={true} />
+              </Box>
+            </Grid>
+          </Grid>
+          
+          {/* Lead form positioned strategically */}
+          <LeadForm />
+        </Container>      
     </Fragment>
   );
 }
