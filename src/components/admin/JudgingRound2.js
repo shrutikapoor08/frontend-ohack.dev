@@ -127,6 +127,12 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       );
       
       const judgeDetails = response.data.judge;
+      console.log('Successfully fetched judge details for', judgeId, ':', judgeDetails);
+      
+      // Ensure consistent user_id field
+      if (judgeDetails && !judgeDetails.user_id) {
+        judgeDetails.user_id = judgeId;
+      }
       
       // Cache the result
       setJudgeDetailsCache(prev => ({ ...prev, [judgeId]: judgeDetails }));
@@ -136,9 +142,18 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     } catch (error) {
       console.error(`Error fetching judge details for ${judgeId}:`, error);
       setLoadingJudgeDetails(prev => ({ ...prev, [judgeId]: false }));
+      
+      // Try to find the judge in the initially loaded judges as fallback
+      const fallbackJudge = judges.find(j => j.user_id === judgeId);
+      if (fallbackJudge) {
+        console.log('Using fallback judge from initial load:', fallbackJudge);
+        setJudgeDetailsCache(prev => ({ ...prev, [judgeId]: fallbackJudge }));
+        return fallbackJudge;
+      }
+      
       return null;
     }
-  }, [selectedHackathon, accessToken, orgId, judgeDetailsCache, loadingJudgeDetails]);
+  }, [selectedHackathon, accessToken, orgId, judgeDetailsCache, loadingJudgeDetails, judges]);
 
   // Fetch assignments for a specific panel with caching
   const fetchPanelAssignments = useCallback(async (panelId) => {
@@ -261,8 +276,12 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       
       // Collect all unique judge IDs and load their details in parallel
       const allJudgeIds = [...new Set(flatAssignments.map(a => a.judge_id))];
+      // Load judge details for all judges involved in scoring
       const judgeDetailPromises = allJudgeIds.map(judgeId => fetchJudgeDetails(judgeId));
       await Promise.all(judgeDetailPromises);
+      
+      console.log('Judge details cache after loading:', judgeDetailsCache);
+      console.log('All judge IDs that need details:', allJudgeIds);
       
       const teamScores = [];
       
@@ -294,8 +313,28 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
             
             if (scoreResponse.data.score && !scoreResponse.data.score.is_draft) {
               const judgeDetails = judgeDetailsCache[assignment.judge_id];
+              
+              // Fallback: try to find judge in the initially loaded judges list
+              let judgeInfo = judgeDetails;
+              if (!judgeInfo) {
+                judgeInfo = judges.find(j => j.user_id === assignment.judge_id);
+                console.log('Using fallback judge info for', assignment.judge_id, ':', judgeInfo);
+              }
+              
+              // Final fallback: create a basic judge object with the ID
+              if (!judgeInfo) {
+                judgeInfo = {
+                  name: `Judge ${assignment.judge_id}`,
+                  firstName: 'Unknown',
+                  lastName: 'Judge',
+                  company: 'N/A',
+                  user_id: assignment.judge_id
+                };
+                console.warn('No judge details found for', assignment.judge_id, 'using fallback');
+              }
+              
               return {
-                judge: judgeDetails || { name: assignment.judge_id },
+                judge: judgeInfo,
                 score: scoreResponse.data.score
               };
             }
@@ -342,7 +381,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     } finally {
       setLoadingScores(false);
     }
-  }, [selectedHackathon, teams, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails, judgeDetailsCache, scoresCache, finalistTeams.length, enqueueSnackbar]);
+  }, [selectedHackathon, teams, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails, judgeDetailsCache, scoresCache, finalistTeams.length, enqueueSnackbar, judges]);
 
   // Fetch judges and teams for selected hackathon
   const fetchData = useCallback(async () => {
@@ -373,6 +412,8 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
 
       // Only get accepted judges
       const acceptedJudges = judgesResponse.data.data?.filter(judge => judge.isSelected) || [];
+      console.log('Loaded judges in Round 2:', acceptedJudges);
+      console.log('Sample judge structure:', acceptedJudges[0]);
       setJudges(acceptedJudges);
       
       const allTeams = teamsResponse.data.teams || [];
