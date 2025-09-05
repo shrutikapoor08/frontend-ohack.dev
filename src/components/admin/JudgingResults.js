@@ -591,7 +591,7 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
             >
               {hackathons.map((hackathon) => (
                 <MenuItem key={hackathon.event_id} value={hackathon.event_id}>
-                  {hackathon.title} - {new Date(hackathon.start_date).toLocaleDateString()}
+                  {hackathon.event_id} - {new Date(hackathon.start_date).toLocaleDateString()}
                 </MenuItem>
               ))}
             </Select>

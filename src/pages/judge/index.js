@@ -70,7 +70,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
   const getProgressColor = (progress) => {
     if (progress === 100) return 'success';
     if (progress >= 50) return 'primary';
-    return 'warning';
+    return 'primary';
   };
 
   if (loading) {

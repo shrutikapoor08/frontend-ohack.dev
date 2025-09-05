@@ -173,6 +173,9 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     }
   }, [accessToken, orgId]);
 
+  // Track initial data fetch to prevent loops
+  const [initialDataFetched, setInitialDataFetched] = useState(false);
+
   // Fetch judges and teams for selected hackathon with progressive loading
   const fetchData = useCallback(async () => {
     if (!selectedHackathon || !selectedHackathonData) return;
@@ -183,6 +186,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     try {
       // Step 1: Load judges first
       setLoadingJudges(true);
+      console.log('Fetching judges for hackathon:', selectedHackathon);
       const judgesResponse = await axios.get(
         `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${selectedHackathon}/judge`,
         {
@@ -193,11 +197,18 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         }
       );
       
+      console.log('Raw judges response:', judgesResponse.data);
+      
       // Only get accepted judges
-      const acceptedJudges = judgesResponse.data.data?.filter(judge => judge.isSelected) || [];
+      const allJudges = judgesResponse.data.data || [];
+      const acceptedJudges = allJudges.filter(judge => judge.isSelected) || [];
+      
+      console.log('All judges:', allJudges.length);
+      console.log('Accepted judges:', acceptedJudges.length);
+      console.log('First few judges:', allJudges.slice(0, 3));
+      
       setJudges(acceptedJudges);
       setLoadingJudges(false);
-      console.log('Fetched Judges:', acceptedJudges);
       
       // Step 2: Load teams
       setLoadingTeams(true);
@@ -218,14 +229,8 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
       // Step 3: Fetch nonprofit names for teams (in background)
       fetchNonprofitNames(teamsData);
       
-      // Initialize judge groups if none exist
-      if (judgeGroups.length === 0 && acceptedJudges.length > 0) {
-        const defaultGroups = [          
-        ];
-        setJudgeGroups(defaultGroups);
-      }
-      
       setDataLoadComplete(true);
+      setInitialDataFetched(true);
       
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -235,11 +240,15 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     } finally {
       setLoading(false);
     }
-  }, [selectedHackathon, accessToken, orgId, judgeGroups.length, selectedHackathonData, enqueueSnackbar, fetchNonprofitNames]);
+  }, [selectedHackathon, accessToken, orgId, selectedHackathonData, enqueueSnackbar, fetchNonprofitNames]);
 
+  // Only fetch data when hackathon changes, not when internal state changes
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (selectedHackathon && selectedHackathonData) {
+      setInitialDataFetched(false);
+      fetchData();
+    }
+  }, [selectedHackathon, selectedHackathonData?.id]); // Only depend on hackathon selection
 
   // Add new judge group
   const addJudgeGroup = () => {
@@ -433,16 +442,31 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     const isAlreadyAssigned = group.teams.some(t => t.id === teamId);
     if (isAlreadyAssigned) return;
 
+    console.log('Assigning team to group:', { groupId, teamId, group, judgesInGroup: group.judges.length });
+
     // If panel exists in backend, create assignments for all judges in the panel
     if (group.panel_id) {
       try {
+        // Check if group has judges
+        if (group.judges.length === 0) {
+          enqueueSnackbar('Cannot assign team - no judges in this panel', { variant: 'warning' });
+          return;
+        }
+        
         // Create assignments for each judge in the panel
         for (const judge of group.judges) {
-          console.log('Assigning team to judge:', judge.user_id);
+          const judgeId = judge.user_id || judge.id || judge.judge_id;
+          console.log('Assigning team to judge:', judgeId, 'Judge object:', judge);
+          
+          if (!judgeId) {
+            console.error('No valid judge ID found for judge:', judge);
+            continue;
+          }
+          
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/assignments`,
             {
-              judge_id: judge.user_id, // Use user_id consistently
+              judge_id: judgeId,
               event_id: selectedHackathon,
               team_id: teamId,
               round: 'round1',
@@ -461,6 +485,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         enqueueSnackbar('Team assigned successfully', { variant: 'success' });
       } catch (error) {
         console.error('Error creating team assignments:', error);
+        console.error('Error details:', error.response?.data);
         enqueueSnackbar('Failed to assign team', { variant: 'error' });
         return;
       }
@@ -521,11 +546,18 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   // Get unassigned judges
   const getUnassignedJudges = () => {
     const assignedJudgeIds = judgeGroups.flatMap(group => 
-      group.judges.map(j => j.user_id)
+      group.judges.map(j => j.user_id || j.id || j.judge_id)
     );
-    return judges.filter(judge => 
+    
+    console.log('Assigned judge IDs from groups:', assignedJudgeIds);
+    console.log('All judges user_ids:', judges.map(j => j.user_id));
+    
+    const unassigned = judges.filter(judge => 
       !assignedJudgeIds.includes(judge.user_id)
     );
+    
+    console.log('Unassigned judges count:', unassigned.length);
+    return unassigned;
   };
 
   // Get unassigned teams
@@ -761,7 +793,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         const loadedGroups = [];
 
         // Exclude panels with a null panel_id
-        const validPanels = panels.filter(panel => panel.panel_id && panel.panel_name);
+        const validPanels = panels.filter(panel => panel.panel_name);
         
         // Step 2: For each panel, load assignments and judge details
         for (const panel of validPanels) {
@@ -776,6 +808,10 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
             if (!judgeMap.has(assignment.judge_id)) {
               const judgeDetails = await fetchJudgeDetails(assignment.judge_id);
               if (judgeDetails) {
+                // Ensure the judge has user_id field for consistency
+                if (!judgeDetails.user_id) {
+                  judgeDetails.user_id = assignment.judge_id;
+                }
                 judgeMap.set(assignment.judge_id, judgeDetails);
               }
             }
@@ -792,6 +828,9 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           const groupJudges = Array.from(judgeMap.values());
           const groupTeams = Array.from(teamSet);
           
+          console.log('Loaded judges for panel', panel.panel_name, ':', groupJudges);
+          console.log('Judge ID fields:', groupJudges.map(j => ({ user_id: j.user_id, id: j.id, judge_id: j.judge_id })));
+          
           loadedGroups.push({
             id: panel.id, // Use panel.id as the group id
             panel_id: panel.id, // Store the backend panel ID
@@ -801,6 +840,12 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
             room: panel.room || ''
           });
         }
+        
+        console.log('Final loaded groups with judges:', loadedGroups.map(g => ({
+          name: g.name,
+          judgeCount: g.judges.length,
+          judgeIds: g.judges.map(j => j.user_id || j.id || j.judge_id)
+        })));
         
         setJudgeGroups(loadedGroups);
       }
@@ -812,12 +857,12 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     }
   }, [selectedHackathon, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails, teams]);
 
-  // Load existing assignments when hackathon changes
+  // Load existing assignments after initial data is loaded
   useEffect(() => {
-    if (selectedHackathon && judges.length > 0 && teams.length > 0) {
+    if (selectedHackathon && initialDataFetched && judges.length > 0 && teams.length > 0) {
       loadExistingAssignments();
     }
-  }, [selectedHackathon, judges.length, teams.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedHackathon, initialDataFetched, judges.length, teams.length]);
 
   return (
     <Box>
@@ -836,7 +881,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
               >
                 {hackathons.map((hackathon) => (
                   <MenuItem key={hackathon.event_id} value={hackathon.event_id}>
-                    {hackathon.title} - {new Date(hackathon.start_date).toLocaleDateString()}
+                    {hackathon.event_id} - {new Date(hackathon.start_date).toLocaleDateString()}
                   </MenuItem>
                 ))}
               </Select>

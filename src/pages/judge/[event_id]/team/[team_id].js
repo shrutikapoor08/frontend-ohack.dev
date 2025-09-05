@@ -52,7 +52,10 @@ import {
   AutoFixHigh as PolishIcon,
   Public as WebIcon,
   Timer as TimerIcon,
-  HelpOutline as HelpIcon
+  HelpOutline as HelpIcon,
+  RecordVoiceOver as VoiceIcon,
+  Screenshot as ScreenshotIcon,
+  Group as GroupIcon
 } from '@mui/icons-material';
 import { useAuthInfo, withRequiredAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
@@ -321,7 +324,17 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
 
   const validateFeedback = () => {
     const feedbackText = feedback.general?.replace(/[#*`\-\n\r\s]/g, '').trim();
-    return feedbackText && feedbackText.length >= 10;
+    return feedbackText && feedbackText.length >= 20;
+  };
+
+  const getFeedbackCharCount = () => {
+    const feedbackText = feedback.general?.replace(/[#*`\-\n\r\s]/g, '').trim() || '';
+    return feedbackText.length;
+  };
+
+  const getRemainingChars = () => {
+    const current = getFeedbackCharCount();
+    return Math.max(0, 20 - current);
   };
 
   const handleSubmit = async () => {
@@ -727,18 +740,63 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                   >
                     Join {teamData.slack_channel}
                   </Button>
-                  <Typography variant="body2" color="text.secondary" display="block">
-                    Slack guidance for Round 1 questions: It's okay to use @here or @channel to notify all team members as you ask questions. You can record video or audio of yourself asking questions using the tools within Slack, or you can screenshot areas you have questions on, or simply use text.{' '}
-                    <Link 
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, fontSize: '1.1rem', mb: 1 }}>
+                      💬 Slack Communication Guidelines
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1.5, fontSize: '1rem' }}>
+                      Use Slack to ask clarifying questions about the team's solution:
+                    </Typography>
+                    <List dense sx={{ ml: -1 }}>
+                      <ListItem disablePadding>
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <GroupIcon fontSize="small" color="action" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Use @here or @channel to notify all team members"
+                        primaryTypographyProps={{ variant: 'body2', style: { fontSize: '0.95rem' } }}
+                      />
+                      </ListItem>
+                      <ListItem disablePadding>
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <VoiceIcon fontSize="small" color="action" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Record video/audio clips for complex questions"
+                        primaryTypographyProps={{ variant: 'body2', style: { fontSize: '0.95rem' } }}
+                      />
+                      </ListItem>
+                      <ListItem disablePadding>
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <ScreenshotIcon fontSize="small" color="action" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Screenshot specific areas you need clarification on"
+                        primaryTypographyProps={{ variant: 'body2', style: { fontSize: '0.95rem' } }}
+                      />
+                      </ListItem>
+                    </List>
+                    <Box sx={{ mt: 1.5, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Link 
                       href="https://slack.com/help/articles/4406235165587-Create-audio-and-video-clips-in-Slack" 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      sx={{ fontSize: 'inherit' }}
-                    >
-                      Learn how to create audio and video clips in Slack.
-                    </Link>
-                  </Typography>
-                  </Box>
+                      sx={{ 
+                        fontSize: '0.95rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        textDecoration: 'none',
+                        '&:hover': {
+                        textDecoration: 'underline'
+                        }
+                      }}
+                      >
+                      📹 Learn how to create audio and video clips in Slack
+                      </Link>
+                    </Box>
+                    </Alert>
+                </Box>
                 )}
 
                 {/* Score Summary */}
@@ -840,9 +898,19 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
                     }}
                   />
                   
-                  <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Typography variant="caption" color="text.secondary">
                       Format your feedback with basic markdown: **bold**, *italic*, bullet points with •
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color={validateFeedback() ? "success.main" : "warning.main"}
+                      sx={{ fontWeight: 500, fontSize: '0.875rem' }}
+                    >
+                      {validateFeedback() 
+                        ? `${getFeedbackCharCount()} ${getFeedbackCharCount() === 1 ? 'character' : 'characters'} - you did it!` 
+                        : `${getFeedbackCharCount()}/20 ${getFeedbackCharCount() === 1 ? 'character' : 'characters'} (${getRemainingChars()} more needed)`
+                      }
                     </Typography>
                   </Box>
                 </CardContent>
@@ -851,9 +919,11 @@ const TeamScoringPage = withRequiredAuthInfo(({ userClass }) => {
               {/* Action Buttons */}
               <Box sx={{ mt: 4 }}>
                 {!validateFeedback() && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    Please provide meaningful feedback to help the team improve before submitting your score.
-                  </Alert>
+                    <Alert severity="warning" sx={{ mb: 2, fontSize: '1.0rem' }}>
+                    Please provide meaningful feedback to help the team improve before submitting your score. 
+                    <br/>
+                    {getRemainingChars()} more {getRemainingChars() === 1 ? 'character' : 'characters'}.
+                    </Alert>
                 )}
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                   <Button
