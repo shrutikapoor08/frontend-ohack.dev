@@ -55,6 +55,8 @@ import {
 import axios from 'axios';
 import { useAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
+import { useRouter } from 'next/router';
+import useHackathonEvents from '../../hooks/use-hackathon-events';
 
 // Constants for assignment status
 const ASSIGNMENT_STATUS = {
@@ -64,10 +66,15 @@ const ASSIGNMENT_STATUS = {
   FINALIZING: 'finalizing'
 };
 
-const TeamAssignments = ({ orgId, hackathons, selectedHackathon, setSelectedHackathon }) => {
+const TeamAssignments = ({ orgId }) => {
   const theme = useTheme();
   const { accessToken } = useAuthInfo();
   const { enqueueSnackbar } = useSnackbar();
+  const router = useRouter();
+  
+  // Fetch hackathons using the hook
+  const { hackathons = [] } = useHackathonEvents(false) || {};
+  const [selectedHackathon, setSelectedHackathon] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [nonprofits, setNonprofits] = useState([]);
@@ -86,6 +93,61 @@ const TeamAssignments = ({ orgId, hackathons, selectedHackathon, setSelectedHack
     key: "name",
     direction: "asc",
   });
+
+  // Handle URL parameters and set initial state
+  useEffect(() => {
+    if (!router?.query) return;
+    
+    const { event_id, tab } = router.query;
+    
+    if (event_id && Array.isArray(hackathons) && hackathons.some(h => h?.id === event_id)) {
+      setSelectedHackathon(event_id);
+    } else if (Array.isArray(hackathons) && hackathons.length > 0 && !selectedHackathon) {
+      // Sort hackathons by date (descending) and use the most recent one
+      const sortedHackathons = [...hackathons]
+        .filter(h => h?.start_date) // Filter out invalid entries
+        .sort((a, b) => {
+          const dateA = new Date(a.start_date);
+          const dateB = new Date(b.start_date);
+          return dateB - dateA; // Most recent first
+        });
+      
+      if (sortedHackathons.length > 0) {
+        setSelectedHackathon(sortedHackathons[0].id);
+      }
+    }
+    
+    if (tab !== undefined) {
+      const tabIndex = parseInt(tab, 10);
+      if (tabIndex >= 0 && tabIndex <= 1) {
+        setViewMode(tabIndex);
+      }
+    }
+  }, [hackathons, selectedHackathon, router?.query]);
+  
+  // Update URL when selectedHackathon or viewMode changes
+  useEffect(() => {
+    if (!router?.replace || !selectedHackathon || !Array.isArray(hackathons) || hackathons.length === 0) {
+      return;
+    }
+    
+    try {
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.set('event_id', selectedHackathon);
+      queryParams.set('tab', viewMode.toString());
+      
+      const newUrl = `${router.pathname}?${queryParams.toString()}`;
+      
+      const newQuery = Object.fromEntries(queryParams);
+      router.replace({
+        pathname: router.pathname,
+        query: newQuery
+      }, undefined, { shallow: true });
+    } catch (error) {
+      console.warn('Failed to update URL:', error);
+    }
+  }, [selectedHackathon, viewMode, router, hackathons]);
 
   // Fetch both nonprofits and teams when hackathon changes
   useEffect(() => {
@@ -881,11 +943,13 @@ const TeamAssignments = ({ orgId, hackathons, selectedHackathon, setSelectedHack
                 <MenuItem value="">
                   <em>Select a hackathon</em>
                 </MenuItem>
-                {hackathons.map((hackathon) => (
-                  <MenuItem key={hackathon.id} value={hackathon.id}>
-                    {hackathon.event_id}
-                  </MenuItem>
-                ))}
+                {hackathons
+                  .filter(hackathon => hackathon?.id) // Filter out invalid entries
+                  .map((hackathon) => (
+                    <MenuItem key={hackathon.id} value={hackathon.id}>
+                      {hackathon.event_id} - {hackathon.start_date ? new Date(hackathon.start_date).toLocaleDateString() : 'Unknown Date'}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>

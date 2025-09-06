@@ -39,7 +39,10 @@ import {
   ExpandMore as ExpandMoreIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Schedule as ScheduleIcon,
+  Timer as TimerIcon,
+  AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 import { useAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
@@ -66,6 +69,9 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
   const [loadingJudges, setLoadingJudges] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [dataLoadComplete, setDataLoadComplete] = useState(false);
+  
+  // Time estimation for judging
+  const [demoDurationMinutes, setDemoDurationMinutes] = useState(4);
 
   // Fetch hackathon details to check if it's in-person
   useEffect(() => {
@@ -175,6 +181,31 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
 
   // Track initial data fetch to prevent loops
   const [initialDataFetched, setInitialDataFetched] = useState(false);
+  
+  // Calculate judging time estimates
+  const calculateJudgingTime = () => {
+    const assignedTeams = teams.filter(team => 
+      judgeGroups.some(group => group.teams.some(t => t.id === team.id)) &&
+      team.status !== 'INACTIVE'
+    );
+    
+    const totalTeams = assignedTeams.length;
+    const totalPanels = judgeGroups.length;
+    const totalMinutes = totalTeams * demoDurationMinutes;
+    const minutesPerPanel = totalPanels > 0 ? totalMinutes / totalPanels : 0;
+    
+    return {
+      totalTeams,
+      totalPanels,
+      demoDuration: demoDurationMinutes,
+      totalMinutes,
+      minutesPerPanel,
+      hoursPerPanel: minutesPerPanel / 60,
+      estimatedEndTime: totalPanels > 0 ? new Date(Date.now() + (minutesPerPanel * 60 * 1000)) : null
+    };
+  };
+  
+  const timeEstimate = calculateJudgingTime();
 
   // Fetch judges and teams for selected hackathon with progressive loading
   const fetchData = useCallback(async () => {
@@ -692,6 +723,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${panelId}`,
           {
           event_id: selectedHackathon,
+          panel_id: panelId,
           panel_name: group.name,
           room: group.room || null
           },
@@ -710,6 +742,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
           {
           event_id: selectedHackathon,
           panel_name: group.name,
+          panel_id: "round1_" + group.id,
           room: group.room || null
           },
           {
@@ -793,7 +826,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         const loadedGroups = [];
 
         // Exclude panels with a null panel_id
-        const validPanels = panels.filter(panel => panel.panel_name);
+        const validPanels = panels.filter(panel => panel.panel_name && panel.panel_id);
         
         // Step 2: For each panel, load assignments and judge details
         for (const panel of validPanels) {
@@ -906,7 +939,7 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
               disabled={!selectedHackathon || judgeGroups.length === 0 || saving || !dataLoadComplete}
               fullWidth
             >
-              {saving ? 'Saving...' : 'Save Assignments'}
+              {saving ? 'Saving...' : 'Save Round 1 Panel'}
             </Button>
           </Grid>
         </Grid>
@@ -1006,6 +1039,126 @@ const JudgingRound1 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
               </Grid>
             </Grid>
           )}
+
+          {/* Time Estimation Calculator */}
+          <Card sx={{ mb: 4, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AccessTimeIcon color="primary" sx={{ mr: 1 }} />
+                <Typography variant="h6" color="primary">
+                  Round 1 Time Estimation
+                </Typography>
+              </Box>
+              
+              <Grid container spacing={3} alignItems="center">
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="Demo Duration (minutes)"
+                    type="number"
+                    value={demoDurationMinutes}
+                    onChange={(e) => setDemoDurationMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                    inputProps={{ min: 1, max: 60, step: 1 }}
+                    size="small"
+                    fullWidth
+                    InputProps={{
+                      endAdornment: <Typography variant="caption" color="text.secondary">min</Typography>
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={9}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'background.paper' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                          <GroupsIcon color="secondary" sx={{ fontSize: 20, mr: 0.5 }} />
+                          <Typography variant="h6" color="secondary">
+                            {timeEstimate.totalTeams}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Teams to Judge
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'background.paper' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                          <TimerIcon color="warning" sx={{ fontSize: 20, mr: 0.5 }} />
+                          <Typography variant="h6" color="warning.main">
+                            {timeEstimate.totalMinutes}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Total Minutes
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'background.paper' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                          <AssignIcon color="info" sx={{ fontSize: 20, mr: 0.5 }} />
+                          <Typography variant="h6" color="info.main">
+                            {timeEstimate.totalPanels}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Judge Panels
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: timeEstimate.totalPanels > 0 ? 'success.50' : 'grey.50' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                          <ScheduleIcon color={timeEstimate.totalPanels > 0 ? 'success' : 'disabled'} sx={{ fontSize: 20, mr: 0.5 }} />
+                          <Typography 
+                            variant="h6" 
+                            color={timeEstimate.totalPanels > 0 ? 'success.main' : 'text.disabled'}
+                          >
+                            {timeEstimate.totalPanels > 0 ? `${Math.round(timeEstimate.minutesPerPanel)}m` : '—'}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Per Panel
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Grid>
+              
+              {timeEstimate.totalPanels > 0 && timeEstimate.hoursPerPanel > 0 && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Estimate:</strong> Each panel will spend approximately{' '}
+                    <strong>
+                      {timeEstimate.hoursPerPanel >= 1 
+                        ? `${Math.floor(timeEstimate.hoursPerPanel)}h ${Math.round((timeEstimate.hoursPerPanel % 1) * 60)}m`
+                        : `${Math.round(timeEstimate.minutesPerPanel)} minutes`
+                      }
+                    </strong>{' '}
+                    judging {Math.round(timeEstimate.totalTeams / timeEstimate.totalPanels)} teams
+                    {demoDurationMinutes > 1 && ` (${demoDurationMinutes} min per demo)`}
+                  </Typography>
+                </Alert>
+              )}
+              
+              {timeEstimate.totalPanels === 0 && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  Create judge panels above to see time estimates
+                </Alert>
+              )}
+              
+              {timeEstimate.totalTeams === 0 && timeEstimate.totalPanels > 0 && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  Assign teams to panels to see accurate time estimates
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Judge Groups */}
           <Typography variant="h5" gutterBottom>

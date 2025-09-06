@@ -70,6 +70,8 @@ import {
 import axios from 'axios';
 import { useAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
+import { useRouter } from 'next/router';
+import useHackathonEvents from '../../hooks/use-hackathon-events';
 import UserSearchDialog from './UserSearchDialog';
 import { TEAM_STATUS_OPTIONS, getStatusOption } from '../../constants/teamStatus';
 
@@ -237,10 +239,15 @@ const MESSAGE_TEMPLATES = {
 };
 
 // Component for managing teams in the admin panel
-const TeamManagement = ({ orgId, hackathons, selectedHackathon, setSelectedHackathon }) => {
+const TeamManagement = ({ orgId }) => {
   const theme = useTheme();
   const { accessToken } = useAuthInfo();
   const { enqueueSnackbar } = useSnackbar();
+  const router = useRouter();
+  
+  // Fetch hackathons using the hook
+  const { hackathons = [] } = useHackathonEvents(false) || {};
+  const [selectedHackathon, setSelectedHackathon] = useState('');
 
   // State for teams data and UI
   const [loading, setLoading] = useState(false);
@@ -283,6 +290,58 @@ const TeamManagement = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
   const [issueFilter, setIssueFilter] = useState('all');
   const [expandedRepo, setExpandedRepo] = useState(null);
   const [githubIssueSummaries, setGithubIssueSummaries] = useState({}); // Add state for table issue summaries
+
+  // Handle URL parameters and set initial state
+  useEffect(() => {
+    if (!router?.query) return;
+    
+    const { event_id } = router.query;
+    
+    if (event_id && Array.isArray(hackathons) && hackathons.some(h => h?.id === event_id)) {
+      setSelectedHackathon(event_id);
+    } else if (Array.isArray(hackathons) && hackathons.length > 0 && !selectedHackathon) {
+      // Sort hackathons by date (descending) and use the most recent one
+      const sortedHackathons = [...hackathons]
+        .filter(h => h?.start_date) // Filter out invalid entries
+        .sort((a, b) => {
+          const dateA = new Date(a.start_date);
+          const dateB = new Date(b.start_date);
+          return dateB - dateA; // Most recent first
+        });
+      
+      if (sortedHackathons.length > 0) {
+        setSelectedHackathon(sortedHackathons[0].id);
+      }
+    }
+  }, [hackathons, selectedHackathon, router?.query]);
+  
+  // Update URL when selectedHackathon changes
+  useEffect(() => {
+    if (!router?.replace || !selectedHackathon || !Array.isArray(hackathons) || hackathons.length === 0) {
+      return;
+    }
+    
+    try {
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.set('event_id', selectedHackathon);
+      
+      // Preserve existing tab parameter
+      if (router.query.tab) {
+        queryParams.set('tab', router.query.tab.toString());
+      }
+      
+      const newUrl = `${router.pathname}?${queryParams.toString()}`;
+      
+      const newQuery = Object.fromEntries(queryParams);
+      router.replace({
+        pathname: router.pathname,
+        query: newQuery
+      }, undefined, { shallow: true });
+    } catch (error) {
+      console.warn('Failed to update URL:', error);
+    }
+  }, [selectedHackathon, router, hackathons]);
 
   // Fetch teams for the selected hackathon
   useEffect(() => {
@@ -1892,11 +1951,13 @@ const TeamManagement = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                 <MenuItem value="">
                   <em>Select a hackathon</em>
                 </MenuItem>
-                {hackathons.map((hackathon) => (
-                  <MenuItem key={hackathon.id} value={hackathon.id}>
-                    {hackathon.event_id}
-                  </MenuItem>
-                ))}
+                {hackathons
+                  .filter(hackathon => hackathon?.id) // Filter out invalid entries
+                  .map((hackathon) => (
+                    <MenuItem key={hackathon.id} value={hackathon.id}>
+                      {hackathon.event_id} - {hackathon.start_date ? new Date(hackathon.start_date).toLocaleDateString() : 'Unknown Date'}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>

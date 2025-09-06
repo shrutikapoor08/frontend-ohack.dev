@@ -151,7 +151,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
                               <TeamsIcon sx={{ mr: 1, fontSize: 20 }} />
-                              Round 1
+                              Round 1 - Find the top teams
                             </Typography>
                             <Chip 
                               label={`${hackathon.judging_status.round1.completed}/${hackathon.judging_status.round1.total}`}
@@ -175,7 +175,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
                               <TrophyIcon sx={{ mr: 1, fontSize: 20 }} />
-                              Round 2
+                              Round 2 - Rank the top team
                             </Typography>
                             <Chip 
                               label={`${hackathon.judging_status.round2.completed}/${hackathon.judging_status.round2.total}`}
@@ -245,7 +245,7 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
               </li>
               <li>
                 <Typography variant="body2">
-                  <strong>Round 2:</strong> Online: Review responses to Round 1 questions, and re-evaluate projects based on new information, then submit final scores. In-person: Live demos with finalist teams, including Q&A sessions
+                  <strong>Round 2:</strong> Review responses to Round 1 questions, and re-evaluate projects based on new information, then submit final scores. In-person: Live demos with finalist teams, including Q&A sessions
                 </Typography>
               </li>
             </Box>
