@@ -37,7 +37,8 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Dashboard as DashboardIcon,
   Share as ShareIcon,
-  Gavel as JudgingIcon
+  Gavel as JudgingIcon,  
+
 } from "@mui/icons-material";
 import HandshakeIcon from '@mui/icons-material/Handshake';
 
@@ -74,6 +75,11 @@ const adminPages = [
     path: "/admin", 
     label: "Dashboard", 
     icon: <DashboardIcon color="primary" />
+  },
+  { 
+    path: "/admin/check-in", 
+    label: "Check In", 
+    icon: <HandshakeIcon color="primary" />
   },
   { 
     path: "/admin/certificates", 

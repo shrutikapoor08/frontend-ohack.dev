@@ -199,6 +199,7 @@ const VolunteerTable = ({
     if (type === "mentors") {
       return [
         ...baseColumns,
+        { id: "checkedIn", label: "Checked In", minWidth: 80, priority: 2 },
         { id: "expertise", label: "Expertise", minWidth: 120, priority: 2 }, // Reduced from 150
         { id: "country", label: "Country", minWidth: 70, priority: 3 }, // Reduced from 100
         { id: "state", label: "State", minWidth: 60, priority: 3 }, // Reduced from 100
@@ -206,6 +207,7 @@ const VolunteerTable = ({
     } else if (type === "judges") {
       return [
         ...baseColumns,
+        { id: "checkedIn", label: "Checked In", minWidth: 80, priority: 2 },
         { id: "status", label: "Status", minWidth: 90 }, // Reduced from 120
         { id: "title", label: "Title", minWidth: 100, priority: 2 }, // Reduced from 150
         { id: "background", label: "Background", minWidth: 120, priority: 3 }, // Reduced from 150
@@ -216,6 +218,7 @@ const VolunteerTable = ({
         { id: "name", label: "Name", minWidth: 100 },
         { id: "messages_sent", label: "Msgs", minWidth: 20, priority: 3 },
         { id: "email", label: "Email", minWidth: 120, priority: 2 },
+        { id: "checkedIn", label: "Checked In", minWidth: 80, priority: 2 },
         { id: "experienceLevel", label: "Experience", minWidth: 90 },
         { id: "availability", label: "Availability", minWidth: 130 }, // Always visible - this is the key column
         { id: "title", label: "Title", minWidth: 90, priority: 2 },
@@ -231,6 +234,7 @@ const VolunteerTable = ({
     } else if (type === "hackers") {
       return [
         ...baseColumns,
+        { id: "checkedIn", label: "Checked In", minWidth: 80, priority: 2 },
         { id: "participantType", label: "Type", minWidth: 80 }, // Reduced from 120, shorter label
         { id: "experienceLevel", label: "Exp.", minWidth: 60 }, // Reduced from 120, shorter label
         { id: "teamStatus", label: "Team", minWidth: 80 }, // Reduced from 120, shorter label
@@ -239,6 +243,7 @@ const VolunteerTable = ({
     } else if (type === "sponsors") {
       return [
         ...baseColumns,
+        { id: "checkedIn", label: "Checked In", minWidth: 80, priority: 2 },
         { id: "sponsorshipTypes", label: "Sponsorship", minWidth: 100 },
         { id: "title", label: "Title", minWidth: 90 },
         { id: "volunteerType", label: "Vol. Type", minWidth: 90 },
@@ -350,6 +355,42 @@ const VolunteerTable = ({
             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
               <CancelIcon color="error" fontSize="small" />
             </Box>
+          </Tooltip>
+        );
+      case "checkedIn":
+        const checkedIn = volunteer.checkedIn;
+        const checkedInAt = volunteer.checkedInAt;
+        
+        let checkInStatus, color, chipColor;
+        if (checkedIn === true) {
+          checkInStatus = "Yes";
+          color = "success";
+          chipColor = "success";
+        } else if (checkedIn === false) {
+          checkInStatus = "No";
+          color = "default";
+          chipColor = "default";
+        } else {
+          checkInStatus = "Not set";
+          color = "text.secondary";
+          chipColor = "default";
+        }
+        
+        const tooltipTitle = checkedInAt 
+          ? `Checked in at: ${new Date(checkedInAt).toLocaleString()}`
+          : checkInStatus === "Not set" 
+            ? "Not checked in"
+            : "No check-in timestamp available";
+        
+        return (
+          <Tooltip title={tooltipTitle}>
+            <Chip 
+              label={checkInStatus} 
+              size="small" 
+              color={chipColor}
+              variant={checkInStatus === "Not set" ? "outlined" : "filled"}
+              sx={{ fontSize: '0.75rem', minWidth: 60 }}
+            />
           </Tooltip>
         );
       case "status":
