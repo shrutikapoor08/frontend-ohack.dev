@@ -477,6 +477,11 @@ const HackerApplicationComponent = () => {
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     
+    // Clear in-person error when they change their selection
+    if (name === 'inPerson') {
+      setInPersonError('');
+    }
+    
     // Custom handling for participant type to clear the "other" field when not needed
     if (name === 'participantType' && value !== 'Other') {
       setFormData(prev => ({
@@ -810,8 +815,21 @@ const HackerApplicationComponent = () => {
     return true;
   };
   
+  const [inPersonError, setInPersonError] = useState('');
+
+  // Extend the validateLocationInfo function to check in-person requirement
   const validateLocationInfo = () => {
+    // Clear any previous error
+    setInPersonError('');
+    
     const requiredFields = ['arizonaResident', 'country', 'state', 'ageRange'];
+    
+    // Add in-person validation for non-online events
+    if (!eventData?.isOnlineEvent && formData.inPerson === 'No') {
+      setError('This event is in-person only. Virtual participation is not supported.');
+      setInPersonError('This event requires in-person attendance. Please select "Yes, I\'ll attend in person".');
+      return false;
+    }
     
     for (const field of requiredFields) {
       if (!formData[field]) {
@@ -1398,9 +1416,14 @@ const HackerApplicationComponent = () => {
       <Box sx={{ mb: 3 }}>
         {/* Only show in-person question if it's not an online event */}
         {!eventData?.isOnlineEvent && (
-          <FormControl required component="fieldset" sx={{ mb: 3 }}>
+          <FormControl 
+            required 
+            component="fieldset" 
+            sx={{ mb: 3 }}
+            error={!!inPersonError}
+          >
             <Typography variant="subtitle1" gutterBottom>
-              {`Are you joining us in-person${eventData?.location ? ` in ${eventData.location}` : ''} or virtually?`}
+              {`Are you joining us in-person${eventData?.location ? ` in ${eventData.location}` : ''}?`} <Box component="span" color="error.main">*</Box>
             </Typography>
             <RadioGroup
               name="inPerson"
@@ -1408,8 +1431,31 @@ const HackerApplicationComponent = () => {
               onChange={handleChange}
             >
               <FormControlLabel value="Yes" control={<Radio />} label="Yes, I'll attend in person" />
-              <FormControlLabel value="No" control={<Radio />} label="No, I'll participate virtually" />
+              <FormControlLabel value="No" control={<Radio />} label={
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography component="span" sx={{ textDecoration: !!inPersonError ? 'line-through' : 'none', color: !!inPersonError ? 'error.main' : 'inherit' }}>
+                    No, I'll participate virtually
+                  </Typography>
+                  {!!inPersonError && (
+                    <Typography component="span" sx={{ ml: 1, fontSize: '0.75rem', color: 'error.main' }}>
+                      (not available)
+                    </Typography>
+                  )}
+                </Box>
+              } />
             </RadioGroup>
+            {!!inPersonError && (
+              <FormHelperText error>{inPersonError}</FormHelperText>
+            )}
+            {!inPersonError && (
+              <FormHelperText sx={{
+                fontSize: '1.20rem',
+                color: 'red',
+                fontWeight: 500
+              }}>
+                {!eventData?.isOnlineEvent ? "This event is in-person event only. Virtual participation is not supported because it's hard to engage with a virtual audience when we have to focus on the in-person attendees." : ""}
+              </FormHelperText>
+            )}
           </FormControl>
         )}
         
