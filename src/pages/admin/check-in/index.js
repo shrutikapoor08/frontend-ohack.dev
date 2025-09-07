@@ -158,67 +158,7 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     return () => clearInterval(interval);
   }, [selectedEventId, fetchCheckInCounts]);
 
-  const handleScan = useCallback(async (data) => {
-    if (data && data.text && data.text !== lastScanned) {
-      setLastScanned(data.text);
-      setScanning(false);
-      
-      try {
-        // Parse QR code data
-        // Expected format: eventId|volunteerId|volunteerType
-        const parts = data.text.split('|');
-        if (parts.length !== 3) {
-          throw new Error('Invalid QR code format. Expected: eventId|volunteerId|volunteerType');
-        }
-
-        const [eventId, volunteerId, volunteerType] = parts;
-        
-        // Validate the data
-        if (!eventId || !volunteerId || !volunteerType) {
-          throw new Error('Missing required information in QR code');
-        }
-
-        const validTypes = ['mentor', 'judge', 'volunteer', 'hacker', 'sponsor'];
-        if (!validTypes.includes(volunteerType)) {
-          throw new Error(`Invalid volunteer type: ${volunteerType}`);
-        }
-
-        setScanResult({
-          eventId,
-          volunteerId,
-          volunteerType,
-          timestamp: new Date().toISOString(),
-          success: true
-        });
-
-        // Process check-in
-        await processCheckIn(eventId, volunteerId, volunteerType);
-
-      } catch (error) {
-        console.error('QR code processing error:', error);
-        setScanResult({
-          error: error.message,
-          timestamp: new Date().toISOString(),
-          success: false
-        });
-        setSnackbar({
-          open: true,
-          message: `Check-in failed: ${error.message}`,
-          severity: "error",
-        });
-      }
-    }
-  }, [lastScanned, processCheckIn]);
-
-  const handleError = useCallback((err) => {
-    console.error('QR Scanner error:', err);
-    setSnackbar({
-      open: true,
-      message: "Camera error. Please check camera permissions and try again.",
-      severity: "error",
-    });
-  }, []);
-
+  // Define processCheckIn before handleScan
   const processCheckIn = useCallback(async (eventId, volunteerId, volunteerType) => {
     setLoading(true);
     try {
@@ -318,6 +258,81 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     }
   }, [accessToken, orgId, selectedEventId, fetchCheckInCounts]);
 
+  const handleScan = useCallback(async (data) => {
+    if (data && data.text && data.text !== lastScanned) {
+      setLastScanned(data.text);
+      setScanning(false);
+      
+      try {
+        // Parse QR code data
+        // Expected format: eventId|volunteerId|volunteerType
+        const parts = data.text.split('|');
+        if (parts.length !== 3) {
+          throw new Error('Invalid QR code format. Expected: eventId|volunteerId|volunteerType');
+        }
+
+        const [eventId, volunteerId, volunteerType] = parts;
+        
+        // Validate the data
+        if (!eventId || !volunteerId || !volunteerType) {
+          throw new Error('Missing required information in QR code');
+        }
+
+        const validTypes = ['mentor', 'judge', 'volunteer', 'hacker', 'sponsor'];
+        if (!validTypes.includes(volunteerType)) {
+          throw new Error(`Invalid volunteer type: ${volunteerType}`);
+        }
+
+        setScanResult({
+          eventId,
+          volunteerId,
+          volunteerType,
+          timestamp: new Date().toISOString(),
+          success: true
+        });
+
+        // Process check-in
+        await processCheckIn(eventId, volunteerId, volunteerType);
+
+      } catch (error) {
+        console.error('QR code processing error:', error);
+        setScanResult({
+          error: error.message,
+          timestamp: new Date().toISOString(),
+          success: false
+        });
+        setSnackbar({
+          open: true,
+          message: `Check-in failed: ${error.message}`,
+          severity: "error",
+        });
+      }
+    }
+  }, [lastScanned, processCheckIn]);
+
+  const handleError = useCallback((err) => {
+    console.error('QR Scanner error:', err);
+    setSnackbar({
+      open: true,
+      message: "Camera error. Please check camera permissions and try again.",
+      severity: "error",
+    });
+  }, []);
+
+  const startScanning = () => {
+    setScanning(true);
+    setScanResult(null);
+    setLastScanned(null);
+  };
+
+  const stopScanning = () => {
+    setScanning(false);
+  };
+
+  const switchCamera = () => {
+    setFacingMode(facingMode === 'environment' ? 'user' : 'environment');
+  };
+
   const handleManualCheckIn = async () => {
     if (!manualEventId || !manualVolunteerId || !manualVolunteerType) {
       setSnackbar({
@@ -333,20 +348,6 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     setManualEventId("");
     setManualVolunteerId("");
     setManualVolunteerType("");
-  };
-
-  const startScanning = () => {
-    setScanning(true);
-    setScanResult(null);
-    setLastScanned(null);
-  };
-
-  const stopScanning = () => {
-    setScanning(false);
-  };
-
-  const switchCamera = () => {
-    setFacingMode(facingMode === 'environment' ? 'user' : 'environment');
   };
 
   const handleViewVolunteer = (eventId, volunteerId, volunteerType) => {
