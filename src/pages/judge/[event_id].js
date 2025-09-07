@@ -155,11 +155,30 @@ const HackathonJudgePage = withRequiredAuthInfo(({ userClass }) => {
           {/* Problem Statement */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" color="primary" gutterBottom>
+              <Button
+              component="a"
+              href={`/nonprofit/${team.problem_statement.nonprofit_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="text"
+              size="small"
+              sx={{
+                textTransform: 'none',
+                p: 0,
+                minWidth: 'auto',
+                fontWeight: 'inherit',
+                fontSize: 'inherit',
+                color: 'primary.main',
+                textDecoration: 'underline',
+                '&:hover': {
+                textDecoration: 'none'
+                }
+              }}
+              >
               {team.problem_statement.nonprofit}
+              </Button>
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {team.problem_statement.title}
-            </Typography>
+            
           </Box>
 
           {/* Demo Time for Round 2 */}
