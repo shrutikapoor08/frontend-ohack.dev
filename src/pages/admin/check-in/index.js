@@ -19,6 +19,10 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import QrScanner from 'react-qr-scanner';
 import AdminPage from "../../../components/admin/AdminPage";
@@ -27,6 +31,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import PersonIcon from '@mui/icons-material/Person';
+import useHackathonEvents from "../../../hooks/use-hackathon-events";
 
 const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
   const { accessToken } = useAuthInfo();
@@ -39,7 +44,18 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
   const orgId = org.orgId;
   const isAdmin = org.hasPermission("volunteer.admin");
 
+  // Hackathon events
+  const { hackathons = [] } = useHackathonEvents(false) || {};
+
   // State
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [checkInCounts, setCheckInCounts] = useState({
+    mentor: 0,
+    judge: 0,
+    volunteer: 0,
+    hacker: 0,
+    sponsor: 0
+  });
   const [scanning, setScanning] = useState(false);
   const [lastScanned, setLastScanned] = useState(null);
   const [scanResult, setScanResult] = useState(null);
@@ -57,6 +73,90 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
 
   // Scanner settings
   const [facingMode, setFacingMode] = useState('environment'); // 'user' for front camera, 'environment' for back camera
+
+  // Fetch check-in counts for all volunteer types
+  const fetchCheckInCounts = useCallback(async (eventId) => {
+    if (!eventId) return;
+    
+    const volunteerTypes = ['mentor', 'judge', 'volunteer', 'hacker', 'sponsor'];
+    const counts = {};
+    
+    try {
+      const promises = volunteerTypes.map(async (type) => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${eventId}/${type}/checkins`,
+          {
+            headers: {
+              authorization: `Bearer ${accessToken}`,
+              "content-type": "application/json",
+              "X-Org-Id": orgId,
+            },
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`Fetched ${type} check-ins:`, data);
+          // Count volunteers that are checked in
+          const checkedInCount = Array.isArray(data.data) 
+            ? data.data.filter(volunteer => volunteer.checkedIn === true).length 
+            : 0;
+
+          console.log(`Counted ${checkedInCount} checked-in ${type}s`);
+          return { type, count: checkedInCount };
+        } else {
+          return { type, count: 0 };
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      results.forEach(({ type, count }) => {
+        counts[type] = count;
+      });
+      
+      setCheckInCounts(counts);
+    } catch (error) {
+      console.error('Error fetching check-in counts:', error);
+      // Reset counts on error
+      setCheckInCounts({
+        mentor: 0,
+        judge: 0,
+        volunteer: 0,
+        hacker: 0,
+        sponsor: 0
+      });
+    }
+  }, [accessToken, orgId]);
+
+  // Handle hackathon event selection
+  const handleEventChange = (eventId) => {
+    setSelectedEventId(eventId);
+    setManualEventId(eventId); // Also set it for manual entry
+    if (eventId) {
+      fetchCheckInCounts(eventId);
+    } else {
+      setCheckInCounts({
+        mentor: 0,
+        judge: 0,
+        volunteer: 0,
+        hacker: 0,
+        sponsor: 0
+      });
+    }
+  };
+
+  // Auto-refresh check-in counts every 7 seconds
+  useEffect(() => {
+    if (!selectedEventId) return;
+
+    fetchCheckInCounts(selectedEventId);
+    
+    const interval = setInterval(() => {
+      fetchCheckInCounts(selectedEventId);
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, [selectedEventId, fetchCheckInCounts]);
 
   const handleScan = useCallback(async (data) => {
     if (data && data.text && data.text !== lastScanned) {
@@ -108,7 +208,7 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
         });
       }
     }
-  }, [lastScanned]);
+  }, [lastScanned, processCheckIn]);
 
   const handleError = useCallback((err) => {
     console.error('QR Scanner error:', err);
@@ -119,7 +219,7 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     });
   }, []);
 
-  const processCheckIn = async (eventId, volunteerId, volunteerType) => {
+  const processCheckIn = useCallback(async (eventId, volunteerId, volunteerType) => {
     setLoading(true);
     try {
       // First, fetch the volunteer data to verify it exists
@@ -187,6 +287,11 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
         severity: "success",
       });
 
+      // Refresh check-in counts after successful check-in
+      if (selectedEventId) {
+        fetchCheckInCounts(selectedEventId);
+      }
+
     } catch (error) {
       console.error('Check-in error:', error);
       
@@ -211,7 +316,7 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, orgId, selectedEventId, fetchCheckInCounts]);
 
   const handleManualCheckIn = async () => {
     if (!manualEventId || !manualVolunteerId || !manualVolunteerType) {
@@ -265,6 +370,72 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
       snackbar={snackbar}
       onSnackbarClose={() => setSnackbar({ ...snackbar, open: false })}
     >
+      {/* Event Selection and Check-in Counts */}
+      <Box sx={{ mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel id="hackathon-select-label">
+                Hackathon Event
+              </InputLabel>
+              <Select
+                labelId="hackathon-select-label"
+                id="hackathon-select"
+                value={selectedEventId || ""}
+                label="Hackathon Event"
+                onChange={(e) => handleEventChange(e.target.value)}
+              >
+                {Array.isArray(hackathons) &&
+                  hackathons
+                    .filter(hackathon => hackathon?.event_id)
+                    .map((hackathon) => (
+                      <MenuItem
+                        key={hackathon.event_id}
+                        value={hackathon.event_id}
+                      >
+                        {hackathon.title || hackathon.event_id}
+                      </MenuItem>
+                    ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={8}>
+            {selectedEventId && (
+              <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom>
+                  Real-time Check-in Counts
+                </Typography>
+                <Grid container spacing={2}>
+                  {[
+                    { key: 'mentor', label: 'Mentors', color: 'primary' },
+                    { key: 'judge', label: 'Judges', color: 'secondary' },
+                    { key: 'volunteer', label: 'Volunteers', color: 'success' },
+                    { key: 'hacker', label: 'Hackers', color: 'info' },
+                    { key: 'sponsor', label: 'Sponsors', color: 'warning' }
+                  ].map(({ key, label, color }) => (
+                    <Grid item xs={6} sm={4} md={2.4} key={key}>
+                      <Card sx={{ textAlign: 'center', minHeight: 80 }}>
+                        <CardContent sx={{ pb: 1, '&:last-child': { pb: 1 } }}>
+                          <Typography variant="h4" color={`${color}.main`} fontWeight="bold">
+                            {checkInCounts[key]}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {label}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                  Updates every 7 seconds
+                </Typography>
+              </Paper>
+            )}
+          </Grid>
+        </Grid>
+      </Box>
+
       <Grid container spacing={3}>
         {/* Scanner Section */}
         <Grid item xs={12} md={8}>

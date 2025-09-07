@@ -33,6 +33,12 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 
 const adminPages = [
   { 
+    path: "/admin/check-in", 
+    label: "Check In", 
+    description: "Manage check-in process",
+    icon: <HandshakeIcon fontSize="large" color="primary" />
+  },
+  { 
     path: "/admin/certificates", 
     label: "Certificates", 
     description: "Generate hearts and GitHub certificates",
