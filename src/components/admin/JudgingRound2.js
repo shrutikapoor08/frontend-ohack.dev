@@ -239,7 +239,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     }
   }, [accessToken, orgId]);
 
-  // Optimized fetch Round 1 scores with caching
+  // Optimized fetch Round 1 scores with single API call
   const fetchRound1Scores = useCallback(async () => {
     if (!selectedHackathon || teams.length === 0) return;
     
@@ -252,9 +252,9 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     
     setLoadingScores(true);
     try {
-      // Get all Round 1 panels
-      const panelsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/panels/${selectedHackathon}`,
+      // Single API call to get all Round 1 scores
+      const scoresResponse = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/admin/scores/${selectedHackathon}/round1`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -263,101 +263,57 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
         }
       );
 
-      const panels = panelsResponse.data.panels || [];
-      const round1Panels = panels.filter(p => !p.panel_name.includes('Round 2'));
+      const allScores = scoresResponse.data.scores || [];
+      console.log('Fetched all Round 1 scores:', allScores);
       
-      // Load all panel assignments in parallel
-      const panelAssignmentPromises = round1Panels.map(panel => 
-        fetchPanelAssignments(panel.id)
-      );
+      // Group scores by team
+      const teamScoreMap = new Map();
       
-      const allPanelAssignments = await Promise.all(panelAssignmentPromises);
-      const flatAssignments = allPanelAssignments.flat();
-      
-      // Collect all unique judge IDs and load their details in parallel
-      const allJudgeIds = [...new Set(flatAssignments.map(a => a.judge_id))];
-      // Load judge details for all judges involved in scoring
-      const judgeDetailPromises = allJudgeIds.map(judgeId => fetchJudgeDetails(judgeId));
-      await Promise.all(judgeDetailPromises);
-      
-      console.log('Judge details cache after loading:', judgeDetailsCache);
-      console.log('All judge IDs that need details:', allJudgeIds);
-      
-      const teamScores = [];
-      
-      // Process each team
-      for (const team of teams) {
-        const teamScoreData = {
+      // Initialize all teams with empty score data
+      teams.forEach(team => {
+        teamScoreMap.set(team.id, {
           team,
           scores: [],
           averageScore: 0,
           totalScore: 0,
           judgeCount: 0
-        };
-        
-        // Get assignments for this team
-        const teamAssignments = flatAssignments.filter(a => a.team_id === team.id);
-        
-        // Fetch scores for each assignment in parallel
-        const scorePromises = teamAssignments.map(async (assignment) => {
-          try {
-            const scoreResponse = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/judge/admin/score/${assignment.judge_id}/${team.id}/${selectedHackathon}/round1`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  "X-Org-Id": orgId,
-                },
-              }
-            );
-            
-            if (scoreResponse.data.score && !scoreResponse.data.score.is_draft) {
-              const judgeDetails = judgeDetailsCache[assignment.judge_id];
-              
-              // Fallback: try to find judge in the initially loaded judges list
-              let judgeInfo = judgeDetails;
-              if (!judgeInfo) {
-                judgeInfo = judges.find(j => j.user_id === assignment.judge_id);
-                console.log('Using fallback judge info for', assignment.judge_id, ':', judgeInfo);
-              }
-              
-              // Final fallback: create a basic judge object with the ID
-              if (!judgeInfo) {
-                judgeInfo = {
-                  name: `Judge ${assignment.judge_id}`,
-                  firstName: 'Unknown',
-                  lastName: 'Judge',
-                  company: 'N/A',
-                  user_id: assignment.judge_id
-                };
-                console.warn('No judge details found for', assignment.judge_id, 'using fallback');
-              }
-              
-              return {
-                judge: judgeInfo,
-                score: scoreResponse.data.score
-              };
-            }
-          } catch (error) {
-            console.log(`No score found for judge ${assignment.judge_id} and team ${team.id}`);
-          }
-          return null;
         });
-        
-        const scoreResults = await Promise.all(scorePromises);
-        teamScoreData.scores = scoreResults.filter(result => result !== null);
-        
-        // Calculate averages using total_score only
-        if (teamScoreData.scores.length > 0) {
-          const totalScores = teamScoreData.scores.map(s => s.score.total_score || 0);
+      });
+      
+      // Process scores and group by team
+      allScores.forEach(scoreData => {
+        if (teamScoreMap.has(scoreData.team_id)) {
+          const teamData = teamScoreMap.get(scoreData.team_id);
           
-          teamScoreData.totalScore = totalScores.reduce((sum, score) => sum + score, 0);
-          teamScoreData.averageScore = teamScoreData.totalScore / teamScoreData.scores.length;
-          teamScoreData.judgeCount = teamScoreData.scores.length;
+          // Create judge info from the score data
+          const judgeInfo = {
+            name: scoreData.judge_name || `Judge ${scoreData.judge_id}`,
+            user_id: scoreData.judge_id,
+            company: 'N/A' // Not provided in the new endpoint
+          };
+          
+          teamData.scores.push({
+            judge: judgeInfo,
+            score: {
+              total_score: scoreData.total_score,
+              scores: scoreData.scores,
+              feedback: scoreData.feedback?.general || '',
+              is_draft: false // Scores from this endpoint are submitted
+            }
+          });
         }
-        
-        teamScores.push(teamScoreData);
-      }
+      });
+      
+      // Calculate averages and totals for each team
+      const teamScores = Array.from(teamScoreMap.values()).map(teamData => {
+        if (teamData.scores.length > 0) {
+          const totalScores = teamData.scores.map(s => s.score.total_score || 0);
+          teamData.totalScore = totalScores.reduce((sum, score) => sum + score, 0);
+          teamData.averageScore = teamData.totalScore / teamData.scores.length;
+          teamData.judgeCount = teamData.scores.length;
+        }
+        return teamData;
+      });
       
       // Sort by average score descending
       teamScores.sort((a, b) => b.averageScore - a.averageScore);
@@ -381,7 +337,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     } finally {
       setLoadingScores(false);
     }
-  }, [selectedHackathon, teams, accessToken, orgId, fetchPanelAssignments, fetchJudgeDetails, judgeDetailsCache, scoresCache, finalistTeams.length, enqueueSnackbar, judges]);
+  }, [selectedHackathon, teams, accessToken, orgId, scoresCache, finalistTeams.length, enqueueSnackbar]);
 
   // Fetch judges and teams for selected hackathon
   const fetchData = useCallback(async () => {
@@ -712,12 +668,72 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
     }
   };
 
-  // Load existing Round 2 assignments when data is available
-  useEffect(() => {
-    if (selectedHackathon && judges.length > 0 && teams.length > 0) {
-      loadExistingRound2();
-    }
-  }, [selectedHackathon, judges.length, teams.length]); // Removed loadExistingRound2 dependency
+  // Calculate standard deviation for a set of scores
+  const calculateStandardDeviation = (scores) => {
+    if (scores.length <= 1) return 0;
+    const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+    return Math.sqrt(variance);
+  };
+
+  // Get category mapping for score fields
+  const getCategoryMapping = () => {
+    return {
+      documentation: ['documentationCode', 'documentationEase'],
+      polish: ['polishCanUseToday', 'polishWorkRemaining'],
+      scope: ['scopeComplexity', 'scopeImpact'],
+      security: ['securityData', 'securityRole']
+    };
+  };
+
+  // Analyze top teams by scoring categories
+  const analyzeTopTeamsByCategory = () => {
+    if (round1Scores.length === 0) return {};
+    
+    const categoryMapping = getCategoryMapping();
+    const categoryResults = {};
+    
+    Object.entries(categoryMapping).forEach(([categoryName, scoreFields]) => {
+      const teamsWithCategoryScores = round1Scores
+        .filter(teamData => teamData.judgeCount > 0)
+        .map(teamData => {
+          // Calculate category scores for each judge
+          const categoryScores = teamData.scores.map(judgeScore => {
+            const categoryTotal = scoreFields.reduce((sum, field) => {
+              return sum + (judgeScore.score.scores[field] || 0);
+            }, 0);
+            return categoryTotal;
+          });
+          
+          // Calculate average and standard deviation for this category
+          const averageScore = categoryScores.reduce((sum, score) => sum + score, 0) / categoryScores.length;
+          const standardDeviation = calculateStandardDeviation(categoryScores);
+          
+          return {
+            ...teamData,
+            categoryScores,
+            categoryAverage: averageScore,
+            categoryStandardDeviation: standardDeviation,
+            maxPossible: scoreFields.length * 5 * teamData.judgeCount, // Assuming max score of 5 per field
+            categoryPercentage: (averageScore / (scoreFields.length * 5)) * 100
+          };
+        })
+        .sort((a, b) => {
+          // Primary sort: highest average score
+          if (Math.abs(a.categoryAverage - b.categoryAverage) > 0.01) {
+            return b.categoryAverage - a.categoryAverage;
+          }
+          // Tiebreaker: lowest standard deviation (more consistent)
+          return a.categoryStandardDeviation - b.categoryStandardDeviation;
+        });
+      
+      categoryResults[categoryName] = teamsWithCategoryScores.slice(0, 3); // Top 3 teams per category
+    });
+    
+    return categoryResults;
+  };
+
+  const topTeamsByCategory = analyzeTopTeamsByCategory();
 
   if (loading) {
     return (
@@ -1007,74 +1023,156 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
             </AccordionDetails>
           </Accordion>
 
-          {/* Selected Finalists Summary */}
+          {/* Top Teams by Category */}
           <Accordion defaultExpanded sx={{ mb: 3 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6">
-                Selected Finalist Teams ({finalistTeams.length} selected)
+                Top Teams by Category
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                These teams will advance to Round 2 final judging presentations.
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Teams ranked by average performance in specific scoring categories. In case of ties, teams with lower standard deviation (more consistent scores) are ranked higher.
               </Typography>
               
-              {finalistTeams.length > 0 ? (
-                <Grid container spacing={2}>
-                  {finalistTeams.map((team) => {
-                    const teamScoreData = round1Scores.find(ts => ts.team.id === team.id);
-                    const nonprofitName = team.selected_nonprofit_id ? 
-                      (nonprofitNames[team.selected_nonprofit_id] || 'Loading...') : 'No nonprofit';
-                    
-                    return (
-                      <Grid item xs={12} sm={6} md={4} key={team.id}>
-                        <Card 
-                          sx={{ 
-                            border: '2px solid',
-                            borderColor: 'primary.main',
-                            backgroundColor: 'action.selected'
-                          }}
-                        >
-                          <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="h6" component="div">
-                                {team.name}
-                              </Typography>
-                              <CheckIcon color="primary" />
-                            </Box>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                              {nonprofitName}
+              {Object.keys(topTeamsByCategory).length > 0 ? (
+                <Grid container spacing={3}>
+                  {Object.entries(topTeamsByCategory).map(([categoryName, teams]) => (
+                    <Grid item xs={12} md={6} key={categoryName}>
+                      <Card variant="outlined" sx={{ height: '100%' }}>
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom sx={{ 
+                            textTransform: 'capitalize',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}>
+                            {categoryName === 'documentation' && <EditIcon color="primary" />}
+                            {categoryName === 'polish' && <StarIcon color="warning" />}
+                            {categoryName === 'scope' && <TrophyIcon color="success" />}
+                            {categoryName === 'security' && <CheckIcon color="error" />}
+                            {categoryName} Excellence
+                          </Typography>
+                          
+                          <List dense>
+                            {teams.map((teamData, index) => {
+                              const isTopTeam = index === 0;
+                              const isTied = index > 0 && Math.abs(teams[0].categoryAverage - teamData.categoryAverage) < 0.01;
+                              
+                              return (
+                                <ListItem key={teamData.team.id} sx={{ 
+                                  px: 0,
+                                  backgroundColor: isTopTeam ? 'action.selected' : 'transparent',
+                                  borderRadius: 1,
+                                  mb: 1
+                                }}>
+                                  <ListItemIcon sx={{ minWidth: 36 }}>
+                                    <Box sx={{ 
+                                      width: 24, 
+                                      height: 24, 
+                                      borderRadius: '50%',
+                                      backgroundColor: isTopTeam ? 'primary.main' : isTied ? 'warning.main' : 'action.disabled',
+                                      color: 'white',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600
+                                    }}>
+                                      {index + 1}
+                                    </Box>
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primary={
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: isTopTeam ? 600 : 400 }}>
+                                          {teamData.team.name}
+                                        </Typography>
+                                        {isTopTeam && (
+                                          <Chip 
+                                            label="Leader" 
+                                            size="small" 
+                                            color="primary" 
+                                            variant="outlined"
+                                          />
+                                        )}
+                                        {isTied && (
+                                          <Chip 
+                                            label="Tied" 
+                                            size="small" 
+                                            color="warning" 
+                                            variant="outlined"
+                                          />
+                                        )}
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Box sx={{ mt: 0.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+                                          <Typography variant="caption" color="text.secondary">
+                                            Avg: {teamData.categoryAverage.toFixed(1)}
+                                          </Typography>
+                                          <Typography variant="caption" color="text.secondary">
+                                            SD: {teamData.categoryStandardDeviation.toFixed(2)}
+                                          </Typography>
+                                          <Typography variant="caption" color="text.secondary">
+                                            {teamData.categoryPercentage.toFixed(0)}%
+                                          </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Box sx={{ 
+                                            width: 100, 
+                                            height: 4, 
+                                            backgroundColor: 'action.hover',
+                                            borderRadius: 2,
+                                            overflow: 'hidden'
+                                          }}>
+                                            <Box sx={{
+                                              width: `${Math.min(teamData.categoryPercentage, 100)}%`,
+                                              height: '100%',
+                                              backgroundColor: isTopTeam ? 'primary.main' : isTied ? 'warning.main' : 'action.disabled',
+                                              transition: 'width 0.3s ease'
+                                            }} />
+                                          </Box>
+                                          <Chip 
+                                            label={`${teamData.judgeCount} judges`} 
+                                            size="small" 
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.6rem', height: 20 }}
+                                          />
+                                        </Box>
+                                      </Box>
+                                    }
+                                  />
+                                </ListItem>
+                              );
+                            })}
+                          </List>
+                          
+                          {teams.length === 0 && (
+                            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                              No teams have scores in this category yet
                             </Typography>
-                            {teamScoreData && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Avg Score: {teamScoreData.averageScore.toFixed(1)}
-                                </Typography>
-                                <Chip 
-                                  label={`${teamScoreData.judgeCount} judges`} 
-                                  size="small" 
-                                  variant="outlined"
-                                />
-                              </Box>
-                            )}
-                            <Button
-                              size="small"
-                              color="error"
-                              onClick={() => toggleFinalistStatus(team.id)}
-                              sx={{ mt: 1 }}
-                            >
-                              Remove
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    );
-                  })}
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
                 </Grid>
               ) : (
-                <Alert severity="warning">
-                  No finalist teams selected. Use the table above to select teams for Round 2.
+                <Alert severity="info">
+                  No category analysis available. Teams need to be scored in Round 1 first.
                 </Alert>
+              )}
+              
+              {Object.keys(topTeamsByCategory).length > 0 && (
+                <Box sx={{ mt: 3, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Scoring Notes:</strong> Teams are ranked by average score in each category. 
+                    Ties are broken by standard deviation (lower is better, indicating more consistent judging). 
+                    Percentage shows performance relative to maximum possible score in that category.
+                  </Typography>
+                </Box>
               )}
             </AccordionDetails>
           </Accordion>
@@ -1333,13 +1431,14 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                     <TableHead>
                       <TableRow>
                         <TableCell>Judge</TableCell>
+                        <TableCell align="center">Total</TableCell>
                         <TableCell>Company</TableCell>
                         {selectedTeamScores.scores[0] && Object.keys(selectedTeamScores.scores[0].score.scores).map(criteria => (
                           <TableCell key={criteria} align="center">
                             {criteria.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </TableCell>
                         ))}
-                        <TableCell align="center">Total</TableCell>
+                        
                         <TableCell>Feedback</TableCell>
                       </TableRow>
                     </TableHead>
@@ -1351,6 +1450,11 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                             <TableCell>
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                 {judgeScore.judge.name || judgeScore.judge.firstName + ' ' + judgeScore.judge.lastName}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                {totalScore}
                               </Typography>
                             </TableCell>
                             <TableCell>
@@ -1366,12 +1470,7 @@ const JudgingRound2 = ({ orgId, hackathons, selectedHackathon, setSelectedHackat
                                   color={score >= 8 ? 'success' : score >= 6 ? 'warning' : 'default'}
                                 />
                               </TableCell>
-                            ))}
-                            <TableCell align="center">
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                {totalScore}
-                              </Typography>
-                            </TableCell>
+                            ))}                            
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
                                 {judgeScore.score.feedback || 'No feedback provided'}
