@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Moment from "moment";
 import {
   Typography,
   Button,
@@ -206,26 +207,14 @@ const VolunteerPage = () => {
   };
 
   const formatEventDate = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = Moment(startDate);
+    const end = Moment(endDate);
     
-    if (start.toDateString() === end.toDateString()) {
-      return start.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
+    if (start.format('YYYY-MM-DD') === end.format('YYYY-MM-DD')) {
+      return start.format('dddd, MMMM Do YYYY');
     }
     
-    return `${start.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    })} - ${end.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    })}`;
+    return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`;
   };
 
   return (
