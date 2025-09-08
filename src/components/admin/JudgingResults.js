@@ -29,7 +29,8 @@ import {
   AccordionSummary,
   AccordionDetails,
   Skeleton,
-  LinearProgress
+  LinearProgress,
+  Tooltip
 } from '@mui/material';
 import {
   EmojiEvents as TrophyIcon,
@@ -48,6 +49,17 @@ import axios from 'axios';
 const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHackathon }) => {
   const { accessToken } = useAuthInfo();
   const { enqueueSnackbar } = useSnackbar();
+
+  // Calculate standard deviation for an array of scores
+  const calculateStandardDeviation = (scores) => {
+    if (scores.length <= 1) return 0;
+    
+    const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    const squaredDifferences = scores.map(score => Math.pow(score - mean, 2));
+    const variance = squaredDifferences.reduce((sum, diff) => sum + diff, 0) / (scores.length - 1);
+    
+    return Math.sqrt(variance);
+  };
   
   const [loading, setLoading] = useState(false);
   const [selectedHackathonData, setSelectedHackathonData] = useState(null);
@@ -311,13 +323,16 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
           
           teamScoreData.totalScore = totalScores.reduce((sum, score) => sum + score, 0);
           teamScoreData.averageScore = teamScoreData.totalScore / teamScoreData.scores.length;
+          teamScoreData.standardDeviation = calculateStandardDeviation(totalScores);
+        } else {
+          teamScoreData.standardDeviation = 0;
         }
         
         // Always add the team, even if no scores yet
         teamScores.push(teamScoreData);
       }
       
-      // Sort by completion status first, then by average score
+      // Sort by completion status first, then by average score, then by standard deviation for tie-breaking
       teamScores.sort((a, b) => {
         // Teams with scores come first
         if (a.judgeCount > 0 && b.judgeCount === 0) return -1;
@@ -325,7 +340,15 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
         
         // Among teams with scores, sort by average score descending
         if (a.judgeCount > 0 && b.judgeCount > 0) {
-          return b.averageScore - a.averageScore;
+          const scoreDiff = b.averageScore - a.averageScore;
+          
+          // If average scores are very close (within 0.01), use standard deviation for tie-breaking
+          if (Math.abs(scoreDiff) < 0.01) {
+            // Lower standard deviation wins (more consistent scoring)
+            return a.standardDeviation - b.standardDeviation;
+          }
+          
+          return scoreDiff;
         }
         
         // Among teams without scores, sort by team name
@@ -701,12 +724,17 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                           <TableCell align="center">Completion</TableCell>
                           <TableCell align="center">Average Score</TableCell>
                           <TableCell align="center">Total Score</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="Standard Deviation of scores - lower values indicate more consistent scoring and break ties">
+                              <span>Std Dev</span>
+                            </Tooltip>
+                          </TableCell>
                           <TableCell align="center">Actions</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {round2Scores.map((teamScoreData, index) => {
-                          const { team, averageScore, judgeCount, totalScore, totalAssignedJudges, completionPercentage } = teamScoreData;
+                          const { team, averageScore, judgeCount, totalScore, totalAssignedJudges, completionPercentage, standardDeviation } = teamScoreData;
                           const nonprofitName = team.selected_nonprofit_id ? 
                             (nonprofitNames[team.selected_nonprofit_id] || 'Loading...') : 'No nonprofit';
                           
@@ -783,6 +811,17 @@ const JudgingResults = ({ orgId, hackathons, selectedHackathon, setSelectedHacka
                                 <Typography variant="body1" sx={{ fontWeight: 600 }}>
                                   {totalScore.toFixed(1)}
                                 </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                {judgeCount > 1 ? (
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {teamScoreData.standardDeviation.toFixed(2)}
+                                  </Typography>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {judgeCount === 1 ? 'N/A' : '—'}
+                                  </Typography>
+                                )}
                               </TableCell>
                               <TableCell align="center">
                                 <Button
