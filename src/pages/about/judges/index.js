@@ -44,7 +44,8 @@ import {
   TrendingUpRounded,
   PersonRounded,
   WorkRounded,
-  LinkRounded
+  LinkRounded,
+  PlayCircleOutlineRounded
 } from "@mui/icons-material";
 
 // Constants for better maintainability
@@ -651,6 +652,79 @@ const AboutJudges = () => {
             Our judging process is designed to fairly evaluate projects while
             providing valuable feedback to teams.
           </Typography>
+
+          {/* Video CTA Section */}
+          <Paper 
+            elevation={2} 
+            sx={{ 
+              p: 3, 
+              mb: 4, 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              textAlign: 'center'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+              <MovieRounded sx={{ fontSize: 40, mr: 2 }} />
+              <Typography variant="h5" component="h3">
+                Watch Our Complete Judging Overview
+              </Typography>
+            </Box>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 3, 
+                fontSize: '16px',
+                opacity: 0.9,
+                maxWidth: '600px',
+                mx: 'auto'
+              }}
+            >
+              Get the full insider view of our judging process! Watch real judges explain the scoring system, see live demo evaluations, and understand exactly how we identify the most impactful nonprofit technology solutions.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="large"
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'primary.main',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  px: 4,
+                  py: 1.5,
+                  '&:hover': { 
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+                href="/about/judges/overview"
+                onClick={() => trackOnClickButtonClickWithGoogleAndFacebook("watch_judging_video")}
+                startIcon={<PlayCircleOutlineRounded />}
+              >
+                Watch Judging Overview Video
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                sx={{ 
+                  borderColor: 'white', 
+                  color: 'white',
+                  fontSize: '14px',
+                  '&:hover': { 
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    borderColor: 'white'
+                  }
+                }}
+                href="#judging-criteria"
+                onClick={() => navigateToAnchor("judging-criteria")}
+              >
+                See Scoring Criteria
+              </Button>
+            </Box>
+          </Paper>
 
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>

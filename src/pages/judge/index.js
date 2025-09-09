@@ -22,7 +22,9 @@ import {
   Groups as TeamsIcon,
   CheckCircle as CompletedIcon,
   Schedule as PendingIcon,
-  EmojiEvents as TrophyIcon
+  EmojiEvents as TrophyIcon,
+  PlayCircleOutlineRounded,
+  VideoLibraryRounded
 } from '@mui/icons-material';
 import { useAuthInfo, withRequiredAuthInfo } from '@propelauth/react';
 import { useSnackbar } from 'notistack';
@@ -86,8 +88,17 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
   return (
     <>
       <Head>
-        <title>Judge Dashboard - Opportunity Hack</title>
-        <meta name="description" content="Judge hackathon projects and evaluate innovative solutions for nonprofits" />
+        <title>Judge Dashboard - Evaluate Hackathon Projects | Opportunity Hack</title>
+        <meta name="description" content="Access your judge assignments and evaluate innovative nonprofit technology solutions. Complete dashboard tutorial available to guide you through Round 1 and Round 2 judging." />
+        <meta name="keywords" content="judge dashboard, hackathon judging, nonprofit technology evaluation, scoring criteria, judge tutorial" />
+        <meta property="og:title" content="Judge Dashboard - Evaluate Hackathon Projects | Opportunity Hack" />
+        <meta property="og:description" content="Access your judge assignments and evaluate innovative nonprofit technology solutions. Complete dashboard tutorial available to guide you through Round 1 and Round 2 judging." />
+        <meta property="og:url" content="https://ohack.dev/judge" />
+        <meta property="og:image" content="https://cdn.ohack.dev/ohack.dev/judge_1.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Judge Dashboard - Evaluate Hackathon Projects | Opportunity Hack" />
+        <meta name="twitter:description" content="Access your judge assignments and evaluate innovative nonprofit technology solutions. Complete dashboard tutorial available to guide you through Round 1 and Round 2 judging." />
+        <meta name="twitter:image" content="https://cdn.ohack.dev/ohack.dev/judge_1.jpg" />
       </Head>
 
       <Container maxWidth="lg">
@@ -229,10 +240,65 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
             </Grid>
           )}
 
+          {/* Video Tutorial CTA Section */}
+          <Paper 
+            elevation={2} 
+            sx={{ 
+              p: 3, 
+              mt: 4, 
+              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+              color: 'white',
+              textAlign: 'center'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+              <VideoLibraryRounded sx={{ fontSize: 40, mr: 2 }} />
+              <Typography variant="h5" component="h3">
+                New to Our Judge Dashboard?
+              </Typography>
+            </Box>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 3, 
+                fontSize: '16px',
+                opacity: 0.9,
+                maxWidth: '600px',
+                mx: 'auto'
+              }}
+            >
+              Watch our complete tutorial to master the judging process! See exactly how to navigate the dashboard, evaluate projects in both rounds, and provide meaningful feedback to teams.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="large"
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'primary.main',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  px: 4,
+                  py: 1.5,
+                  '&:hover': { 
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+                href="/judge/overview"
+                startIcon={<PlayCircleOutlineRounded />}
+              >
+                Watch Dashboard Tutorial
+              </Button>
+            </Box>
+          </Paper>
+
           {/* Help Section */}
           <Paper elevation={1} sx={{ p: 3, mt: 4, bgcolor: 'grey.50' }}>
             <Typography variant="h6" gutterBottom>
-              Need Help?
+              Quick Reference: Judging Process
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
               As a judge, you'll evaluate teams in two rounds (in most hackathons):
@@ -249,9 +315,26 @@ const JudgeDashboard = withRequiredAuthInfo(({ userClass }) => {
                 </Typography>
               </li>
             </Box>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Each project is scored across four categories: Scope, Documentation, Polish, and Security.               
             </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                href="/judge/overview"
+                startIcon={<VideoLibraryRounded />}
+              >
+                Dashboard Tutorial
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                href="/about/judges#judging-criteria"
+              >
+                Scoring Criteria
+              </Button>
+            </Box>
           </Paper>
         </Box>
       </Container>
