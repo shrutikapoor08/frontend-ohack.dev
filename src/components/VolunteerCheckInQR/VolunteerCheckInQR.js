@@ -19,6 +19,7 @@ import QRCode from 'react-qr-code';
  * @param {string} props.volunteerId - Unique volunteer ID
  * @param {string} props.volunteerType - Type of volunteer ("mentor", "judge", "volunteer", "hacker", "sponsor")
  * @param {boolean} props.isSubmitted - Whether the application has been submitted
+ * @param {boolean} props.isSelected - Whether to display the component (default: false)
  * @param {Object} props.sx - Additional MUI sx prop styling
  * @param {number} props.qrSize - Size of the QR code (default: 120)
  * @param {boolean} props.showOnlyIfSubmitted - Only show QR code if application is submitted (default: false)
@@ -28,12 +29,18 @@ const VolunteerCheckInQR = ({
   volunteerId,
   volunteerType,
   isSubmitted = false,
+  isSelected = false,
   sx = {},
   qrSize = 120,
   showOnlyIfSubmitted = false
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Don't render if not selected
+  if (!isSelected) {
+    return null;
+  }
 
   // Don't render if we don't have the necessary data
   if (!volunteerId || !eventId || !volunteerType) {
@@ -129,7 +136,7 @@ const VolunteerCheckInQR = ({
           minWidth: 'fit-content'
         }}>
           <QRCode
-            size={isMobile ? Math.min(qrSize, 100) : qrSize}
+            size={isMobile ? Math.min(qrSize, 200) : qrSize}
             style={{ height: "auto", maxWidth: "100%", width: "100%" }}
             value={qrCodeData}
             viewBox="0 0 256 256"

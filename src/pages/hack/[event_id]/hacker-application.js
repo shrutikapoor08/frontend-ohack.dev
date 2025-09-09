@@ -699,6 +699,7 @@ const HackerApplicationComponent = () => {
                     portfolio: prevData.portfolio || '',
                     photoUrl: prevData.photoUrl || '',
                     inPerson: prevData.inPerson || (prevData.isInPerson ? 'Yes' : 'No'),
+                    isSelected: prevData.isSelected || false,
                     shirtSize: prevData.shirtSize || '',
                     participationCount: prevData.participationCount || '',
                     arizonaResident: prevData.arizonaResident || '',
@@ -2483,6 +2484,17 @@ const HackerApplicationComponent = () => {
             {event_id && <ApplicationNav eventId={event_id} currentType="hacker" />}
 
             <Box sx={{ mb: 4 }}>
+              {/* QR Code for Check-in */}
+                  <VolunteerCheckInQR
+                    eventId={event_id}
+                    volunteerId={volunteerId}  
+                    isSelected={formData.isSelected}                  
+                    volunteerType="hacker"
+                    isSubmitted={true}
+                    qrSize={200}
+                    sx={{ mx: 'auto', maxWidth: 500 }}
+                  />
+                  
               {eventData && eventData.isEventPast ? (
                 <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                   <Alert severity="warning" sx={{ mb: 3 }}>
@@ -2586,17 +2598,7 @@ const HackerApplicationComponent = () => {
                         )}</StepLabel>
                       </Step>
                     ))}
-                  </Stepper>
-
-                  {/* QR Code for Check-in */}
-                  <VolunteerCheckInQR
-                    eventId={event_id}
-                    volunteerId={volunteerId}                    
-                    volunteerType="hacker"
-                    isSubmitted={true}
-                    qrSize={200}
-                    sx={{ mx: 'auto', maxWidth: 500 }}
-                  />
+                  </Stepper>                  
 
                   <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                     <Typography variant="body1" paragraph>
