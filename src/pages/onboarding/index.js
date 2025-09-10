@@ -25,7 +25,6 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useAuthInfo } from '@propelauth/react';
-import ExploreIcon from '@mui/icons-material/Explore';
 
 // Components
 import WelcomeSection from '../../components/Onboarding/WelcomeSection';
@@ -269,19 +268,6 @@ function OnboardingComponent() {
           Member Onboarding
         </Typography>
 
-        {/* Website Tour Link */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <Button
-            component={Link}
-            href="/onboarding/website-tour"
-            variant="outlined"
-            color="primary"
-            startIcon={<ExploreIcon />}
-            sx={{ borderRadius: 4 }}
-          >
-            Take a Website Tour
-          </Button>
-        </Box>
 
         <StyledPaper>
           {/* Stepper */}
