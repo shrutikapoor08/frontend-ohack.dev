@@ -131,8 +131,8 @@ const FIELD_CONFIG = {
   availability: {
     fields: ['availability'],
     type: 'availability',
-    requiredType: 'mentor'
-  },
+    allowedTypes: ['mentor', 'volunteer']
+  },  
   artifacts: {
     fields: ['artifacts'],
     type: 'artifacts',
@@ -384,8 +384,13 @@ const shouldRenderField = (volunteer, fieldKey, type) => {
   const fieldConfig = FIELD_CONFIG[fieldKey];
   if (!fieldConfig) return false;
   
-  // Check if field has a type requirement
+  // Check if field has a type requirement (legacy)
   if (fieldConfig.requiredType && fieldConfig.requiredType !== type) {
+    return false;
+  }
+  
+  // Check if field has allowed types (new approach)
+  if (fieldConfig.allowedTypes && !fieldConfig.allowedTypes.includes(type)) {
     return false;
   }
   
@@ -811,9 +816,235 @@ const VolunteerList = ({ event_id, type }) => {
     );
   };
 
-  const renderAvailability = (availability, volunteerName) => {
-    if (!availability || typeof availability !== "string") return null;
+  // Helper function to detect if availability is volunteer format vs mentor format
+  const detectAvailabilityFormat = (availability) => {
+    if (!availability || typeof availability !== "string") return 'unknown';
+    
+    console.log('Detecting format for:', availability); // Debug log
+    
+    // Volunteer format has dash separator and tends to have event names
+    // Example: "Friday, Oct 10: Doors Open & Registration - 🍕 Food Service (8:00am - 11:00am)"
+    const volunteerPattern = /\w+,\s+\w+\s+\d+:\s+[^-]+-\s+[🍕🧹📸🎤🎯🔧💻📋🎨🔒🎵🏃‍♂️🛠️📊🎪🎭🎬🎮🎲]/;
+    
+    // Mentor format typically has emoji at the start of the time portion without dash separator
+    // Example: "Friday Oct 10: 🌅 Early Morning (7am - 9am PST)"
+    const mentorPattern = /\w+\s+\w+\s+\d+:\s+[🌅☀️🏙️🌆🌃🌙]\s+/;
+    
+    // Additional check: volunteer format often contains dash separators
+    const hasDashSeparator = availability.includes(' - ');
+    
+    console.log('Has dash separator:', hasDashSeparator);
+    console.log('Volunteer pattern match:', volunteerPattern.test(availability));
+    console.log('Mentor pattern match:', mentorPattern.test(availability));
+    
+    if (hasDashSeparator && volunteerPattern.test(availability)) {
+      console.log('Detected as volunteer format');
+      return 'volunteer';
+    } else if (mentorPattern.test(availability)) {
+      console.log('Detected as mentor format');
+      return 'mentor';
+    }
+    
+    // If it contains dash separators but doesn't match volunteer pattern, still try volunteer
+    if (hasDashSeparator) {
+      console.log('Has dash, defaulting to volunteer format');
+      return 'volunteer';
+    }
+    
+    // Default to mentor format for backwards compatibility
+    console.log('Defaulting to mentor format');
+    return 'mentor';
+  };
 
+  // Helper function to parse volunteer availability format
+  const parseVolunteerAvailability = (availability) => {
+    try {
+      // Split by comma followed by space and day name pattern
+      // Example input: "Friday, Oct 10: Doors Open & Registration - 🍕 Food Service (8:00am - 11:00am), Friday, Oct 10: Nonprofit Pitches - 🧹 Cleanup Crew (10:00am - 12:00pm)"
+      const parts = availability.split(/,\s+(?=\w+,\s+\w+\s+\d+:)/);
+      
+      console.log('Volunteer availability parts:', parts); // Debug log
+      
+      return parts.map((slot, index) => {
+        console.log(`Processing slot ${index}:`, slot); // Debug log
+        
+        // Parse format: "Friday, Oct 10: Doors Open & Registration - 🍕 Food Service (8:00am - 11:00am)"
+        // More flexible regex to capture various emoji patterns
+        const match = slot.match(/^(\w+,\s+\w+\s+\d+):\s+([^-]+?)\s*-\s*([🍕🧹📸🎤🎯🔧💻📋🎨🔒🎵🏃‍♂️🛠️📊🎪🎭🎬🎮🎲🎯🎨🎪🎭🎬🎮🎲])\s+([^(]+?)\s*\(([^)]+)\)/);
+        
+        if (match) {
+          const [, dateStr, eventName, emoji, role, timeRange] = match;
+          
+          console.log('Matched:', { dateStr, eventName, emoji, role, timeRange }); // Debug log
+          
+          // Create short date format (e.g., "Oct 10" from "Friday, Oct 10")
+          const shortDate = dateStr.split(',')[1]?.trim() || dateStr; // "Oct 10"
+          const dayName = dateStr.split(',')[0]?.trim() || ''; // "Friday"
+          
+          return {
+            original: slot.trim(),
+            dateStr: dateStr.trim(),
+            shortDate,
+            dayName,
+            eventName: eventName.trim(),
+            emoji,
+            role: role.trim(),
+            timeRange: timeRange.replace(/\s*(am|pm)\s*-\s*/i, '$1 - ').replace(/PST/gi, '').trim(),
+            isCurrentlyAvailable: false, // Volunteers don't have "currently available" concept
+            sortKey: dateStr + eventName
+          };
+        }
+        
+        console.log('No match for slot:', slot); // Debug log
+        
+        // Fallback parsing if regex doesn't match - try to extract basic info
+        const basicMatch = slot.match(/^([^:]+):\s*(.+)/);
+        if (basicMatch) {
+          const [, dateStr, rest] = basicMatch;
+          return {
+            original: slot.trim(),
+            dateStr: dateStr.trim(),
+            shortDate: dateStr.trim(),
+            dayName: '',
+            eventName: rest.trim(),
+            emoji: '📋',            
+            timeRange: '',
+            isCurrentlyAvailable: false,
+            sortKey: slot.trim()
+          };
+        }
+        
+        // Last resort fallback
+        return {
+          original: slot.trim(),
+          dateStr: slot.trim(),
+          shortDate: slot.trim(),
+          dayName: '',
+          eventName: slot.trim(),
+          emoji: '📋',          
+          timeRange: '',
+          isCurrentlyAvailable: false,
+          sortKey: slot.trim()
+        };
+      }).filter(slot => slot.original); // Remove empty slots
+      
+    } catch (error) {
+      console.error('Error parsing volunteer availability:', error);
+      return [];
+    }
+  };
+
+  // Helper function to render volunteer availability
+  const renderVolunteerAvailability = (availability, volunteerName) => {
+    const slots = parseVolunteerAvailability(availability);
+    
+    console.log('Parsed volunteer slots:', slots); // Debug log
+    
+    if (slots.length === 0) {
+      console.log('No slots parsed, rendering fallback');
+      // Fallback: show the raw availability string if parsing fails
+      return (
+        <AvailabilitySection>
+          <Typography variant="subtitle2" color="primary" sx={{ mb: 2 }}>
+            📅 Volunteer Schedule
+          </Typography>
+          <Typography variant="body2" sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+            {availability}
+          </Typography>
+        </AvailabilitySection>
+      );
+    }
+
+    // Group slots by date for better organization
+    const slotsByDate = slots.reduce((acc, slot) => {
+      const date = slot.shortDate;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(slot);
+      return acc;
+    }, {});
+
+    const isExpanded = expandedAvailability[volunteerName] || false;
+    const totalSlots = slots.length;
+    const shouldShowExpanded = totalSlots > 4;
+
+    return (
+      <AvailabilitySection>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="subtitle2" color="primary">
+            📅 Volunteer Schedule ({totalSlots} shifts)
+          </Typography>
+          {shouldShowExpanded && (
+            <Typography variant="caption" color="text.secondary">
+              {isExpanded ? 'Showing all shifts' : `Showing first few of ${totalSlots} shifts`}
+            </Typography>
+          )}
+        </Box>
+
+        <Stack spacing={1}>
+          {Object.entries(slotsByDate).map(([date, dateSlots], index) => {
+            const shouldHideDate = shouldShowExpanded && !isExpanded && index >= 2;
+            if (shouldHideDate) return null;
+
+            return (
+              <Box key={date}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}>
+                  {dateSlots[0].dayName ? `${dateSlots[0].dayName}, ${date}` : date}
+                </Typography>
+                <Stack spacing={0.1} sx={{ ml: 2 }}>
+                  {dateSlots.map((slot, slotIndex) => (
+                    <Box key={slotIndex} sx={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      p: 1.1, 
+                      borderRadius: 1,
+                      backgroundColor: 'grey.50',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      '&:hover': {
+                        backgroundColor: 'grey.100'
+                      }
+                    }}>
+                      <Typography component="span" sx={{ fontSize: '1.0em', mr: 1.5, mt: 0.0 }}>
+                        {slot.emoji}
+                      </Typography>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.3 }}>
+                          {slot.eventName || 'Event'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2, display: 'block' }}>                          
+                          {slot.timeRange && ` • ${slot.timeRange}`}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            );
+          })}
+        </Stack>
+
+        {shouldShowExpanded && (
+          <ExpandButton onClick={() => toggleExpanded(volunteerName)} sx={{ mt: 2 }}>
+            <Typography variant="body2" color="primary" sx={{ mr: 1 }}>
+              {isExpanded 
+                ? 'Show Less' 
+                : `Show All ${totalSlots} Volunteer Shifts`
+              }
+            </Typography>
+            {isExpanded ? <ExpandLessIcon color="primary" /> : <ExpandMoreIcon color="primary" />}
+          </ExpandButton>
+        )}
+
+        <Divider sx={{ my: 1.5 }} />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
+          📋 Volunteer commitments • Times shown as registered
+        </Typography>
+      </AvailabilitySection>
+    );
+  };
+
+  // Helper function to render mentor availability (extracted from original logic)
+  const renderMentorAvailability = (availability, volunteerName) => {
     const isExpanded = expandedAvailability[volunteerName] || false;
 
     try {
@@ -1023,8 +1254,23 @@ const VolunteerList = ({ event_id, type }) => {
       );
 
     } catch (error) {
-      console.error("Error rendering availability:", error);
+      console.error("Error rendering mentor availability:", error);
       return null;
+    }
+  };
+
+  // Main availability router - detects format and routes to appropriate renderer
+  const renderAvailability = (availability, volunteerName) => {
+    if (!availability || typeof availability !== "string") return null;
+
+    const format = detectAvailabilityFormat(availability);
+    
+    switch (format) {
+      case 'volunteer':
+        return renderVolunteerAvailability(availability, volunteerName);
+      case 'mentor':
+      default:
+        return renderMentorAvailability(availability, volunteerName);
     }
   };
 
