@@ -271,7 +271,17 @@ const AdminGiveawaysPage = withRequiredAuthInfo(({ userClass }) => {
               onChange={(e) => setRandomSeed(e.target.value)}
               type="number"
               helperText="Enter any number for reproducible random selection"
+              placeholder="e.g., 12345"
             />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Button
+              variant="outlined"
+              onClick={() => setRandomSeed(Date.now().toString())}
+              sx={{ height: '56px' }}
+            >
+              Generate Random Seed
+            </Button>
           </Grid>
           <Grid item xs={12}>
             <DramaticGiveawaySelector
