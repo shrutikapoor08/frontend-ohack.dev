@@ -79,6 +79,13 @@ const INQUIRY_TYPES = [
     description: 'Help with website issues or technical problems'
   },
   { 
+    value: 'prize', 
+    label: 'Prize Claim',
+    description: 'Request to claim your prize after reaching a milestone or achievement',
+    link: '/profile',
+    linkText: 'View Your Badges'
+  },
+  { 
     value: 'other', 
     label: 'Other',
     description: 'Any other inquiries not covered above'

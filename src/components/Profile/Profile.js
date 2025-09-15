@@ -1077,7 +1077,29 @@ export default function Profile(props) {
                     {isLoading ? (
                       <Skeleton variant="rectangular" height={100} />
                     ) : (
-                      <BadgeList badges={badges} />
+                      <>
+                        <BadgeList badges={badges} />
+                        {badges && badges.length > 0 && (
+                          <Box sx={{ 
+                            mt: 2, 
+                            p: 2, 
+                            backgroundColor: 'action.hover', 
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}>
+                            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <EmojiEventsIcon fontSize="small" color="primary" />
+                              <strong>Congratulations on your achievement!</strong> 
+                              If you've reached a milestone and are eligible for a prize, please{' '}
+                              <Link href="/contact?type=prize" underline="hover" color="primary">
+                                contact us
+                              </Link>
+                              {' '}to claim it.
+                            </Typography>
+                          </Box>
+                        )}
+                      </>
                     )}
                   </Box>
                   
