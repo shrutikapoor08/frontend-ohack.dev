@@ -3,6 +3,7 @@ import {
   Typography,
   Box,
   Link,
+  Button,
   useTheme,
   useMediaQuery,
   LinearProgress,
@@ -17,6 +18,7 @@ import {
   FaCheck,
   FaTrophy,
   FaStar,
+  FaGift,
 } from "react-icons/fa";
 
 const rewards = [
@@ -283,6 +285,37 @@ const MilestoneProgress = ({ history }) => {
 
       {/* Call to Action */}
       <Box sx={{ textAlign: "center" }}>
+        {/* Show claim reward button if user has achieved any milestone */}
+        {achievedRewards.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              startIcon={<FaGift />}
+              href={`/contact?type=claim_reward&hearts=${hearts}`}
+              sx={{
+                fontWeight: "bold",
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: "none",
+                fontSize: "1.1rem",
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                "&:hover": {
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                },
+              }}
+            >
+              Claim Your Rewards
+            </Button>
+            <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
+              You've earned {achievedRewards.length} milestone
+              {achievedRewards.length !== 1 ? "s" : ""}!
+            </Typography>
+          </Box>
+        )}
+
         <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
           Keep contributing to earn more hearts and unlock exclusive rewards!
         </Typography>
