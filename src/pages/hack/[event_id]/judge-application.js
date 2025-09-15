@@ -1,6 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/router';
-import { useAuthInfo, RequiredAuthProvider, RedirectToLogin } from "@propelauth/react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useRouter } from "next/router";
+import {
+  useAuthInfo,
+  RequiredAuthProvider,
+  RedirectToLogin,
+} from "@propelauth/react";
 import {
   Typography,
   Container,
@@ -28,29 +38,30 @@ import {
   Step,
   StepLabel,
   useTheme,
-  useMediaQuery
-} from '@mui/material';
-import Head from 'next/head';
-import Script from 'next/script';
-import { useEnv } from '../../../context/env.context';
-import VolunteerCheckInQR from '../../../components/VolunteerCheckInQR';
-import LoginOrRegister from '../../../components/LoginOrRegister/LoginOrRegister2';
-import ApplicationNav from '../../../components/ApplicationNav/ApplicationNav';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import InfoIcon from '@mui/icons-material/Info';
-import FormPersistenceControls from '../../../components/FormPersistenceControls';
-import { useFormPersistence } from '../../../hooks/use-form-persistence';
-import { useRecaptcha } from '../../../hooks/use-recaptcha';
-import GiveButterWidget from '../../../components/GiveButterWidget';
-import useProfileApi from '../../../hooks/use-profile-api';
-import UploadPhoto from '../../../components/UploadPhoto';
-import { SchoolRounded, 
-  WorkRounded,  
+  useMediaQuery,
+} from "@mui/material";
+import Head from "next/head";
+import Script from "next/script";
+import { useEnv } from "../../../context/env.context";
+import VolunteerCheckInQR from "../../../components/VolunteerCheckInQR";
+import LoginOrRegister from "../../../components/LoginOrRegister/LoginOrRegister2";
+import ApplicationNav from "../../../components/ApplicationNav/ApplicationNav";
+import Breadcrumbs from "../../../components/Breadcrumbs/Breadcrumbs";
+import InfoIcon from "@mui/icons-material/Info";
+import FormPersistenceControls from "../../../components/FormPersistenceControls";
+import { useFormPersistence } from "../../../hooks/use-form-persistence";
+import { useRecaptcha } from "../../../hooks/use-recaptcha";
+import GiveButterWidget from "../../../components/GiveButterWidget";
+import useProfileApi from "../../../hooks/use-profile-api";
+import UploadPhoto from "../../../components/UploadPhoto";
+import {
+  SchoolRounded,
+  WorkRounded,
   TrendingUpRounded,
   PersonRounded,
   GroupsRounded,
-  CheckCircleRounded
- } from '@mui/icons-material';
+  CheckCircleRounded,
+} from "@mui/icons-material";
 
 const JudgeApplicationComponent = () => {
   const router = useRouter();
@@ -58,72 +69,75 @@ const JudgeApplicationComponent = () => {
   const { isLoggedIn, user, accessToken } = useAuthInfo();
   const { apiServerUrl } = useEnv();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   // Profile API integration
   const { profile, isLoading: profileLoading } = useProfileApi();
-  
+
   // Form navigation state
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [eventData, setEventData] = useState(null);
   const [profileDataLoaded, setProfileDataLoaded] = useState(false);
-  const [dataLoadingStatus, setDataLoadingStatus] = useState('idle'); // 'idle', 'loading-backend', 'loading-localStorage', 'completed', 'error'
+  const [dataLoadingStatus, setDataLoadingStatus] = useState("idle"); // 'idle', 'loading-backend', 'loading-localStorage', 'completed', 'error'
   // Store volunteer ID for QR code generation
   const [volunteerId, setVolunteerId] = useState(null);
-  
+
   // Application constraints state
   const [applicationConstraints, setApplicationConstraints] = useState({
     enabled: false,
     passcode: null,
-    isUnlocked: false
+    isUnlocked: false,
   });
-  const [passcodeInput, setPasscodeInput] = useState('');
-  const [passcodeError, setPasscodeError] = useState('');
-  
+  const [passcodeInput, setPasscodeInput] = useState("");
+  const [passcodeError, setPasscodeError] = useState("");
+
   // reCAPTCHA integration
-  const { 
-    initializeRecaptcha, 
-    getRecaptchaToken, 
-    isLoading: recaptchaLoading, 
+  const {
+    initializeRecaptcha,
+    getRecaptchaToken,
+    isLoading: recaptchaLoading,
     error: recaptchaError,
-    setError: setRecaptchaError 
+    setError: setRecaptchaError,
   } = useRecaptcha();
   // Use ref to store uploaded photo URL to avoid race conditions
-  const uploadedPhotoUrlRef = useRef('');
-  
+  const uploadedPhotoUrlRef = useRef("");
+
   // Prevent duplicate confirmation dialogs
   const confirmationShownRef = useRef(false);
-  
+
   // Initial form state
-  const initialFormData = useMemo(() => ({
-    timestamp: new Date().toISOString(),
-    email: '',
-    selected: false,    
-    name: '',
-    title: '',
-    biography: '',
-    whyJudge: '',
-    availability: '',
-    canAttendJudging: '', // New field for judging availability confirmation
-    inPerson: '',
-    additionalInfo: '',
-    companyName: '',
-    codeOfConduct: false,
-    backgroundAreas: [], // Changed from string to array
-    otherBackground: '', // New field for "Other" option
-    participationCount: '', // Added participation count field
-    agreedToCodeOfConduct: false,
-    linkedinProfile: '',
-    shortBio: '',
-    photoUrl: '',
-    pronouns: '',
-    country: '',
-    state: '',
-    event_id: '' // Ensure event_id is included
-  }), []);
+  const initialFormData = useMemo(
+    () => ({
+      timestamp: new Date().toISOString(),
+      email: "",
+      selected: false,
+      name: "",
+      title: "",
+      biography: "",
+      whyJudge: "",
+      availability: "",
+      canAttendJudging: "", // New field for judging availability confirmation
+      inPerson: "",
+      additionalInfo: "",
+      companyName: "",
+      codeOfConduct: false,
+      backgroundAreas: [], // Changed from string to array
+      otherBackground: "", // New field for "Other" option
+      participationCount: "", // Added participation count field
+      agreedToCodeOfConduct: false,
+      linkedinProfile: "",
+      shortBio: "",
+      photoUrl: "",
+      pronouns: "",
+      country: "",
+      state: "",
+      event_id: "", // Ensure event_id is included
+    }),
+    [],
+  );
 
   // Use form persistence hook
   const {
@@ -141,16 +155,16 @@ const JudgeApplicationComponent = () => {
     notification,
     closeNotification,
     isLoading,
-    setIsLoading
+    setIsLoading,
   } = useFormPersistence({
-    formType: 'judge',
+    formType: "judge",
     eventId: event_id,
     userId: user?.userId,
     initialFormData,
     apiServerUrl,
-    accessToken
+    accessToken,
   });
-  
+
   // Common background areas for judges
   const backgroundOptions = [
     "Software Development",
@@ -167,188 +181,231 @@ const JudgeApplicationComponent = () => {
     "Education Technology",
     "AI/Machine Learning",
     "Healthcare Technology",
-    "Other" // Option to specify custom background
+    "Other", // Option to specify custom background
   ];
 
   // Load form data with proper sequencing: backend API first, then localStorage
-  const loadFormDataSequentially = useCallback(async (baseFormData) => {
-    setDataLoadingStatus('loading-backend');
-    
-    // Always try to load from backend API first if user is logged in
-    if (user?.userId) {
-      try {
-        console.log('Attempting to load previous submission from backend API...');
-        const prevData = await loadPreviousSubmission();
-        
-        if (prevData && !confirmationShownRef.current) {
-          confirmationShownRef.current = true;
-          // If the user has submitted before, ask if they want to load it
-          if (window.confirm('We found a previous application. Would you like to load it for editing?')) {
-            // Transform API data to match our form structure
-            const transformedData = {
-              ...baseFormData, // Start with current form data as base
-              // Basic info fields
-              email: prevData.email || baseFormData.email,
-              name: prevData.name || baseFormData.name,
-              pronouns: prevData.pronouns || '',
-              title: prevData.title || '',
-              companyName: prevData.companyName || '',
-              linkedinProfile: prevData.linkedinProfile || '',
-              country: prevData.country || '',
-              state: prevData.state || '',
-              
-              // Biography and experience fields
-              biography: prevData.biography || prevData.shortBio || '',
-              shortBio: prevData.shortBio || prevData.biography || '',
-              whyJudge: prevData.whyJudge || '',
-              
-              // Background areas - handle both array and string formats
-              backgroundAreas: Array.isArray(prevData.backgroundAreas) 
-                ? prevData.backgroundAreas 
-                : (prevData.backgroundAreas || prevData.background || '').split(', ').filter(Boolean),
-              otherBackground: prevData.otherBackground || '',
-              participationCount: prevData.participationCount || '',
-              
-              // Availability fields
-              availability: prevData.availability || '',
-              canAttendJudging: prevData.canAttendJudging || '',
-              inPerson: prevData.inPerson || '',
-              
-              // Additional info
-              additionalInfo: prevData.additionalInfo || '',
-              
-              // Agreement and photo
-              codeOfConduct: Boolean(prevData.agreedToCodeOfConduct || prevData.codeOfConduct),
-              agreedToCodeOfConduct: Boolean(prevData.agreedToCodeOfConduct || prevData.codeOfConduct),
-              photoUrl: prevData.photoUrl || '',
-              
-              // Ensure event_id is always set
-              event_id: event_id
-            };
-            setVolunteerId(prevData.id || null);
-            console.log('Successfully loaded previous submission from backend API:', transformedData);
-            setFormData(transformedData);
+  const loadFormDataSequentially = useCallback(
+    async (baseFormData) => {
+      setDataLoadingStatus("loading-backend");
 
-            // If there's a photo URL (base64 or URL), set the ref
-            if (prevData.photoUrl) {
-              uploadedPhotoUrlRef.current = prevData.photoUrl;
+      // Always try to load from backend API first if user is logged in
+      if (user?.userId) {
+        try {
+          console.log(
+            "Attempting to load previous submission from backend API...",
+          );
+          const prevData = await loadPreviousSubmission();
+
+          if (prevData && !confirmationShownRef.current) {
+            confirmationShownRef.current = true;
+            // If the user has submitted before, ask if they want to load it
+            if (
+              window.confirm(
+                "We found a previous application. Would you like to load it for editing?",
+              )
+            ) {
+              // Transform API data to match our form structure
+              const transformedData = {
+                ...baseFormData, // Start with current form data as base
+                // Basic info fields
+                email: prevData.email || baseFormData.email,
+                name: prevData.name || baseFormData.name,
+                pronouns: prevData.pronouns || "",
+                title: prevData.title || "",
+                companyName: prevData.companyName || "",
+                linkedinProfile: prevData.linkedinProfile || "",
+                country: prevData.country || "",
+                state: prevData.state || "",
+
+                // Biography and experience fields
+                biography: prevData.biography || prevData.shortBio || "",
+                shortBio: prevData.shortBio || prevData.biography || "",
+                whyJudge: prevData.whyJudge || "",
+
+                // Background areas - handle both array and string formats
+                backgroundAreas: Array.isArray(prevData.backgroundAreas)
+                  ? prevData.backgroundAreas
+                  : (prevData.backgroundAreas || prevData.background || "")
+                      .split(", ")
+                      .filter(Boolean),
+                otherBackground: prevData.otherBackground || "",
+                participationCount: prevData.participationCount || "",
+
+                // Availability fields
+                availability: prevData.availability || "",
+                canAttendJudging: prevData.canAttendJudging || "",
+                inPerson: prevData.inPerson || "",
+
+                // Additional info
+                additionalInfo: prevData.additionalInfo || "",
+
+                // Agreement and photo
+                codeOfConduct: Boolean(
+                  prevData.agreedToCodeOfConduct || prevData.codeOfConduct,
+                ),
+                agreedToCodeOfConduct: Boolean(
+                  prevData.agreedToCodeOfConduct || prevData.codeOfConduct,
+                ),
+                photoUrl: prevData.photoUrl || "",
+
+                // Ensure event_id is always set
+                event_id: event_id,
+              };
+              setVolunteerId(prevData.id || null);
+              console.log(
+                "Successfully loaded previous submission from backend API:",
+                transformedData,
+              );
+              setFormData(transformedData);
+
+              // If there's a photo URL (base64 or URL), set the ref
+              if (prevData.photoUrl) {
+                uploadedPhotoUrlRef.current = prevData.photoUrl;
+              }
+
+              setDataLoadingStatus("completed");
+              return; // Exit early - we've loaded from backend
             }
-            
-            setDataLoadingStatus('completed');
-            return; // Exit early - we've loaded from backend
           }
+
+          // If no previous submission found or user declined, fall through to localStorage
+          console.log(
+            "No previous submission found or user declined, checking localStorage...",
+          );
+        } catch (err) {
+          console.error(
+            "Backend API error, falling back to localStorage:",
+            err,
+          );
+          // Continue to localStorage fallback - don't set error state yet
         }
-        
-        // If no previous submission found or user declined, fall through to localStorage
-        console.log('No previous submission found or user declined, checking localStorage...');
-      } catch (err) {
-        console.error('Backend API error, falling back to localStorage:', err);
-        // Continue to localStorage fallback - don't set error state yet
       }
-    }
-    
-    // Fallback to localStorage (either no backend submission or user not logged in)
-    setDataLoadingStatus('loading-localStorage');
-    try {
-      console.log('Loading from localStorage...');
-      loadFromLocalStorage();
-      setDataLoadingStatus('completed');
-    } catch (err) {
-      console.error('Error loading from localStorage:', err);
-      setDataLoadingStatus('error');
-      // If both fail, we'll still use the base form data that's already set
-      // Don't throw error here as the form can still work with base data
-    }
-  }, [user?.userId, loadPreviousSubmission, setFormData, loadFromLocalStorage, event_id]);
+
+      // Fallback to localStorage (either no backend submission or user not logged in)
+      setDataLoadingStatus("loading-localStorage");
+      try {
+        console.log("Loading from localStorage...");
+        loadFromLocalStorage();
+        setDataLoadingStatus("completed");
+      } catch (err) {
+        console.error("Error loading from localStorage:", err);
+        setDataLoadingStatus("error");
+        // If both fail, we'll still use the base form data that's already set
+        // Don't throw error here as the form can still work with base data
+      }
+    },
+    [
+      user?.userId,
+      loadPreviousSubmission,
+      setFormData,
+      loadFromLocalStorage,
+      event_id,
+    ],
+  );
 
   // fetch event data from the backend API
   useEffect(() => {
     // Initialize reCAPTCHA when component mounts
     initializeRecaptcha();
-    
+
     if (!event_id || !apiServerUrl) return;
 
     const fetchEventData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch event data from the actual API
-        const response = await fetch(`${apiServerUrl}/api/messages/hackathon/${event_id}`);
-        
+        const response = await fetch(
+          `${apiServerUrl}/api/messages/hackathon/${event_id}`,
+        );
+
         if (!response.ok) {
-          throw new Error(`Failed to fetch event data: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch event data: ${response.status} ${response.statusText}`,
+          );
         }
-        
+
         const eventData = await response.json();
-        
+
         if (!eventData || !eventData.start_date || !eventData.end_date) {
-          throw new Error('Invalid event data received');
+          throw new Error("Invalid event data received");
         }
-        
+
         // Format dates for display
         const startDate = new Date(eventData.start_date);
         const endDate = new Date(eventData.end_date);
-        
+
         // Use UTC methods to avoid timezone conversion issues
-        const formattedStartDate = new Date(eventData.start_date + 'T00:00:00Z').toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: 'UTC'
+        const formattedStartDate = new Date(
+          eventData.start_date + "T00:00:00Z",
+        ).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "UTC",
         });
-        const formattedEndDate = new Date(eventData.end_date + 'T00:00:00Z').toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: 'UTC'
+        const formattedEndDate = new Date(
+          eventData.end_date + "T00:00:00Z",
+        ).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "UTC",
         });
-        
+
         // Check if event is in the past (with 1-day buffer)
         const now = new Date();
         const oneDayBuffer = 24 * 60 * 60 * 1000; // 1 day in milliseconds
         const isEventPast = new Date(endDate.getTime() + oneDayBuffer) < now;
-        
+
         // Process application constraints
         const constraints = eventData.constraints || {};
-        const judgeApplicationEnabled = constraints.application_judge_enabled !== false;
-        const judgeApplicationPasscode = constraints.application_judge_enabled_code || null;
-                
+        const judgeApplicationEnabled =
+          constraints.application_judge_enabled !== false;
+        const judgeApplicationPasscode =
+          constraints.application_judge_enabled_code || null;
+
         setApplicationConstraints({
           enabled: judgeApplicationEnabled,
           passcode: judgeApplicationPasscode,
-          isUnlocked: judgeApplicationEnabled // Only unlock if enabled is true (passcode unlock happens via user input)
+          isUnlocked: judgeApplicationEnabled, // Only unlock if enabled is true (passcode unlock happens via user input)
         });
-        
+
         setEventData({
           name: eventData.title || `Opportunity Hack - ${event_id}`,
-          description: eventData.description || "Annual hackathon for nonprofits",
+          description:
+            eventData.description || "Annual hackathon for nonprofits",
           date: new Date(eventData.start_date).getFullYear().toString(),
           startDate: eventData.start_date,
           endDate: eventData.end_date,
           formattedStartDate,
           formattedEndDate,
           location: eventData.location || "Tempe, Arizona",
-          image: eventData.image_url || "https://cdn.ohack.dev/ohack.dev/2023_hackathon_2.webp",
+          image:
+            eventData.image_url ||
+            "https://cdn.ohack.dev/ohack.dev/2023_hackathon_2.webp",
           isEventPast,
-          constraints: constraints
+          constraints: constraints,
         });
-        
+
         // Prepare base form data with user info and profile data
         let baseFormData = {
           ...initialFormData,
-          event_id: event_id
+          event_id: event_id,
         };
 
         // Process user information if available
         if (user) {
           // Start with basic user info
           const userFormData = {
-            email: user.email || '',
-            name: user.firstName && user.lastName 
-              ? `${user.firstName} ${user.lastName}` 
-              : user.username || '',
+            email: user.email || "",
+            name:
+              user.firstName && user.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user.username || "",
           };
 
           // Add profile data if available and not loading
@@ -356,84 +413,102 @@ const JudgeApplicationComponent = () => {
             const profileFormData = {
               ...userFormData,
               // Map profile fields to form fields
-              companyName: profile.company || '',
-              linkedinProfile: profile.linkedin_url || '',
-              country: profile.country || '',
-              state: profile.state || ''
+              companyName: profile.company || "",
+              linkedinProfile: profile.linkedin_url || "",
+              country: profile.country || "",
+              state: profile.state || "",
             };
 
             baseFormData = {
               ...baseFormData,
-              ...profileFormData
+              ...profileFormData,
             };
-            
+
             // Indicate that profile data was loaded
             setProfileDataLoaded(true);
           } else {
             baseFormData = {
               ...baseFormData,
-              ...userFormData
+              ...userFormData,
             };
           }
-          
+
           // Set the base form data first
           setFormData(baseFormData);
-          
+
           // Then sequentially try to load saved data (backend first, then localStorage)
           await loadFormDataSequentially(baseFormData);
         } else {
           // For non-logged in users, set base data and try localStorage
           setFormData(baseFormData);
-          setDataLoadingStatus('loading-localStorage');
-          console.log('User not logged in, loading from localStorage');
+          setDataLoadingStatus("loading-localStorage");
+          console.log("User not logged in, loading from localStorage");
           try {
             loadFromLocalStorage();
-            setDataLoadingStatus('completed');
+            setDataLoadingStatus("completed");
           } catch (err) {
-            console.error('Error loading from localStorage for non-logged in user:', err);
-            setDataLoadingStatus('error');
+            console.error(
+              "Error loading from localStorage for non-logged in user:",
+              err,
+            );
+            setDataLoadingStatus("error");
           }
         }
-        
+
         setIsLoading(false);
       } catch (err) {
-        console.error('Error fetching event data:', err);
-        setError('Failed to load event data. Please try again later.');
+        console.error("Error fetching event data:", err);
+        setError("Failed to load event data. Please try again later.");
         setIsLoading(false);
       }
     };
 
     fetchEventData();
-  }, [event_id, apiServerUrl, user, profile, profileLoading, setFormData, loadFormDataSequentially, loadFromLocalStorage, initializeRecaptcha, initialFormData, setIsLoading]);
+  }, [
+    event_id,
+    apiServerUrl,
+    user,
+    profile,
+    profileLoading,
+    setFormData,
+    loadFormDataSequentially,
+    loadFromLocalStorage,
+    initializeRecaptcha,
+    initialFormData,
+    setIsLoading,
+  ]);
 
   // Extend handleFormChange to handle otherBackground field
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    if (type === 'checkbox') {
+
+    if (type === "checkbox") {
       handleFormChange(e);
     } else {
       handleFormChange(e);
-      
+
       // Additional logic for backgroundAreas
-      if (name === 'backgroundAreas' && !value.includes('Other')) {
-        setFormData(prev => ({
+      if (name === "backgroundAreas" && !value.includes("Other")) {
+        setFormData((prev) => ({
           ...prev,
-          otherBackground: ''
+          otherBackground: "",
         }));
       }
     }
   };
-  
+
   // Extend handleMultiSelectChange to handle otherBackground field
   const customHandleMultiSelectChange = (event, fieldName) => {
     handleMultiSelectChange(event, fieldName);
-    
+
     // Clear otherBackground when Other is removed from backgroundAreas
-    if (fieldName === 'backgroundAreas' && !event.target.value.includes('Other')) {
-      setFormData(prev => ({
+    if (
+      fieldName === "backgroundAreas" &&
+      !event.target.value.includes("Other")
+    ) {
+      setFormData((prev) => ({
         ...prev,
-        otherBackground: ''
+        otherBackground: "",
       }));
     }
   };
@@ -441,47 +516,49 @@ const JudgeApplicationComponent = () => {
   const handlePhotoUpload = (photoUrl) => {
     // Store URL in both ref (for submission) and state (for form persistence)
     uploadedPhotoUrlRef.current = photoUrl;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      photoUrl: photoUrl
+      photoUrl: photoUrl,
     }));
-    console.log('Photo URL saved to form and ref:', photoUrl);
+    console.log("Photo URL saved to form and ref:", photoUrl);
   };
 
   const handlePhotoError = (errorMessage) => {
     setError(errorMessage);
     // Clear the URLs on error
-    uploadedPhotoUrlRef.current = '';
-    setFormData(prev => ({
+    uploadedPhotoUrlRef.current = "";
+    setFormData((prev) => ({
       ...prev,
-      photoUrl: ''
+      photoUrl: "",
     }));
   };
 
   // Passcode validation function
   const handlePasscodeSubmit = (e) => {
     e.preventDefault();
-    setPasscodeError('');
-    
+    setPasscodeError("");
+
     if (!passcodeInput.trim()) {
-      setPasscodeError('Please enter the access code');
+      setPasscodeError("Please enter the access code");
       return;
     }
-    
+
     if (passcodeInput.trim() === applicationConstraints.passcode) {
-      setApplicationConstraints(prev => ({
+      setApplicationConstraints((prev) => ({
         ...prev,
-        isUnlocked: true
+        isUnlocked: true,
       }));
-      setPasscodeInput('');
-      setPasscodeError('');
-      
+      setPasscodeInput("");
+      setPasscodeError("");
+
       // Show success message briefly
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }, 100);
     } else {
-      setPasscodeError('Invalid access code. Please check with the event organizers.');
+      setPasscodeError(
+        "Invalid access code. Please check with the event organizers.",
+      );
     }
   };
 
@@ -494,28 +571,37 @@ const JudgeApplicationComponent = () => {
           {/* QR Code for Check-in - Show if user has existing data */}
           <VolunteerCheckInQR
             eventId={event_id}
-            volunteerId={volunteerId}            
+            volunteerId={volunteerId}
             volunteerType="judge"
             isSubmitted={!!volunteerId}
             sx={{ mb: 4 }}
           />
-          
+
           <Alert severity="warning" sx={{ mb: 4 }}>
             <Typography variant="h6" component="div" sx={{ mb: 2 }}>
               Access Code Required
             </Typography>
             <Typography variant="body1">
-              Judge applications are closed and require an access code for edits. If you've been provided with an access code by the event organizers, enter it below to proceed.
+              Judge applications are closed and require an access code for
+              edits. If you've been provided with an access code by the event
+              organizers, enter it below to proceed.
             </Typography>
           </Alert>
-          
+
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" component="div" sx={{ mb: 2 }}>
               Enter Access Code
             </Typography>
-            
+
             <form onSubmit={handlePasscodeSubmit}>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 2,
+                  alignItems: "flex-start",
+                  mb: 3,
+                }}
+              >
                 <TextField
                   label="Access Code"
                   value={passcodeInput}
@@ -532,7 +618,7 @@ const JudgeApplicationComponent = () => {
                   type="submit"
                   variant="contained"
                   disabled={!passcodeInput.trim()}
-                  sx={{ alignSelf: 'stretch', px: 3 }}
+                  sx={{ alignSelf: "stretch", px: 3 }}
                 >
                   Unlock Application
                 </Button>
@@ -541,81 +627,146 @@ const JudgeApplicationComponent = () => {
           </Box>
 
           {/* Mentoring suggestion section */}
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 4, 
-              mb: 4, 
-              bgcolor: 'secondary.light', 
-              color: 'white',
-              textAlign: 'center'
+          <Paper
+            elevation={3}
+            sx={{
+              p: 4,
+              mb: 4,
+              bgcolor: "secondary.light",
+              color: "white",
+              textAlign: "center",
             }}
           >
             <SchoolRounded sx={{ fontSize: 56, mb: 3 }} />
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
+            <Typography
+              variant="h4"
+              gutterBottom
+              sx={{ fontWeight: "bold", fontSize: "1.8rem" }}
+            >
               Consider Mentoring Instead!
             </Typography>
-            <Typography variant="h6" sx={{ mb: 3, maxWidth: '700px', mx: 'auto', fontSize: '1.1rem', lineHeight: 1.6 }}>
-              Many of our most valued <strong>mentors started as aspiring judges</strong>. Mentoring offers similar professional benefits with even greater impact on your career development.
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 3,
+                maxWidth: "700px",
+                mx: "auto",
+                fontSize: "1.1rem",
+                lineHeight: 1.6,
+              }}
+            >
+              Many of our most valued{" "}
+              <strong>mentors started as aspiring judges</strong>. Mentoring
+              offers similar professional benefits with even greater impact on
+              your career development.
             </Typography>
-            
-            <Box sx={{ mb: 4, textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+
+            <Box
+              sx={{ mb: 4, textAlign: "left", maxWidth: "600px", mx: "auto" }}
+            >
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Professional Recognition:</strong>&nbsp;Demonstrate leadership and expertise
+                <strong>Professional Recognition:</strong>&nbsp;Demonstrate
+                leadership and expertise
               </Typography>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Resume Enhancement:</strong>&nbsp;Show community involvement and technical leadership
+                <strong>Resume Enhancement:</strong>&nbsp;Show community
+                involvement and technical leadership
               </Typography>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Network Building:</strong>&nbsp;Connect directly with innovative teams and industry professionals
+                <strong>Network Building:</strong>&nbsp;Connect directly with
+                innovative teams and industry professionals
               </Typography>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <CheckCircleRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Skill Validation:</strong>&nbsp;Showcase your expertise while helping others grow
+                <strong>Skill Validation:</strong>&nbsp;Showcase your expertise
+                while helping others grow
               </Typography>
             </Box>
 
-            <Typography variant="h6" sx={{ mb: 4, opacity: 0.95, fontSize: '1rem' }}>
-              💡 <strong>Pro tip:</strong> Mentors often get priority consideration for future judging opportunities!
+            <Typography
+              variant="h6"
+              sx={{ mb: 4, opacity: 0.95, fontSize: "1rem" }}
+            >
+              💡 <strong>Pro tip:</strong> Mentors often get priority
+              consideration for future judging opportunities!
             </Typography>
-            
-            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button 
-                variant="contained" 
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 3,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <Button
+                variant="contained"
                 size="large"
                 href={`/hack/${event_id}/mentor-application`}
-                sx={{ 
-                  bgcolor: 'white', 
-                  color: 'secondary.main',
-                  fontWeight: 'bold',
-                  fontSize: '1.1rem',
+                sx={{
+                  bgcolor: "white",
+                  color: "secondary.main",
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
                   py: 1.5,
                   px: 3,
-                  '&:hover': { 
-                    bgcolor: 'grey.100',
-                    transform: 'translateY(-2px)'
-                  }
+                  "&:hover": {
+                    bgcolor: "grey.100",
+                    transform: "translateY(-2px)",
+                  },
                 }}
                 startIcon={<SchoolRounded />}
               >
                 Apply to Mentor
               </Button>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 size="large"
                 href="/about/mentors"
-                sx={{ 
-                  borderColor: 'white', 
-                  color: 'white',
-                  fontSize: '1rem',
+                sx={{
+                  borderColor: "white",
+                  color: "white",
+                  fontSize: "1rem",
                   py: 1.5,
                   px: 3,
-                  '&:hover': { 
-                    bgcolor: 'rgba(255,255,255,0.1)'
-                  }
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.1)",
+                  },
                 }}
               >
                 Learn About Mentoring
@@ -624,21 +775,39 @@ const JudgeApplicationComponent = () => {
           </Paper>
 
           {/* GiveButter widget when showing passcode */}
-          <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h6" component="div" sx={{ mb: 2, textAlign: 'center' }}>
+          <Box
+            sx={{
+              mt: 4,
+              pt: 3,
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ mb: 2, textAlign: "center" }}
+            >
               Support Our Mission
             </Typography>
-            <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
-              While you're here, consider supporting Opportunity Hack's mission to connect nonprofits with innovative tech solutions.
+            <Typography
+              variant="body2"
+              sx={{ mb: 3, textAlign: "center", color: "text.secondary" }}
+            >
+              While you're here, consider supporting Opportunity Hack's mission
+              to connect nonprofits with innovative tech solutions.
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <GiveButterWidget 
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <GiveButterWidget
                 context="application_locked"
                 userId={user?.userId}
                 applicationType="judge"
                 size="medium"
                 onDonationEvent={(eventData) => {
-                  console.log('Judge application locked donation event:', eventData);
+                  console.log(
+                    "Judge application locked donation event:",
+                    eventData,
+                  );
                 }}
               />
             </Box>
@@ -652,97 +821,170 @@ const JudgeApplicationComponent = () => {
               Judge Applications Are Currently Closed
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              We're not accepting new judge applications at this time. This could be because:
+              We're not accepting new judge applications at this time. This
+              could be because:
             </Typography>
             <Box component="ul" sx={{ pl: 2, mb: 2 }}>
               <li>We've reached our capacity for judges</li>
               <li>The application period has ended</li>
               <li>We're in the final preparation phase</li>
             </Box>
-            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-              If you believe you should have access or have questions, please contact the event organizers.
+            <Typography variant="body2" sx={{ fontStyle: "italic" }}>
+              If you believe you should have access or have questions, please
+              contact the event organizers.
             </Typography>
           </Alert>
 
           {/* Mentoring suggestion for closed applications */}
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 4, 
-              mb: 4, 
-              bgcolor: 'secondary.light', 
-              color: 'white',
-              textAlign: 'center'
+          <Paper
+            elevation={3}
+            sx={{
+              p: 4,
+              mb: 4,
+              bgcolor: "secondary.light",
+              color: "white",
+              textAlign: "center",
             }}
           >
             <SchoolRounded sx={{ fontSize: 56, mb: 3 }} />
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
+            <Typography
+              variant="h4"
+              gutterBottom
+              sx={{ fontWeight: "bold", fontSize: "1.8rem" }}
+            >
               Perfect Timing to Become a Mentor!
             </Typography>
-            <Typography variant="h6" sx={{ mb: 3, maxWidth: '700px', mx: 'auto', fontSize: '1.1rem', lineHeight: 1.6 }}>
-              Since judging spots are full, this is an excellent opportunity to <strong>mentor instead</strong>. 
-              Our most successful professionals often prefer mentoring for the <strong>direct impact and career benefits</strong>.
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 3,
+                maxWidth: "700px",
+                mx: "auto",
+                fontSize: "1.1rem",
+                lineHeight: 1.6,
+              }}
+            >
+              Since judging spots are full, this is an excellent opportunity to{" "}
+              <strong>mentor instead</strong>. Our most successful professionals
+              often prefer mentoring for the{" "}
+              <strong>direct impact and career benefits</strong>.
             </Typography>
-            
-            <Box sx={{ mb: 4, textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+
+            <Box
+              sx={{ mb: 4, textAlign: "left", maxWidth: "600px", mx: "auto" }}
+            >
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <TrendingUpRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Career Advancement:</strong>&nbsp;Showcase leadership skills that employers value
+                <strong>Career Advancement:</strong>&nbsp;Showcase leadership
+                skills that employers value
               </Typography>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <PersonRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Professional Development:</strong>&nbsp;Build coaching and communication abilities
+                <strong>Professional Development:</strong>&nbsp;Build coaching
+                and communication abilities
               </Typography>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <GroupsRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Industry Connections:</strong>&nbsp;Work closely with teams and other mentors
+                <strong>Industry Connections:</strong>&nbsp;Work closely with
+                teams and other mentors
               </Typography>
-              <Typography variant="body1" sx={{ mb: 2, display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1rem",
+                }}
+              >
                 <WorkRounded sx={{ mr: 2, fontSize: 24 }} />
-                <strong>Resume Impact:</strong>&nbsp;Demonstrate community leadership and technical expertise
+                <strong>Resume Impact:</strong>&nbsp;Demonstrate community
+                leadership and technical expertise
               </Typography>
             </Box>
 
-            <Alert severity="success" sx={{ mb: 4, bgcolor: 'rgba(255,255,255,0.95)', color: 'text.primary' }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                🚀 Many mentors report that the experience was more valuable than judging for their professional growth!
+            <Alert
+              severity="success"
+              sx={{
+                mb: 4,
+                bgcolor: "rgba(255,255,255,0.95)",
+                color: "text.primary",
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: "bold", fontSize: "1rem" }}
+              >
+                🚀 Many mentors report that the experience was more valuable
+                than judging for their professional growth!
               </Typography>
             </Alert>
-            
-            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button 
-                variant="contained" 
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 3,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <Button
+                variant="contained"
                 size="large"
                 href={`/hack/${event_id}/mentor-application`}
-                sx={{ 
-                  bgcolor: 'white', 
-                  color: 'secondary.main',
-                  fontWeight: 'bold',
-                  fontSize: '1.1rem',
+                sx={{
+                  bgcolor: "white",
+                  color: "secondary.main",
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
                   py: 1.5,
                   px: 3,
-                  '&:hover': { 
-                    bgcolor: 'grey.100',
-                    transform: 'translateY(-2px)'
-                  }
+                  "&:hover": {
+                    bgcolor: "grey.100",
+                    transform: "translateY(-2px)",
+                  },
                 }}
                 startIcon={<SchoolRounded />}
               >
                 Apply to Mentor Instead
               </Button>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 size="large"
                 href="/about/mentors"
-                sx={{ 
-                  borderColor: 'white', 
-                  color: 'white',
-                  fontSize: '1rem',
+                sx={{
+                  borderColor: "white",
+                  color: "white",
+                  fontSize: "1rem",
                   py: 1.5,
                   px: 3,
-                  '&:hover': { 
-                    bgcolor: 'rgba(255,255,255,0.1)'
-                  }
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.1)",
+                  },
                 }}
               >
                 Learn About Mentoring Benefits
@@ -751,21 +993,40 @@ const JudgeApplicationComponent = () => {
           </Paper>
 
           {/* GiveButter widget when applications are closed */}
-          <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h6" component="div" sx={{ mb: 2, textAlign: 'center' }}>
+          <Box
+            sx={{
+              mt: 4,
+              pt: 3,
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ mb: 2, textAlign: "center" }}
+            >
               Support Our Mission
             </Typography>
-            <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
-              While applications are closed, you can still support Opportunity Hack's mission to connect nonprofits with innovative tech solutions.
+            <Typography
+              variant="body2"
+              sx={{ mb: 3, textAlign: "center", color: "text.secondary" }}
+            >
+              While applications are closed, you can still support Opportunity
+              Hack's mission to connect nonprofits with innovative tech
+              solutions.
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <GiveButterWidget 
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <GiveButterWidget
                 context="application_closed"
                 userId={user?.userId}
                 applicationType="judge"
                 size="medium"
                 onDonationEvent={(eventData) => {
-                  console.log('Judge application closed donation event:', eventData);
+                  console.log(
+                    "Judge application closed donation event:",
+                    eventData,
+                  );
                 }}
               />
             </Box>
@@ -777,7 +1038,7 @@ const JudgeApplicationComponent = () => {
         <Button
           variant="contained"
           color="primary"
-          onClick={() => router.push('/hack')}
+          onClick={() => router.push("/hack")}
           sx={{ mr: 2 }}
         >
           View Other Events
@@ -794,82 +1055,110 @@ const JudgeApplicationComponent = () => {
   );
 
   // Define steps for stepper
-  const steps = ['Basic Info', 'Background & Experience', 'Availability', 'Finish'];
+  const steps = [
+    "Basic Info",
+    "Background & Experience",
+    "Availability",
+    "Finish",
+  ];
 
   const handleNext = () => {
     if (activeStep === 0 && !validateBasicInfo()) return;
     if (activeStep === 1 && !validateBackgroundAndExperience()) return;
     if (activeStep === 2 && !validateAvailability()) return;
-    
+
     if (activeStep === steps.length - 1) {
       handleSubmit();
     } else {
-      setActiveStep(prev => prev + 1);
+      setActiveStep((prev) => prev + 1);
+      // Scroll to top of form for better UX
+      if (formRef?.current) {
+        formRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
     }
   };
 
   const handleBack = () => {
-    setActiveStep(prev => prev - 1);
+    setActiveStep((prev) => prev - 1);
+    // Scroll to top of form for better UX
+    if (formRef?.current) {
+      formRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
   };
-  
+
   const validateBasicInfo = () => {
-    const requiredFields = ['email', 'name'];
-    
+    const requiredFields = ["email", "name"];
+
     for (const field of requiredFields) {
       if (!formData[field]) {
-        setError(`Please fill out the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} field`);
+        setError(
+          `Please fill out the ${field.replace(/([A-Z])/g, " $1").toLowerCase()} field`,
+        );
         return false;
       }
     }
-    
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return false;
     }
-    
-    setError('');
+
+    setError("");
     return true;
   };
-  
+
   const validateBackgroundAndExperience = () => {
-    const requiredFields = ['participationCount'];
-    
+    const requiredFields = ["participationCount"];
+
     for (const field of requiredFields) {
       if (!formData[field]) {
-        setError(`Please fill out the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} field`);
+        setError(
+          `Please fill out the ${field.replace(/([A-Z])/g, " $1").toLowerCase()} field`,
+        );
         return false;
       }
     }
-    
+
     // Validate backgroundAreas field
     if (!formData.backgroundAreas || formData.backgroundAreas.length === 0) {
-      setError('Please select at least one background area');
+      setError("Please select at least one background area");
       return false;
     }
-    
+
     // Validate otherBackground if "Other" is selected
-    if (formData.backgroundAreas.includes('Other') && !formData.otherBackground) {
-      setError('Please specify your other background area');
+    if (
+      formData.backgroundAreas.includes("Other") &&
+      !formData.otherBackground
+    ) {
+      setError("Please specify your other background area");
       return false;
     }
-    
-    setError('');
+
+    setError("");
     return true;
   };
-  
+
   const validateAvailability = () => {
-    const requiredFields = ['inPerson', 'canAttendJudging'];
-    
+    const requiredFields = ["inPerson", "canAttendJudging"];
+
     for (const field of requiredFields) {
       if (!formData[field]) {
-        setError(`Please fill out the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} field`);
+        setError(
+          `Please fill out the ${field.replace(/([A-Z])/g, " $1").toLowerCase()} field`,
+        );
         return false;
       }
     }
-    
-    setError('');
+
+    setError("");
     return true;
   };
 
@@ -884,19 +1173,19 @@ const JudgeApplicationComponent = () => {
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    
+
     if (!formData.codeOfConduct) {
-      setError('You must agree to the code of conduct');
+      setError("You must agree to the code of conduct");
       return;
     }
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setSubmitting(true);
-    setError('');
-    
+    setError("");
+
     try {
       // Get reCAPTCHA token
       const recaptchaToken = await getRecaptchaToken();
@@ -904,7 +1193,7 @@ const JudgeApplicationComponent = () => {
       // If we couldn't get a token and we're in production, show error
       if (!recaptchaToken && process.env.NODE_ENV === "production") {
         setError(
-          "Failed to verify you are human. Please refresh the page and try again."
+          "Failed to verify you are human. Please refresh the page and try again.",
         );
         setSubmitting(false);
         return;
@@ -922,12 +1211,13 @@ const JudgeApplicationComponent = () => {
           : "";
 
       // Use the ref value as the source of truth for photoUrl to avoid race conditions
-      const finalPhotoUrl = uploadedPhotoUrlRef.current || formData.photoUrl || "";
+      const finalPhotoUrl =
+        uploadedPhotoUrlRef.current || formData.photoUrl || "";
 
       // Create a complete submission object with all required fields
       // IMPORTANT: Extract photoUrl from formData to avoid conflicts, then spread the rest
       const { photoUrl: formDataPhotoUrl, ...restFormData } = formData;
-      
+
       const submissionData = {
         ...restFormData,
         timestamp: new Date().toISOString(),
@@ -943,7 +1233,7 @@ const JudgeApplicationComponent = () => {
         shortBio: formData.biography || "", // Map to appropriate field
         shortBiography: formData.biography || "", // Ensure we have both formats
         recaptchaToken, // Add reCAPTCHA token
-      };     
+      };
 
       if (apiServerUrl) {
         // Submit to API - use the correct endpoint based on whether this is an update
@@ -964,17 +1254,17 @@ const JudgeApplicationComponent = () => {
           const errorData = await response.json().catch(() => null);
           if (errorData?.error?.includes("recaptcha")) {
             throw new Error(
-              "reCAPTCHA verification failed. Please refresh the page and try again."
+              "reCAPTCHA verification failed. Please refresh the page and try again.",
             );
           }
           throw new Error(
-            `Failed to submit application: ${response.status}${errorData ? ` - ${errorData.message}` : ""}`
+            `Failed to submit application: ${response.status}${errorData ? ` - ${errorData.message}` : ""}`,
           );
         }
-        
+
         const responseData = await response.json();
-        console.log('Submission successful:', responseData); // Debug log
-        
+        console.log("Submission successful:", responseData); // Debug log
+
         // Extract volunteer ID from response for QR code generation
         if (responseData?.volunteer_id || responseData?.id) {
           setVolunteerId(responseData.volunteer_id || responseData.id);
@@ -998,13 +1288,15 @@ const JudgeApplicationComponent = () => {
 
       setSuccess(true);
     } catch (err) {
-      console.error('Error submitting application:', err);
-      setError(`Failed to submit your application. ${err.message || 'Please try again.'}`);
+      console.error("Error submitting application:", err);
+      setError(
+        `Failed to submit your application. ${err.message || "Please try again."}`,
+      );
     } finally {
       setSubmitting(false);
     }
   };
-  
+
   // Render basic information form
   const renderBasicInfoForm = () => (
     <Box sx={{ mb: 4 }}>
@@ -1013,7 +1305,10 @@ const JudgeApplicationComponent = () => {
       </Typography>
 
       {profileLoading && (
-        <Alert severity="info" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+        <Alert
+          severity="info"
+          sx={{ mb: 3, display: "flex", alignItems: "center" }}
+        >
           <CircularProgress size={20} sx={{ mr: 2 }} />
           <Typography variant="body2">
             Loading your profile information to pre-fill the form...
@@ -1021,8 +1316,11 @@ const JudgeApplicationComponent = () => {
         </Alert>
       )}
 
-      {dataLoadingStatus === 'loading-backend' && (
-        <Alert severity="info" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+      {dataLoadingStatus === "loading-backend" && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3, display: "flex", alignItems: "center" }}
+        >
           <CircularProgress size={20} sx={{ mr: 2 }} />
           <Typography variant="body2">
             Checking for your previous application...
@@ -1030,8 +1328,11 @@ const JudgeApplicationComponent = () => {
         </Alert>
       )}
 
-      {dataLoadingStatus === 'loading-localStorage' && (
-        <Alert severity="info" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+      {dataLoadingStatus === "loading-localStorage" && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3, display: "flex", alignItems: "center" }}
+        >
           <CircularProgress size={20} sx={{ mr: 2 }} />
           <Typography variant="body2">
             Loading your saved progress...
@@ -1039,21 +1340,25 @@ const JudgeApplicationComponent = () => {
         </Alert>
       )}
 
-      {profileDataLoaded && !profileLoading && dataLoadingStatus === 'completed' && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            ✓ We've automatically filled in some fields using your existing profile information. You can edit any field as needed.{' '}
-            <Link href="/profile" sx={{ fontWeight: "bold" }}>
-              View/edit your profile
-            </Link>
-          </Typography>
-        </Alert>
-      )}
+      {profileDataLoaded &&
+        !profileLoading &&
+        dataLoadingStatus === "completed" && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              ✓ We've automatically filled in some fields using your existing
+              profile information. You can edit any field as needed.{" "}
+              <Link href="/profile" sx={{ fontWeight: "bold" }}>
+                View/edit your profile
+              </Link>
+            </Typography>
+          </Alert>
+        )}
 
-      {dataLoadingStatus === 'error' && (
+      {dataLoadingStatus === "error" && (
         <Alert severity="warning" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            Unable to load previous data, but you can still complete the form. Your progress will be saved as you work.
+            Unable to load previous data, but you can still complete the form.
+            Your progress will be saved as you work.
           </Typography>
         </Alert>
       )}
@@ -1068,7 +1373,11 @@ const JudgeApplicationComponent = () => {
           value={formData.email}
           onChange={handleChange}
           sx={{ mb: 3 }}
-          helperText={profileDataLoaded && formData.email ? "Auto-filled from your profile" : undefined}
+          helperText={
+            profileDataLoaded && formData.email
+              ? "Auto-filled from your profile"
+              : undefined
+          }
         />
 
         <TextField
@@ -1079,7 +1388,11 @@ const JudgeApplicationComponent = () => {
           value={formData.name}
           onChange={handleChange}
           sx={{ mb: 3 }}
-          helperText={profileDataLoaded && formData.name ? "Auto-filled from your profile" : undefined}
+          helperText={
+            profileDataLoaded && formData.name
+              ? "Auto-filled from your profile"
+              : undefined
+          }
         />
 
         <TextField
@@ -1109,7 +1422,11 @@ const JudgeApplicationComponent = () => {
           value={formData.companyName}
           onChange={handleChange}
           sx={{ mb: 3 }}
-          helperText={profileDataLoaded && formData.companyName ? "Auto-filled from your profile" : undefined}
+          helperText={
+            profileDataLoaded && formData.companyName
+              ? "Auto-filled from your profile"
+              : undefined
+          }
         />
 
         <TextField
@@ -1118,23 +1435,29 @@ const JudgeApplicationComponent = () => {
           fullWidth
           value={formData.linkedinProfile}
           onChange={handleChange}
-          helperText={profileDataLoaded && formData.linkedinProfile ? "Auto-filled from your profile - Optional link to your LinkedIn profile" : "Optional - link to your LinkedIn profile"}
+          helperText={
+            profileDataLoaded && formData.linkedinProfile
+              ? "Auto-filled from your profile - Optional link to your LinkedIn profile"
+              : "Optional - link to your LinkedIn profile"
+          }
           sx={{ mb: 3 }}
         />
       </Box>
     </Box>
   );
-  
+
   // Render background and experience form
   const renderBackgroundAndExperienceForm = () => (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
         Background & Experience
       </Typography>
-      
-      <Box sx={{ mb: 3 }}>       
+
+      <Box sx={{ mb: 3 }}>
         <FormControl fullWidth required sx={{ mb: 3 }}>
-          <InputLabel id="participation-count-label">How many times have you participated in Opportunity Hack?</InputLabel>
+          <InputLabel id="participation-count-label">
+            How many times have you participated in Opportunity Hack?
+          </InputLabel>
           <Select
             labelId="participation-count-label"
             id="participation-count"
@@ -1143,24 +1466,42 @@ const JudgeApplicationComponent = () => {
             onChange={handleChange}
             label="How many times have you participated in Opportunity Hack?"
           >
-            <MenuItem value="This is my first year! 👆">This is my first year! 👆</MenuItem>
-            <MenuItem value="This will be the 2nd time ✌️">This will be the 2nd time ✌️</MenuItem>
-            <MenuItem value="This will be the 3rd time ☘️">This will be the 3rd time ☘️</MenuItem>
-            <MenuItem value="I've been here 4+ times 🔥">I've been here 4+ times 🔥</MenuItem>
+            <MenuItem value="This is my first year! 👆">
+              This is my first year! 👆
+            </MenuItem>
+            <MenuItem value="This will be the 2nd time ✌️">
+              This will be the 2nd time ✌️
+            </MenuItem>
+            <MenuItem value="This will be the 3rd time ☘️">
+              This will be the 3rd time ☘️
+            </MenuItem>
+            <MenuItem value="I've been here 4+ times 🔥">
+              I've been here 4+ times 🔥
+            </MenuItem>
           </Select>
         </FormControl>
-        
-        <FormControl fullWidth required sx={{ mb: formData.backgroundAreas.includes('Other') ? 1 : 3 }}>
-          <InputLabel id="background-areas-label">Which areas best describe your background?</InputLabel>
+
+        <FormControl
+          fullWidth
+          required
+          sx={{ mb: formData.backgroundAreas.includes("Other") ? 1 : 3 }}
+        >
+          <InputLabel id="background-areas-label">
+            Which areas best describe your background?
+          </InputLabel>
           <Select
             labelId="background-areas-label"
             id="background-areas"
             multiple
             value={formData.backgroundAreas}
-            onChange={(e) => customHandleMultiSelectChange(e, 'backgroundAreas')}
-            input={<OutlinedInput label="Which areas best describe your background?" />}
+            onChange={(e) =>
+              customHandleMultiSelectChange(e, "backgroundAreas")
+            }
+            input={
+              <OutlinedInput label="Which areas best describe your background?" />
+            }
             renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                 {selected.map((value) => (
                   <Chip key={value} label={value} />
                 ))}
@@ -1169,15 +1510,19 @@ const JudgeApplicationComponent = () => {
           >
             {backgroundOptions.map((option) => (
               <MenuItem key={option} value={option}>
-                <Checkbox checked={formData.backgroundAreas.indexOf(option) > -1} />
+                <Checkbox
+                  checked={formData.backgroundAreas.indexOf(option) > -1}
+                />
                 <ListItemText primary={option} />
               </MenuItem>
             ))}
           </Select>
-          <FormHelperText>Select all areas that apply to your expertise</FormHelperText>
+          <FormHelperText>
+            Select all areas that apply to your expertise
+          </FormHelperText>
         </FormControl>
-        
-        {formData.backgroundAreas.includes('Other') && (
+
+        {formData.backgroundAreas.includes("Other") && (
           <TextField
             label="Please specify your background"
             name="otherBackground"
@@ -1189,7 +1534,7 @@ const JudgeApplicationComponent = () => {
             sx={{ mb: 3 }}
           />
         )}
-        
+
         <TextField
           label="A (short) biography - aim for 200 words"
           name="biography"
@@ -1201,7 +1546,7 @@ const JudgeApplicationComponent = () => {
           helperText="Tell us about your professional background and expertise"
           sx={{ mb: 3 }}
         />
-        
+
         <TextField
           label="Why do you want to be a judge for Opportunity Hack?"
           name="whyJudge"
@@ -1212,7 +1557,7 @@ const JudgeApplicationComponent = () => {
           onChange={handleChange}
           sx={{ mb: 3 }}
         />
-        
+
         <UploadPhoto
           value={formData.photoUrl}
           onChange={handlePhotoUpload}
@@ -1229,80 +1574,98 @@ const JudgeApplicationComponent = () => {
       </Box>
     </Box>
   );
-  
+
   // Render availability form
   const renderAvailabilityForm = () => (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
         Availability & Logistics
       </Typography>
-      
+
       <Box sx={{ mb: 3 }}>
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="subtitle1" fontWeight="bold">
             Important Judging Schedule
           </Typography>
           <Typography variant="body2">
-            Judging starts at 3:00 PM on the last day of the hackathon (typically Sunday). We expect to complete judging and announce the winning teams by 5:30 PM. Your presence during this entire timeframe is crucial.
+            Judging starts at 3:00 PM on the last day of the hackathon
+            (typically Sunday). We expect to complete judging and announce the
+            winning teams by 5:30 PM. Your presence during this entire timeframe
+            is crucial.
           </Typography>
         </Alert>
-        
+
         {eventData && eventData.endDate && (
-          <Box sx={{ mb: 3, bgcolor: 'background.paper', p: 2, borderRadius: 1, border: '1px dashed'}}>
+          <Box
+            sx={{
+              mb: 3,
+              bgcolor: "background.paper",
+              p: 2,
+              borderRadius: 1,
+              border: "1px dashed",
+            }}
+          >
             <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-              For this event: 
+              For this event:
             </Typography>
             <Typography variant="body2" paragraph>
-              Judging will take place on{' '}
+              Judging will take place on{" "}
               <Box component="span" fontWeight="bold">
-                {new Date(eventData.endDate + 'T00:00:00Z').toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  timeZone: 'UTC'
-                })}
-              </Box>{' '}
-              from{' '}
+                {new Date(eventData.endDate + "T00:00:00Z").toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    timeZone: "UTC",
+                  },
+                )}
+              </Box>{" "}
+              from{" "}
               <Box component="span" fontWeight="bold">
                 3:00 PM to approximately 5:30 PM
               </Box>
             </Typography>
           </Box>
         )}
-        
+
         <FormControl required component="fieldset" sx={{ mb: 3 }}>
           <Typography variant="subtitle1" gutterBottom>
-            Can you commit to being present for the entire judging period (3:00 PM to 5:30 PM on the last day)?
+            Can you commit to being present for the entire judging period (3:00
+            PM to 5:30 PM on the last day)?
           </Typography>
           <RadioGroup
             name="canAttendJudging"
             value={formData.canAttendJudging}
             onChange={handleChange}
           >
-            <FormControlLabel 
-              value="Yes" 
-              control={<Radio />} 
-              label="Yes, I can be present for the entire judging period" 
+            <FormControlLabel
+              value="Yes"
+              control={<Radio />}
+              label="Yes, I can be present for the entire judging period"
             />
-            <FormControlLabel 
-              value="No" 
-              control={<Radio />} 
-              label="No, I cannot commit to this time period" 
+            <FormControlLabel
+              value="No"
+              control={<Radio />}
+              label="No, I cannot commit to this time period"
             />
-            <FormControlLabel 
-              value="Partial" 
-              control={<Radio />} 
-              label="I can attend part of the judging period (please explain in availability)" 
+            <FormControlLabel
+              value="Partial"
+              control={<Radio />}
+              label="I can attend part of the judging period (please explain in availability)"
             />
           </RadioGroup>
           {formData.canAttendJudging === "No" && (
             <Alert severity="warning" sx={{ mt: 1 }}>
-              Please note that availability during the judging period is a key requirement for judges. Your application may still be considered, but priority will be given to those who can attend the full judging session.
+              Please note that availability during the judging period is a key
+              requirement for judges. Your application may still be considered,
+              but priority will be given to those who can attend the full
+              judging session.
             </Alert>
           )}
         </FormControl>
-        
+
         <TextField
           label="Additional availability details"
           name="availability"
@@ -1314,16 +1677,15 @@ const JudgeApplicationComponent = () => {
           helperText="Please specify any additional availability details or constraints"
           sx={{ mb: 3 }}
         />
-        
+
         <FormControl required component="fieldset" sx={{ mb: 3 }}>
           <Typography variant="subtitle1" gutterBottom>
-            {eventData && ['Virtual', 'Global', 'Online'].some(term => 
-              eventData.location?.toLowerCase().includes(term.toLowerCase())
-            ) ? (
-              'Will you be participating online?'
-            ) :
-              `Are you joining us in-person${eventData?.location ? ` in ${eventData.location}` : ' at the event location'}?`
-          }
+            {eventData &&
+            ["Virtual", "Global", "Online"].some((term) =>
+              eventData.location?.toLowerCase().includes(term.toLowerCase()),
+            )
+              ? "Will you be participating online?"
+              : `Are you joining us in-person${eventData?.location ? ` in ${eventData.location}` : " at the event location"}?`}
           </Typography>
           <RadioGroup
             name="inPerson"
@@ -1337,14 +1699,14 @@ const JudgeApplicationComponent = () => {
       </Box>
     </Box>
   );
-  
+
   // Render review form
   const renderReviewForm = () => (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
         Review & Submit
       </Typography>
-      
+
       <TextField
         label="(Optional) Anything else to share?"
         name="additionalInfo"
@@ -1355,7 +1717,7 @@ const JudgeApplicationComponent = () => {
         onChange={handleChange}
         sx={{ mb: 4 }}
       />
-      
+
       <FormControlLabel
         control={
           <Checkbox
@@ -1380,23 +1742,20 @@ const JudgeApplicationComponent = () => {
         }
         sx={{ mb: 2 }}
       />
-      
+
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
-          By submitting this form, you're expressing interest in judging at Opportunity Hack. 
-          Our team will review your application and reach out with further details about judging logistics and criteria.
+          By submitting this form, you're expressing interest in judging at
+          Opportunity Hack. Our team will review your application and reach out
+          with further details about judging logistics and criteria.
         </Typography>
       </Alert>
-      
+
       {/* Selected field is not shown to users but stored in state */}
-      <input 
-        type="hidden" 
-        name="selected" 
-        value={formData.selected} 
-      />
+      <input type="hidden" name="selected" value={formData.selected} />
     </Box>
   );
-  
+
   // Function to render the current step form
   const getStepContent = (step) => {
     switch (step) {
@@ -1409,88 +1768,90 @@ const JudgeApplicationComponent = () => {
       case 3:
         return renderReviewForm();
       default:
-        return 'Unknown step';
+        return "Unknown step";
     }
   };
 
   // SEO metadata and descriptions
-  const pageTitle = eventData 
+  const pageTitle = eventData
     ? `Judge ${eventData.name} | Evaluate Tech for Good Solutions`
     : "Judge at Opportunity Hack | Evaluate Tech for Good Solutions";
   const pageDescription = eventData
     ? `Apply to judge ${eventData.name} in ${eventData.location}. Evaluate innovative tech solutions for nonprofits and help select winning projects that make real impact.`
     : "Apply to judge our tech for good hackathon. Evaluate innovative solutions for nonprofits and help select winning projects that make real social impact.";
   const canonicalUrl = `https://ohack.dev/hack/${event_id}/judge-application`;
-  
-  const imageUrl = eventData?.image || "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp";
+
+  const imageUrl =
+    eventData?.image || "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp";
 
   // Breadcrumb items for structured data
   const breadcrumbItems = [
-    { name: 'Home', url: 'https://ohack.dev' },
-    { name: 'Hackathons', url: 'https://ohack.dev/hack' },
-    { 
-      name: eventData?.name || 'Hackathon Event', 
-      url: `https://ohack.dev/hack/${event_id}` 
+    { name: "Home", url: "https://ohack.dev" },
+    { name: "Hackathons", url: "https://ohack.dev/hack" },
+    {
+      name: eventData?.name || "Hackathon Event",
+      url: `https://ohack.dev/hack/${event_id}`,
     },
-    { 
-      name: 'Judge Application', 
-      url: canonicalUrl 
-    }
+    {
+      name: "Judge Application",
+      url: canonicalUrl,
+    },
   ];
 
   // Structured data for judge application
   const judgeApplicationStructuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": pageTitle,
-    "description": pageDescription,
-    "url": canonicalUrl,
-    "isPartOf": {
+    name: pageTitle,
+    description: pageDescription,
+    url: canonicalUrl,
+    isPartOf: {
       "@type": "WebSite",
-      "name": "Opportunity Hack",
-      "url": "https://ohack.dev"
+      name: "Opportunity Hack",
+      url: "https://ohack.dev",
     },
-    "breadcrumb": {
+    breadcrumb: {
       "@type": "BreadcrumbList",
-      "itemListElement": breadcrumbItems.map((item, index) => ({
+      itemListElement: breadcrumbItems.map((item, index) => ({
         "@type": "ListItem",
-        "position": index + 1,
-        "name": item.name,
-        "item": item.url
-      }))
+        position: index + 1,
+        name: item.name,
+        item: item.url,
+      })),
     },
-    "mainEntity": {
+    mainEntity: {
       "@type": "JobPosting",
-      "title": `Judge for ${eventData?.name || 'Opportunity Hack'}`,
-      "description": "Evaluate innovative tech solutions created for nonprofits during our hackathon event",
-      "hiringOrganization": {
+      title: `Judge for ${eventData?.name || "Opportunity Hack"}`,
+      description:
+        "Evaluate innovative tech solutions created for nonprofits during our hackathon event",
+      hiringOrganization: {
         "@type": "Organization",
-        "name": "Opportunity Hack"
+        name: "Opportunity Hack",
       },
-      "jobLocation": {
+      jobLocation: {
         "@type": "Place",
-        "address": {
+        address: {
           "@type": "PostalAddress",
-          "addressLocality": eventData?.location || "Tempe",
-          "addressRegion": "Arizona",
-          "addressCountry": "US"
-        }
+          addressLocality: eventData?.location || "Tempe",
+          addressRegion: "Arizona",
+          addressCountry: "US",
+        },
       },
-      "employmentType": "VOLUNTEER",
-      "industry": "Technology for Social Good",
-      "responsibilities": [
+      employmentType: "VOLUNTEER",
+      industry: "Technology for Social Good",
+      responsibilities: [
         "Evaluate hackathon projects for technical innovation",
-        "Assess impact potential for nonprofit organizations", 
+        "Assess impact potential for nonprofit organizations",
         "Provide constructive feedback to development teams",
-        "Help select winning solutions"
+        "Help select winning solutions",
       ],
-      "qualifications": [
+      qualifications: [
         "Professional experience in technology, product management, or related fields",
-        "Understanding of nonprofit sector challenges", 
+        "Understanding of nonprofit sector challenges",
         "Ability to evaluate technical solutions objectively",
-        "Commitment to social good initiatives"
-      ]
-    }
+        "Commitment to social good initiatives",
+      ],
+    },
   };
 
   // If form submitted successfully, show success message
@@ -1508,7 +1869,11 @@ const JudgeApplicationComponent = () => {
 
           {/* DNS prefetch and preconnect for performance */}
           <link rel="dns-prefetch" href="//cdn.ohack.dev" />
-          <link rel="preconnect" href="https://cdn.ohack.dev" crossOrigin="anonymous" />
+          <link
+            rel="preconnect"
+            href="https://cdn.ohack.dev"
+            crossOrigin="anonymous"
+          />
 
           {/* Open Graph tags */}
           <meta property="og:title" content={pageTitle} />
@@ -1518,7 +1883,10 @@ const JudgeApplicationComponent = () => {
           <meta property="og:image" content={imageUrl} />
           <meta property="og:image:width" content="1200" />
           <meta property="og:image:height" content="630" />
-          <meta property="og:image:alt" content="Judges evaluating tech solutions at Opportunity Hack" />
+          <meta
+            property="og:image:alt"
+            content="Judges evaluating tech solutions at Opportunity Hack"
+          />
           <meta property="og:site_name" content="Opportunity Hack" />
 
           {/* Twitter Card tags */}
@@ -1526,7 +1894,10 @@ const JudgeApplicationComponent = () => {
           <meta name="twitter:title" content={pageTitle} />
           <meta name="twitter:description" content={pageDescription} />
           <meta name="twitter:image" content={imageUrl} />
-          <meta name="twitter:image:alt" content="Judges evaluating tech solutions at Opportunity Hack" />
+          <meta
+            name="twitter:image:alt"
+            content="Judges evaluating tech solutions at Opportunity Hack"
+          />
 
           {/* Additional SEO meta tags */}
           <meta name="robots" content="index, follow" />
@@ -1539,31 +1910,36 @@ const JudgeApplicationComponent = () => {
           id="judge-application-structured-data"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(judgeApplicationStructuredData)
+            __html: JSON.stringify(judgeApplicationStructuredData),
           }}
         />
-        
+
         <Box my={8} textAlign="center">
-          <Typography variant="h1" component="h1" sx={{ fontSize: '2.5rem', mb: 4, mt: 12 }}>
+          <Typography
+            variant="h1"
+            component="h1"
+            sx={{ fontSize: "2.5rem", mb: 4, mt: 12 }}
+          >
             Application Submitted!
           </Typography>
-          
-          <Alert severity="success" sx={{ mb: 4, mx: 'auto', maxWidth: 600 }}>
-            Thank you for applying to be a judge at Opportunity Hack. We'll review your application and contact you soon.
-          </Alert>         
-          
-          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
-            <GiveButterWidget 
+
+          <Alert severity="success" sx={{ mb: 4, mx: "auto", maxWidth: 600 }}>
+            Thank you for applying to be a judge at Opportunity Hack. We'll
+            review your application and contact you soon.
+          </Alert>
+
+          <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
+            <GiveButterWidget
               context="success"
               userId={user?.userId}
               applicationType="judge"
               size="large"
               onDonationEvent={(eventData) => {
-                console.log('Judge donation event:', eventData);
+                console.log("Judge donation event:", eventData);
               }}
             />
           </Box>
-          
+
           <Button
             variant="contained"
             color="primary"
@@ -1590,7 +1966,11 @@ const JudgeApplicationComponent = () => {
 
         {/* DNS prefetch and preconnect for performance */}
         <link rel="dns-prefetch" href="//cdn.ohack.dev" />
-        <link rel="preconnect" href="https://cdn.ohack.dev" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://cdn.ohack.dev"
+          crossOrigin="anonymous"
+        />
 
         {/* Open Graph tags */}
         <meta property="og:title" content={pageTitle} />
@@ -1600,7 +1980,10 @@ const JudgeApplicationComponent = () => {
         <meta property="og:image" content={imageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Judges evaluating tech solutions at Opportunity Hack" />
+        <meta
+          property="og:image:alt"
+          content="Judges evaluating tech solutions at Opportunity Hack"
+        />
         <meta property="og:site_name" content="Opportunity Hack" />
 
         {/* Twitter Card tags */}
@@ -1608,7 +1991,10 @@ const JudgeApplicationComponent = () => {
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={imageUrl} />
-        <meta name="twitter:image:alt" content="Judges evaluating tech solutions at Opportunity Hack" />
+        <meta
+          name="twitter:image:alt"
+          content="Judges evaluating tech solutions at Opportunity Hack"
+        />
 
         {/* Additional SEO meta tags */}
         <meta name="robots" content="index, follow" />
@@ -1621,10 +2007,10 @@ const JudgeApplicationComponent = () => {
         id="judge-application-structured-data"
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(judgeApplicationStructuredData)
+          __html: JSON.stringify(judgeApplicationStructuredData),
         }}
       />
-      
+
       {/* Form persistence notification component */}
       <FormPersistenceControls
         onSave={saveToLocalStorage}
@@ -1650,13 +2036,15 @@ const JudgeApplicationComponent = () => {
         ) : (
           <Box>
             {/* Header section with responsive layout */}
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: { xs: 'column', md: 'row' },
-              alignItems: { xs: 'flex-start', md: 'flex-start' },
-              gap: 2,
-              mb: 3
-            }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                alignItems: { xs: "flex-start", md: "flex-start" },
+                gap: 2,
+                mb: 3,
+              }}
+            >
               {/* Event info */}
               <Box sx={{ flex: 1 }}>
                 {eventData && (
@@ -1705,7 +2093,10 @@ const JudgeApplicationComponent = () => {
                           </Box>
                           <Box
                             component="span"
-                            sx={{ display: "inline-flex", alignItems: "center" }}
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                            }}
                           >
                             {eventData.formattedEndDate}
                           </Box>
@@ -1717,27 +2108,27 @@ const JudgeApplicationComponent = () => {
               </Box>
 
               {/* Social proof image */}
-              <Box 
-                sx={{ 
-                  width: { xs: '100%', sm: '180px', md: '220px' },
-                  height: { xs: '140px', sm: '120px', md: '150px' },
+              <Box
+                sx={{
+                  width: { xs: "100%", sm: "180px", md: "220px" },
+                  height: { xs: "140px", sm: "120px", md: "150px" },
                   borderRadius: 2,
-                  overflow: 'hidden',
+                  overflow: "hidden",
                   boxShadow: 2,
                   flexShrink: 0,
-                  alignSelf: { xs: 'center', md: 'flex-start' },
-                  maxWidth: '100%',
-                  mt: { xs: 0, md: 1 }
+                  alignSelf: { xs: "center", md: "flex-start" },
+                  maxWidth: "100%",
+                  mt: { xs: 0, md: 1 },
                 }}
               >
-                <img 
-                  src="https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp" 
-                  alt="Professional judges evaluating innovative tech solutions at Opportunity Hack" 
-                  style={{ 
-                    width: '100%',
-                    height: '100%',
-                    display: 'block',
-                    objectFit: 'cover'
+                <img
+                  src="https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp"
+                  alt="Professional judges evaluating innovative tech solutions at Opportunity Hack"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    objectFit: "cover",
                   }}
                 />
               </Box>
@@ -1754,15 +2145,16 @@ const JudgeApplicationComponent = () => {
                       This event has already ended
                     </Typography>
                     <Typography variant="body1">
-                      Applications are no longer being accepted for judges as this hackathon has already concluded.
-                      Please check our upcoming events for future judging opportunities.
+                      Applications are no longer being accepted for judges as
+                      this hackathon has already concluded. Please check our
+                      upcoming events for future judging opportunities.
                     </Typography>
                   </Alert>
                   <Box textAlign="center">
                     <Button
                       variant="contained"
                       color="primary"
-                      onClick={() => router.push('/hack')}
+                      onClick={() => router.push("/hack")}
                       sx={{ mt: 2 }}
                     >
                       View Upcoming Events
@@ -1771,98 +2163,103 @@ const JudgeApplicationComponent = () => {
                 </Paper>
               ) : !applicationConstraints.isUnlocked ? (
                 // Show application closed UI with optional passcode unlock
-                renderApplicationClosed()                
+                renderApplicationClosed()
               ) : (
                 <>
                   {/* Show success message when application is unlocked via passcode */}
-                  {applicationConstraints.passcode && applicationConstraints.isUnlocked && (
-                    <Alert severity="success" sx={{ mb: 3 }}>
-                      <Typography variant="body2">
-                        ✓ Access granted! You can now proceed with your judge application.
-                      </Typography>
-                    </Alert>
-                  )}
-                  
+                  {applicationConstraints.passcode &&
+                    applicationConstraints.isUnlocked && (
+                      <Alert severity="success" sx={{ mb: 3 }}>
+                        <Typography variant="body2">
+                          ✓ Access granted! You can now proceed with your judge
+                          application.
+                        </Typography>
+                      </Alert>
+                    )}
+
                   <Stepper
                     activeStep={activeStep}
                     alternativeLabel={!isMobile}
                     orientation={isMobile ? "horizontal" : "horizontal"}
-                    sx={{ 
+                    sx={{
                       mb: 4,
                       ...(isMobile && {
-                        '& .MuiStepLabel-root': {
-                          padding: '0 4px', // Reduce padding on mobile
+                        "& .MuiStepLabel-root": {
+                          padding: "0 4px", // Reduce padding on mobile
                         },
-                        '& .MuiStepLabel-labelContainer': {
-                          width: 'auto', // Let the label container be as small as possible
+                        "& .MuiStepLabel-labelContainer": {
+                          width: "auto", // Let the label container be as small as possible
                         },
-                        '& .MuiStepLabel-label': {
-                          fontSize: '0.7rem', // Smaller text on mobile
-                          whiteSpace: 'nowrap', // Prevent text wrapping
+                        "& .MuiStepLabel-label": {
+                          fontSize: "0.7rem", // Smaller text on mobile
+                          whiteSpace: "nowrap", // Prevent text wrapping
                         },
-                        '& .MuiSvgIcon-root': {
+                        "& .MuiSvgIcon-root": {
                           width: 20, // Smaller icons
                           height: 20,
                         },
-                        overflowX: 'auto', // Allow horizontal scrolling if needed
-                        '&::-webkit-scrollbar': {
-                          display: 'none' // Hide scrollbar on webkit browsers
+                        overflowX: "auto", // Allow horizontal scrolling if needed
+                        "&::-webkit-scrollbar": {
+                          display: "none", // Hide scrollbar on webkit browsers
                         },
-                        scrollbarWidth: 'none', // Hide scrollbar on Firefox
-                      })
+                        scrollbarWidth: "none", // Hide scrollbar on Firefox
+                      }),
                     }}
                   >
                     {steps.map((label) => (
                       <Step key={label}>
-                        <StepLabel>{isMobile ? (
-                          // On mobile, show abbreviated labels or just the step number
-                          activeStep === steps.indexOf(label) ? label : (steps.indexOf(label) + 1)
-                        ) : (
-                          // On desktop, show full labels
-                          label
-                        )}</StepLabel>
+                        <StepLabel>
+                          {isMobile
+                            ? // On mobile, show abbreviated labels or just the step number
+                              activeStep === steps.indexOf(label)
+                              ? label
+                              : steps.indexOf(label) + 1
+                            : // On desktop, show full labels
+                              label}
+                        </StepLabel>
                       </Step>
                     ))}
                   </Stepper>
 
                   <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                     <Typography variant="body1" paragraph>
-                      Thank you for your interest in judging at Opportunity Hack!
-                      Judges play a crucial role in evaluating the projects created
-                      by our participants and providing valuable feedback.
+                      Thank you for your interest in judging at Opportunity
+                      Hack! Judges play a crucial role in evaluating the
+                      projects created by our participants and providing
+                      valuable feedback.
                     </Typography>
 
                     {eventData && eventData.description && (
                       <Typography variant="body1" sx={{ mb: 3 }}>
-                        <strong>About this event:</strong> {eventData.description}
+                        <strong>About this event:</strong>{" "}
+                        {eventData.description}
                       </Typography>
                     )}
 
-                    
-                      <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 4 }}>
-                        <Typography variant="body1" paragraph>
-                          <strong>
-                            Want to learn more about judging at Opportunity Hack?
-                          </strong>{" "}
-                          Visit our{" "}
-                          <Link
-                            href="/about/judges"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{ fontWeight: "bold" }}
-                          >
-                            Judges Information Page
-                          </Link>{" "}
-                          for details about the evaluation criteria, judging
-                          process, and commitment.
-                        </Typography>
-                      </Alert>
-                    
+                    <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 4 }}>
+                      <Typography variant="body1" paragraph>
+                        <strong>
+                          Want to learn more about judging at Opportunity Hack?
+                        </strong>{" "}
+                        Visit our{" "}
+                        <Link
+                          href="/about/judges"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ fontWeight: "bold" }}
+                        >
+                          Judges Information Page
+                        </Link>{" "}
+                        for details about the evaluation criteria, judging
+                        process, and commitment.
+                      </Typography>
+                    </Alert>
 
                     <Typography variant="body1" paragraph>
-                      As a judge, you'll review innovative solutions developed for
-                      nonprofits and help recognize outstanding contributions. Your
-                      expertise will help ensure the success of our hackathon.
+                      As a judge, you'll review innovative solutions developed
+                      for nonprofits and help recognize outstanding
+                      contributions. Your expertise will help ensure the success
+                      of our hackathon.
                     </Typography>
 
                     {(error || recaptchaError) && (
@@ -1929,9 +2326,10 @@ const JudgeApplicationPage = ({ seoMetadata }) => {
   const { event_id } = router.query;
 
   // Create the current URL for redirection
-  const currentUrl = typeof window !== 'undefined' && event_id
-    ? `${window.location.origin}/hack/${event_id}/judge-application`
-    : null;
+  const currentUrl =
+    typeof window !== "undefined" && event_id
+      ? `${window.location.origin}/hack/${event_id}/judge-application`
+      : null;
 
   return (
     <>
@@ -1953,7 +2351,10 @@ const JudgeApplicationPage = ({ seoMetadata }) => {
         <meta property="og:image" content={seoMetadata.imageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Judges evaluating tech solutions at Opportunity Hack" />
+        <meta
+          property="og:image:alt"
+          content="Judges evaluating tech solutions at Opportunity Hack"
+        />
         <meta property="og:site_name" content="Opportunity Hack" />
 
         {/* Twitter Card tags */}
@@ -1961,7 +2362,10 @@ const JudgeApplicationPage = ({ seoMetadata }) => {
         <meta name="twitter:title" content={seoMetadata.title} />
         <meta name="twitter:description" content={seoMetadata.description} />
         <meta name="twitter:image" content={seoMetadata.imageUrl} />
-        <meta name="twitter:image:alt" content="Judges evaluating tech solutions at Opportunity Hack" />
+        <meta
+          name="twitter:image:alt"
+          content="Judges evaluating tech solutions at Opportunity Hack"
+        />
 
         {/* Additional SEO meta tags */}
         <meta name="robots" content="index, follow" />
@@ -1977,76 +2381,78 @@ const JudgeApplicationPage = ({ seoMetadata }) => {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebPage",
-            "name": seoMetadata.title,
-            "description": seoMetadata.description,
-            "url": seoMetadata.canonicalUrl,
-            "isPartOf": {
+            name: seoMetadata.title,
+            description: seoMetadata.description,
+            url: seoMetadata.canonicalUrl,
+            isPartOf: {
               "@type": "WebSite",
-              "name": "Opportunity Hack",
-              "url": "https://ohack.dev"
+              name: "Opportunity Hack",
+              url: "https://ohack.dev",
             },
-            "breadcrumb": {
+            breadcrumb: {
               "@type": "BreadcrumbList",
-              "itemListElement": [
+              itemListElement: [
                 {
                   "@type": "ListItem",
-                  "position": 1,
-                  "name": "Home",
-                  "item": "https://ohack.dev"
+                  position: 1,
+                  name: "Home",
+                  item: "https://ohack.dev",
                 },
                 {
                   "@type": "ListItem",
-                  "position": 2,
-                  "name": "Hackathons",
-                  "item": "https://ohack.dev/hack"
+                  position: 2,
+                  name: "Hackathons",
+                  item: "https://ohack.dev/hack",
                 },
                 {
                   "@type": "ListItem",
-                  "position": 3,
-                  "name": seoMetadata.eventName,
-                  "item": `https://ohack.dev/hack/${event_id}`
+                  position: 3,
+                  name: seoMetadata.eventName,
+                  item: `https://ohack.dev/hack/${event_id}`,
                 },
                 {
                   "@type": "ListItem",
-                  "position": 4,
-                  "name": "Judge Application",
-                  "item": seoMetadata.canonicalUrl
-                }
-              ]
-            },
-            "mainEntity": {
-              "@type": "JobPosting",
-              "title": `Judge for ${seoMetadata.eventName}`,
-              "description": "Evaluate innovative tech solutions created for nonprofits during our hackathon event",
-              "hiringOrganization": {
-                "@type": "Organization",
-                "name": "Opportunity Hack"
-              },
-              "jobLocation": {
-                "@type": "Place",
-                "address": {
-                  "@type": "PostalAddress",
-                  "addressLocality": seoMetadata.location.split(',')[0] || "Tempe",
-                  "addressRegion": "Arizona",
-                  "addressCountry": "US"
-                }
-              },
-              "employmentType": "VOLUNTEER",
-              "industry": "Technology for Social Good",
-              "responsibilities": [
-                "Evaluate hackathon projects for technical innovation",
-                "Assess impact potential for nonprofit organizations", 
-                "Provide constructive feedback to development teams",
-                "Help select winning solutions"
+                  position: 4,
+                  name: "Judge Application",
+                  item: seoMetadata.canonicalUrl,
+                },
               ],
-              "qualifications": [
+            },
+            mainEntity: {
+              "@type": "JobPosting",
+              title: `Judge for ${seoMetadata.eventName}`,
+              description:
+                "Evaluate innovative tech solutions created for nonprofits during our hackathon event",
+              hiringOrganization: {
+                "@type": "Organization",
+                name: "Opportunity Hack",
+              },
+              jobLocation: {
+                "@type": "Place",
+                address: {
+                  "@type": "PostalAddress",
+                  addressLocality:
+                    seoMetadata.location.split(",")[0] || "Tempe",
+                  addressRegion: "Arizona",
+                  addressCountry: "US",
+                },
+              },
+              employmentType: "VOLUNTEER",
+              industry: "Technology for Social Good",
+              responsibilities: [
+                "Evaluate hackathon projects for technical innovation",
+                "Assess impact potential for nonprofit organizations",
+                "Provide constructive feedback to development teams",
+                "Help select winning solutions",
+              ],
+              qualifications: [
                 "Professional experience in technology, product management, or related fields",
-                "Understanding of nonprofit sector challenges", 
+                "Understanding of nonprofit sector challenges",
                 "Ability to evaluate technical solutions objectively",
-                "Commitment to social good initiatives"
-              ]
-            }
-          })
+                "Commitment to social good initiatives",
+              ],
+            },
+          }),
         }}
       />
 
@@ -2067,47 +2473,52 @@ const JudgeApplicationPage = ({ seoMetadata }) => {
 // Server-side props for SEO metadata (available to crawlers before auth)
 export async function getServerSideProps(context) {
   const { event_id } = context.params;
-  
+
   // Default metadata for SEO
   let seoMetadata = {
     title: "Judge at Opportunity Hack | Evaluate Tech for Good Solutions",
-    description: "Apply to judge our tech for good hackathon. Evaluate innovative solutions for nonprofits and help select winning projects that make real social impact.",
+    description:
+      "Apply to judge our tech for good hackathon. Evaluate innovative solutions for nonprofits and help select winning projects that make real social impact.",
     eventName: "Opportunity Hack",
     location: "Tempe, Arizona",
     canonicalUrl: `https://ohack.dev/hack/${event_id}/judge-application`,
-    imageUrl: "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp"
+    imageUrl: "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp",
   };
 
   // Try to fetch event data for better SEO
   try {
     const apiServerUrl = process.env.NEXT_PUBLIC_REACT_APP_API_SERVER_URL;
     if (apiServerUrl) {
-      const response = await fetch(`${apiServerUrl}/api/messages/hackathon/${event_id}`);
-      
+      const response = await fetch(
+        `${apiServerUrl}/api/messages/hackathon/${event_id}`,
+      );
+
       if (response.ok) {
         const eventData = await response.json();
-        
+
         if (eventData && eventData.title) {
           seoMetadata = {
             title: `Judge ${eventData.title} | Evaluate Tech for Good Solutions`,
-            description: `Apply to judge ${eventData.title} in ${eventData.location || 'Tempe, Arizona'}. Evaluate innovative tech solutions for nonprofits and help select winning projects that make real impact.`,
+            description: `Apply to judge ${eventData.title} in ${eventData.location || "Tempe, Arizona"}. Evaluate innovative tech solutions for nonprofits and help select winning projects that make real impact.`,
             eventName: eventData.title,
-            location: eventData.location || 'Tempe, Arizona',
+            location: eventData.location || "Tempe, Arizona",
             canonicalUrl: `https://ohack.dev/hack/${event_id}/judge-application`,
-            imageUrl: eventData.image_url || "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp"
+            imageUrl:
+              eventData.image_url ||
+              "https://cdn.ohack.dev/ohack.dev/2024_hackathon_1.webp",
           };
         }
       }
     }
   } catch (error) {
-    console.error('Failed to fetch event data for SEO:', error);
+    console.error("Failed to fetch event data for SEO:", error);
     // Continue with default metadata
   }
 
   return {
     props: {
-      seoMetadata
-    }
+      seoMetadata,
+    },
   };
 }
 
