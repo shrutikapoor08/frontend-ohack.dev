@@ -1287,6 +1287,13 @@ const JudgeApplicationComponent = () => {
       }
 
       setSuccess(true);
+      // Scroll to top of form to show "Application Submitted!" message
+      if (formRef?.current) {
+        formRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
     } catch (err) {
       console.error("Error submitting application:", err);
       setError(

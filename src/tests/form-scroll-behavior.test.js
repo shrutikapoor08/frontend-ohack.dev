@@ -86,4 +86,27 @@ describe('Form Scroll Behavior', () => {
       expect(content).toMatch(/formRef\?\.current/);
     });
   });
+
+  test('should contain scroll behavior after form submission success', () => {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const applicationFiles = [
+      '../pages/hack/[event_id]/hacker-application.js',
+      '../pages/hack/[event_id]/mentor-application.js',
+      '../pages/hack/[event_id]/volunteer-application.js',
+      '../pages/hack/[event_id]/sponsor-application.js',
+      '../pages/hack/[event_id]/judge-application.js'
+    ];
+    
+    applicationFiles.forEach(filePath => {
+      const fullPath = path.join(__dirname, filePath);
+      const content = fs.readFileSync(fullPath, 'utf8');
+      
+      // Verify scroll behavior is triggered after setSuccess(true) - more flexible regex
+      expect(content).toMatch(/setSuccess\(true\);[\s\S]*?scrollIntoView[\s\S]*?behavior.*smooth/);
+      // Also verify the comment explaining the behavior
+      expect(content).toMatch(/Scroll to top of form to show.*Application Submitted/);
+    });
+  });
 });
