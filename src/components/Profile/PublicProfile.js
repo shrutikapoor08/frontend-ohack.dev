@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import Image from "next/image";
 import Link from "next/link";
 import {
   Typography,
@@ -9,124 +8,494 @@ import {
   Card,
   CardContent,
   Avatar,
-  Chip,
   Button,
   CircularProgress,
+  Grid,
+  Divider,
+  Paper,
+  Chip,
+  Alert,
+  useTheme,
 } from "@mui/material";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import FeedbackIcon from "@mui/icons-material/Feedback";
+import PersonIcon from "@mui/icons-material/Person";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import BusinessIcon from "@mui/icons-material/Business";
+import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
+import HistoryIcon from "@mui/icons-material/History";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+
+import usePublicProfile from "../../hooks/use-public-profile";
+import BadgeList from "../badge-list";
+import ProfileHackathonList from "../profile-hackathon-list";
+import FeedbackLite from "../feedback-lite";
 import HelpUsBuildOHack from "../HelpUsBuildOHack/HelpUsBuildOHack";
 
 const PublicProfile = () => {
   const router = useRouter();
+  const theme = useTheme();
   const { userid } = router.query;
-  const [userInfo, setUserInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (userid) {
-        try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/profile/${userid}`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            setUserInfo(data);
-          } else {
-            console.error("Failed to fetch user info");
-          }
-        } catch (error) {
-          console.error("Error fetching user info:", error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
+  const {
+    profile,
+    badges,
+    hackathons,
+    feedbackUrl,
+    privacySettings,
+    isLoading,
+    error,
+  } = usePublicProfile(userid);
 
-    fetchUserInfo();
-  }, [userid]);
-
-  if (loading) {
-    return <CircularProgress />;
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
+
+  if (error) {
+    return (
+      <Box sx={{ mt: 4 }}>
+        <Alert severity="error">Failed to load profile: {error}</Alert>
+      </Box>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <Box sx={{ mt: 4 }}>
+        <Alert severity="info">Profile not found or user does not exist.</Alert>
+      </Box>
+    );
+  }
+
+  // Helper function to check if a field should be displayed
+  const isPublic = (field) => {
+    return privacySettings?.[field] === "public";
+  };
+
+  // Helper component for private content placeholder
+  const PrivateContentPlaceholder = ({ icon: Icon, label }) => (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        color: "text.secondary",
+        fontStyle: "italic",
+        p: 2,
+        bgcolor: "action.hover",
+        borderRadius: 1,
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
+      <VisibilityOffIcon fontSize="small" />
+      <Typography variant="body2">{label} is private</Typography>
+    </Box>
+  );
+
+  const roleLabels = {
+    hacker_in_school: "Hacker (In School)",
+    hacker_pro: "Hacker (Professional)",
+    mentor: "Mentor",
+    volunteer: "Volunteer",
+    judge: "Judge",
+    nonprofit: "Nonprofit",
+    sponsor: "Sponsor",
+    organizer: "Organizer",
+  };
 
   return (
     <div className="content-layout">
       <Head>
         <title>
-          Profile for {userInfo?.name || userid} - Opportunity Hack Developer
+          Profile for {profile?.name || userid} - Opportunity Hack Developer
           Portal
         </title>
       </Head>
-      <Box sx={{ position: "relative", mt: 5}}>
-        <Typography variant="h4" component="h1" gutterBottom>
+
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Typography
+          variant="h3"
+          component="h1"
+          gutterBottom
+          sx={{ fontWeight: 600 }}
+        >
           Public Profile
         </Typography>
-     
+        <Typography variant="subtitle1" color="text.secondary">
+          Viewing the public information for this Opportunity Hack community
+          member
+        </Typography>
       </Box>
-      
-      <Card>
-        <CardContent>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+
+      {/* Basic Profile Header */}
+      <Paper elevation={1} sx={{ mb: 4, borderRadius: 2 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
             <Avatar
-              src={userInfo?.profile_image}
-              alt={userInfo?.name}
-              sx={{ width: 100, height: 100, mr: 2 }}
+              src={profile?.profile_image || "https://i.imgur.com/RdOsE7s.png"}
+              alt={profile?.name}
+              sx={{ width: 120, height: 120, mr: 3 }}
             />
-            <Box>
-              <Typography variant="h5" component="h2">
-                {userInfo?.name || "Anonymous User"}
+            <Box sx={{ flex: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                <Typography
+                  variant="h4"
+                  component="h2"
+                  sx={{ fontWeight: 500 }}
+                >
+                  {profile?.name || "Anonymous User"}
+                </Typography>
                 <VerifiedUserIcon
                   color="success"
-                  fontSize="small"
+                  fontSize="medium"
                   sx={{ ml: 1 }}
                 />
+              </Box>
+              <Typography variant="h6" color="textSecondary" gutterBottom>
+                {profile?.nickname || "Community Member"}
               </Typography>
-              <Typography color="textSecondary" gutterBottom>
-                {userInfo?.nickname || "No nickname set"}
-              </Typography>
-              {userInfo?.github && (
-                <Typography variant="body2">
-                  GitHub:{" "}
-                  <Link
-                    href={`https://github.com/${userInfo.github}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {userInfo.github}
-                  </Link>
-                </Typography>
+
+              {/* Public Role Display */}
+              {profile?.role && isPublic("current_role") && (
+                <Box sx={{ mt: 2 }}>
+                  <Chip
+                    icon={<PersonIcon />}
+                    label={roleLabels[profile.role] || profile.role}
+                    color="primary"
+                    variant="outlined"
+                  />
+                </Box>
               )}
             </Box>
           </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              <EmojiEventsIcon sx={{ mr: 1 }} />
-              Achievements
+
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<FeedbackIcon />}
+            component={Link}
+            href={feedbackUrl}
+            sx={{ mt: 2 }}
+          >
+            Send Feedback to {profile?.name || "User"}
+          </Button>
+        </CardContent>
+      </Paper>
+
+      <Grid container spacing={4}>
+        {/* Left Column */}
+        <Grid item xs={12} md={8}>
+          {/* Basic Information */}
+          <Paper elevation={1} sx={{ mb: 4, borderRadius: 2 }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  mb: 3,
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <PersonIcon />
+                Basic Information
+              </Typography>
+
+              <Grid container spacing={3}>
+                {/* GitHub Username */}
+                <Grid item xs={12} sm={6}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    GitHub Profile
+                  </Typography>
+                  {isPublic("github_username") && profile?.github ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <GitHubIcon fontSize="small" />
+                      <Link
+                        href={`https://github.com/${profile.github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="hover"
+                      >
+                        {profile.github}
+                      </Link>
+                    </Box>
+                  ) : !isPublic("github_username") ? (
+                    <PrivateContentPlaceholder
+                      icon={GitHubIcon}
+                      label="GitHub profile"
+                    />
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontStyle: "italic" }}
+                    >
+                      Not provided
+                    </Typography>
+                  )}
+                </Grid>
+
+                {/* Company */}
+                <Grid item xs={12} sm={6}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Company
+                  </Typography>
+                  {isPublic("current_company") && profile?.company ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <BusinessIcon fontSize="small" />
+                      <Typography variant="body1">{profile.company}</Typography>
+                    </Box>
+                  ) : !isPublic("current_company") ? (
+                    <PrivateContentPlaceholder
+                      icon={BusinessIcon}
+                      label="Company information"
+                    />
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontStyle: "italic" }}
+                    >
+                      Not provided
+                    </Typography>
+                  )}
+                </Grid>
+
+                {/* Why are you here */}
+                <Grid item xs={12}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Why are they here with Opportunity Hack?
+                  </Typography>
+                  {isPublic("why_are_you_here") && profile?.why ? (
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        bgcolor: "action.hover",
+                        p: 2,
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      {profile.why}
+                    </Typography>
+                  ) : !isPublic("why_are_you_here") ? (
+                    <PrivateContentPlaceholder
+                      icon={VolunteerActivismIcon}
+                      label="Personal motivation"
+                    />
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontStyle: "italic" }}
+                    >
+                      Not provided
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Paper>
+
+          {/* Badges Section */}
+          {(isPublic("badges") || badges?.length > 0) && (
+            <Paper elevation={1} sx={{ mb: 4, borderRadius: 2 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    mb: 3,
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <EmojiEventsIcon />
+                  Achievements & Badges
+                </Typography>
+
+                {isPublic("badges") ? (
+                  badges && badges.length > 0 ? (
+                    <BadgeList badges={badges} />
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontStyle: "italic" }}
+                    >
+                      No badges earned yet
+                    </Typography>
+                  )
+                ) : (
+                  <PrivateContentPlaceholder
+                    icon={EmojiEventsIcon}
+                    label="Achievements and badges"
+                  />
+                )}
+              </CardContent>
+            </Paper>
+          )}
+
+          {/* Hackathon History */}
+          {(isPublic("hackathon_history") || hackathons?.length > 0) && (
+            <Paper elevation={1} sx={{ mb: 4, borderRadius: 2 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    mb: 3,
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <HistoryIcon />
+                  Hackathon History
+                </Typography>
+
+                {isPublic("hackathon_history") ? (
+                  hackathons && hackathons.length > 0 ? (
+                    <>
+                      <Typography variant="body2" sx={{ mb: 2 }}>
+                        Track record of participation, mentoring, and judging at
+                        Opportunity Hack events.
+                      </Typography>
+                      <ProfileHackathonList hackathons={hackathons} />
+                    </>
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontStyle: "italic" }}
+                    >
+                      No hackathon participation recorded yet
+                    </Typography>
+                  )
+                ) : (
+                  <PrivateContentPlaceholder
+                    icon={HistoryIcon}
+                    label="Hackathon participation history"
+                  />
+                )}
+              </CardContent>
+            </Paper>
+          )}
+
+          {/* Feedback Section */}
+          {isPublic("feedback") && (
+            <Paper elevation={1} sx={{ mb: 4, borderRadius: 2 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    mb: 3,
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <FeedbackIcon />
+                  Community Feedback
+                </Typography>
+
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Feedback and ratings from the Opportunity Hack community.
+                </Typography>
+
+                <FeedbackLite
+                  feedback_url={feedbackUrl}
+                  history={profile?.history}
+                />
+              </CardContent>
+            </Paper>
+          )}
+        </Grid>
+
+        {/* Right Column - Info & Actions */}
+        <Grid item xs={12} md={4}>
+          <Paper
+            elevation={1}
+            sx={{ p: 3, borderRadius: 2, position: "sticky", top: 24 }}
+          >
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 500 }}>
+              Connect & Engage
             </Typography>
-            <Typography variant="body1">
-              This user's achievements will be displayed here once implemented.
-            </Typography>
-          </Box>
-          <Box sx={{ mt: 2 }}>
+
             <Button
-              variant="contained"
-              color="primary"
+              variant="outlined"
+              fullWidth
               startIcon={<FeedbackIcon />}
               component={Link}
-              href={`/feedback/${userid}`}
+              href={feedbackUrl}
+              sx={{ mb: 2 }}
             >
-              Send Feedback to {userInfo?.name || "User"}
+              Send Feedback
             </Button>
-          </Box>
-        </CardContent>
-      </Card>
-      <Box sx={{ mt: 4 }}>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Want to get involved with Opportunity Hack?
+            </Typography>
+
+            <Button
+              variant="contained"
+              fullWidth
+              component={Link}
+              href="/volunteer"
+              sx={{ mb: 1 }}
+            >
+              Become a Volunteer
+            </Button>
+
+            <Button
+              variant="text"
+              fullWidth
+              component={Link}
+              href="/projects"
+              size="small"
+            >
+              View Current Projects
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Box sx={{ mt: 6 }}>
         <HelpUsBuildOHack
-          github_link="https://github.com/opportunity-hack/frontend-ohack.dev/issues/8"
-          github_name="Issue #8"
+          github_link="https://github.com/opportunity-hack/frontend-ohack.dev/issues/195"
+          github_name="Issue #195"
         />
       </Box>
     </div>
