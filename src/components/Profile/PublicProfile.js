@@ -169,7 +169,7 @@ const PublicProfile = () => {
               </Typography>
 
               {/* Public Role Display */}
-              {profile?.role && isPublic("current_role") && (
+              {profile?.role && isPublic("role") && (
                 <Box sx={{ mt: 2 }}>
                   <Chip
                     icon={<PersonIcon />}
@@ -226,7 +226,7 @@ const PublicProfile = () => {
                   >
                     GitHub Profile
                   </Typography>
-                  {isPublic("github_username") && profile?.github ? (
+                  {isPublic("github") && profile?.github ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <GitHubIcon fontSize="small" />
                       <Link
@@ -238,7 +238,7 @@ const PublicProfile = () => {
                         {profile.github}
                       </Link>
                     </Box>
-                  ) : !isPublic("github_username") ? (
+                  ) : !isPublic("github") ? (
                     <PrivateContentPlaceholder
                       icon={GitHubIcon}
                       label="GitHub profile"
@@ -263,12 +263,12 @@ const PublicProfile = () => {
                   >
                     Company
                   </Typography>
-                  {isPublic("current_company") && profile?.company ? (
+                  {isPublic("company") && profile?.company ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <BusinessIcon fontSize="small" />
                       <Typography variant="body1">{profile.company}</Typography>
                     </Box>
-                  ) : !isPublic("current_company") ? (
+                  ) : !isPublic("company") ? (
                     <PrivateContentPlaceholder
                       icon={BusinessIcon}
                       label="Company information"
@@ -293,7 +293,7 @@ const PublicProfile = () => {
                   >
                     Why are they here with Opportunity Hack?
                   </Typography>
-                  {isPublic("why_are_you_here") && profile?.why ? (
+                  {isPublic("why") && profile?.why ? (
                     <Typography
                       variant="body1"
                       sx={{
@@ -306,7 +306,7 @@ const PublicProfile = () => {
                     >
                       {profile.why}
                     </Typography>
-                  ) : !isPublic("why_are_you_here") ? (
+                  ) : !isPublic("why") ? (
                     <PrivateContentPlaceholder
                       icon={VolunteerActivismIcon}
                       label="Personal motivation"

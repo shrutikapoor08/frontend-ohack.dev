@@ -11,7 +11,7 @@ export default function PrivacyToggle({
   size = "medium" 
 }) {
   const displayLabel = label || (isPrivate ? "Private" : "Public");
-  
+  console.log(`Rendering PrivacyToggle for field: ${field}, isPrivate: ${isPrivate}`);
   const handleClick = () => {
     if (!disabled && onToggle) {
       onToggle(field);

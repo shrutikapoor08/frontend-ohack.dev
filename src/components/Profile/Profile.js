@@ -722,8 +722,8 @@ export default function Profile(props) {
                               sx={{ flex: 1 }}
                             />
                             <PrivacyToggle
-                              field="current_role"
-                              isPrivate={privacySettings.current_role === 'private'}
+                              field="role"
+                              isPrivate={privacySettings.role !== 'public'}
                               onToggle={togglePrivacySetting}
                               size="small"
                               disabled={privacyLoading}
@@ -747,8 +747,8 @@ export default function Profile(props) {
                           />
                         </FormControl>
                         <PrivacyToggle
-                          field="github_username"
-                          isPrivate={privacySettings.github_username === 'private'}
+                          field="github"
+                          isPrivate={privacySettings.github !== 'public'}
                           onToggle={togglePrivacySetting}
                           size="small"
                           disabled={privacyLoading}
@@ -786,8 +786,8 @@ export default function Profile(props) {
                           />
                         </FormControl>
                         <PrivacyToggle
-                          field="current_company"
-                          isPrivate={privacySettings.current_company === 'private'}
+                          field="company"
+                          isPrivate={privacySettings.company !== 'public'}
                           onToggle={togglePrivacySetting}
                           size="small"
                           disabled={privacyLoading}
@@ -840,8 +840,8 @@ export default function Profile(props) {
                         </FormControl>
                         <Box sx={{ mt: 1 }}>
                           <PrivacyToggle
-                            field="why_are_you_here"
-                            isPrivate={privacySettings.why_are_you_here === 'private'}
+                            field="why"
+                            isPrivate={privacySettings.why !== 'public'}
                             onToggle={togglePrivacySetting}
                             size="small"
                             disabled={privacyLoading}
@@ -1068,7 +1068,7 @@ export default function Profile(props) {
                       <Typography variant="h5">Badges</Typography>
                       <PrivacyToggle
                         field="badges"
-                        isPrivate={privacySettings.badges === 'private'}
+                        isPrivate={privacySettings.badges !== 'public'}
                         onToggle={togglePrivacySetting}
                         size="small"
                         disabled={privacyLoading}
@@ -1107,8 +1107,8 @@ export default function Profile(props) {
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="h5">Hackathons</Typography>
                       <PrivacyToggle
-                        field="hackathon_history"
-                        isPrivate={privacySettings.hackathon_history === 'private'}
+                        field="hackathons"
+                        isPrivate={privacySettings.hackathons !== 'public'}
                         onToggle={togglePrivacySetting}
                         size="small"
                         disabled={privacyLoading}
@@ -1130,7 +1130,7 @@ export default function Profile(props) {
                       <Typography variant="h5">Feedback Exchange</Typography>
                       <PrivacyToggle
                         field="feedback"
-                        isPrivate={privacySettings.feedback === 'private'}
+                        isPrivate={privacySettings.feedback !== 'public'}
                         onToggle={togglePrivacySetting}
                         size="small"
                         disabled={privacyLoading}

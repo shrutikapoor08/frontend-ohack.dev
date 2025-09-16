@@ -2,19 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthInfo } from '@propelauth/react';
 
 const DEFAULT_PRIVACY_SETTINGS = {
-  github_username: "public",
-  current_role: "public", 
-  current_company: "public",
-  why_are_you_here: "public",
-  badges: "public",
-  feedback: "public",
-  what: "public",
-  how: "public",
-  hackathon_history: "public"
+  github: "private",
+  role: "private", 
+  company: "private",
+  why_are_you_here: "private",
+  badges: "private",
+  feedback: "private",
+  what: "private",
+  how: "private",
+  hackathon_history: "private"
 };
 
 export default function usePrivacySettings() {
-  const { user } = useAuthInfo();
+  const { user, accessToken} = useAuthInfo();
   const [privacySettings, setPrivacySettings] = useState(DEFAULT_PRIVACY_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,19 +28,20 @@ export default function usePrivacySettings() {
       setError(null);
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy`,
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy-settings`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.accessToken}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        setPrivacySettings({ ...DEFAULT_PRIVACY_SETTINGS, ...data });
+        console.log('Fetched privacy settings:', data);
+        setPrivacySettings({ ...DEFAULT_PRIVACY_SETTINGS, ...data.privacy_settings });
       } else if (response.status === 404) {
         // If no privacy settings exist yet, use defaults
         console.log('No privacy settings found, using defaults');
@@ -64,14 +65,16 @@ export default function usePrivacySettings() {
 
     try {
       const updateData = { [field]: value };
-      
+
+      console.log(`Updating privacy setting: ${field} = ${value}`);
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy`,
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy-settings`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.accessToken}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify(updateData),
         }
@@ -98,7 +101,7 @@ export default function usePrivacySettings() {
   // Toggle a privacy setting between public and private
   const togglePrivacySetting = useCallback((field) => {
     const currentValue = privacySettings[field];
-    const newValue = currentValue === 'public' ? 'private' : 'public';
+    const newValue = currentValue === "public" ? "private" : "public";
     updatePrivacySetting(field, newValue);
   }, [privacySettings, updatePrivacySetting]);
 

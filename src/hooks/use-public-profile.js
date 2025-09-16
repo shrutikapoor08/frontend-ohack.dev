@@ -22,7 +22,7 @@ export default function usePublicProfile(userId) {
 
       // Fetch the basic profile data
       const profileResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/profile/${userId}`,
+        `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/${userId}/profile/public`,
         {
           method: 'GET',
           headers: {
@@ -45,7 +45,7 @@ export default function usePublicProfile(userId) {
       // If unavailable, default to private (secure by default)
       try {
         const privacyResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy/${userId}`,
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/${userId}/profile/privacy-settings`,
           {
             method: 'GET',
             headers: {
@@ -56,14 +56,14 @@ export default function usePublicProfile(userId) {
         
         if (privacyResponse.ok) {
           const privacyData = await privacyResponse.json();
-          setPrivacySettings(privacyData);
+          setPrivacySettings(privacyData.privacy_settings);
         } else {
           // Default to private (secure by default) if no privacy settings found
           setPrivacySettings({
-            github_username: "private",
-            current_role: "private",
-            current_company: "private",
-            why_are_you_here: "private",
+            github: "private",
+            role: "private",
+            company: "private",
+            why: "private",
             badges: "private",
             feedback: "private",
             what: "private",
@@ -75,10 +75,10 @@ export default function usePublicProfile(userId) {
         console.log('Privacy settings not available, defaulting to private for security');
         // Default to private (secure by default) if privacy endpoint doesn't exist
         setPrivacySettings({
-          github_username: "private",
-          current_role: "private",
-          current_company: "private",
-          why_are_you_here: "private",
+          github: "private",
+          role: "private",
+          company: "private",
+          why: "private",
           badges: "private",
           feedback: "private",
           what: "private",
