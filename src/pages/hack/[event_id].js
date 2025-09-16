@@ -589,7 +589,7 @@ export default function HackathonEvent({ eventData }) {
         />
 
         <nav aria-label="Event navigation">
-          <TableOfContents />
+          <TableOfContents eventLinks={event.links} />
         </nav>
 
         <Grid container spacing={3}>
