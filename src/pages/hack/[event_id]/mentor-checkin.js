@@ -17,7 +17,12 @@ import {
   Chip,
   useTheme,
   useMediaQuery,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText
 } from '@mui/material';
 import Head from 'next/head';
 import { useEnv } from '../../../context/env.context';
@@ -26,6 +31,8 @@ import axios from 'axios';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import HourglassFullIcon from '@mui/icons-material/HourglassFull';
+import SlackIcon from '@mui/icons-material/Chat';
+import InfoIcon from '@mui/icons-material/Info';
 import Link from 'next/link';
 
 const MentorCheckinPage = () => {
@@ -49,6 +56,7 @@ const MentorCheckinPage = () => {
   const [availabilitySlots, setAvailabilitySlots] = useState([]);
   const [currentActiveSlot, setCurrentActiveSlot] = useState(null);
   const [showPreviousSlots, setShowPreviousSlots] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // Helper function to check if a time slot is current
   const isCurrentTimeSlot = (slot) => {    
@@ -552,8 +560,14 @@ const MentorCheckinPage = () => {
     return sortedGroups;
   }, [availabilitySlots]);
 
-  // Handle check-in
-  const handleCheckin = async () => {
+  // Handle check-in confirmation
+  const handleCheckinClick = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmCheckin = async () => {
+    setConfirmDialogOpen(false);
+
     if (!isLoggedIn || !mentorData) {
       setError('You must be logged in as a registered mentor to check in.');
       return;
@@ -577,7 +591,7 @@ const MentorCheckinPage = () => {
       if (response.data) {
         setCheckedIn(true);
         setSuccess('You have successfully checked in as a mentor!');
-        setSnackbarMessage('Checked in successfully! Teams have been notified that you are available.');
+        setSnackbarMessage('Checked in successfully! A message has been sent to #ask-a-mentor on Slack notifying teams that you are available.');
         setSnackbarOpen(true);
       }
     } catch (err) {
@@ -586,6 +600,10 @@ const MentorCheckinPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancelCheckin = () => {
+    setConfirmDialogOpen(false);
   };
 
   // Handle check-out
@@ -860,9 +878,20 @@ const MentorCheckinPage = () => {
 
                   <Typography variant="body1">
                     {checkedIn
-                      ? 'You are currently available to mentor teams. Teams will be notified in Slack that you are available.'
-                      : 'You are not currently checked in as a mentor. Check in to notify teams that you are available.'}
+                      ? 'You are currently available to mentor teams. Teams have been notified in the #ask-a-mentor Slack channel that you are available.'
+                      : 'You are not currently checked in as a mentor. Checking in will send a message to the #ask-a-mentor Slack channel to notify teams that you are available.'}
                   </Typography>
+
+                  {!checkedIn && (
+                    <Alert severity="info" sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <SlackIcon sx={{ mr: 1, color: 'info.main' }} />
+                        <Typography variant="body2">
+                          Checking in sends an automatic notification to <strong>#ask-a-mentor</strong> on Slack
+                        </Typography>
+                      </Box>
+                    </Alert>
+                  )}
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
                   {checkedIn ? (
@@ -879,11 +908,11 @@ const MentorCheckinPage = () => {
                     <Button
                       variant="contained"
                       color="success"
-                      onClick={handleCheckin}
+                      onClick={handleCheckinClick}
                       disabled={isSubmitting}
-                      startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+                      startIcon={isSubmitting ? <CircularProgress size={20} /> : <SlackIcon />}
                     >
-                      Check In
+                      Check In & Notify Teams
                     </Button>
                   )}
                 </CardActions>
@@ -993,6 +1022,59 @@ const MentorCheckinPage = () => {
           </Grid>
         </Paper>
 
+        {/* Confirmation Dialog */}
+        <Dialog
+          open={confirmDialogOpen}
+          onClose={handleCancelCheckin}
+          aria-labelledby="checkin-confirm-dialog-title"
+          aria-describedby="checkin-confirm-dialog-description"
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle id="checkin-confirm-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SlackIcon color="primary" />
+            Confirm Mentor Check-in
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="checkin-confirm-dialog-description">
+              Are you ready to check in as a mentor? This action will:
+            </DialogContentText>
+            <Box sx={{ mt: 2, pl: 2 }}>
+              <Typography variant="body2" component="div" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                <SlackIcon sx={{ mr: 1, fontSize: 16, color: 'primary.main' }} />
+                Send an automatic message to <strong>#ask-a-mentor</strong> on Slack
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                <InfoIcon sx={{ mr: 1, fontSize: 16, color: 'primary.main' }} />
+                Notify all teams that you are available to help
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ display: 'flex', alignItems: 'center' }}>
+                <CheckCircleOutlineIcon sx={{ mr: 1, fontSize: 16, color: 'primary.main' }} />
+                Mark you as "Available" in the mentor system
+              </Typography>
+            </Box>
+            <Alert severity="info" sx={{ mt: 3 }}>
+              <Typography variant="body2">
+                Teams will be able to see your availability and reach out through Slack channels like <strong>#ask-a-mentor</strong> and <strong>#help</strong>.
+              </Typography>
+            </Alert>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 1 }}>
+            <Button onClick={handleCancelCheckin} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmCheckin}
+              variant="contained"
+              color="success"
+              startIcon={<SlackIcon />}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Checking In...' : 'Check In & Send Notification'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h5" gutterBottom>
             Mentor Guidelines
@@ -1010,11 +1092,12 @@ const MentorCheckinPage = () => {
                   Do:
                 </Typography>
                 <ul>
-                  <li>Check in when you arrive to notify teams you're available</li>
+                  <li>Check in when you arrive to notify teams you're available in <strong>#ask-a-mentor</strong></li>
                   <li>Be approachable and open to questions from all teams</li>
                   <li>Provide guidance rather than solutions</li>
                   <li>Share your expertise when asked</li>
                   <li>Help teams prioritize features and scope their projects</li>
+                  <li>Monitor <strong>#ask-a-mentor</strong> and <strong>#help</strong> Slack channels for questions</li>
                   <li>Check out when you leave so teams know you're no longer available</li>
                 </ul>
               </Box>
@@ -1035,6 +1118,57 @@ const MentorCheckinPage = () => {
               </Box>
             </Grid>
           </Grid>
+
+          <Divider sx={{ my: 4 }} />
+
+          <Typography variant="h6" gutterBottom>
+            Team Pairing Options
+          </Typography>
+          <Typography variant="body1" paragraph>
+            As a mentor, you have two approaches to helping teams:
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={1} sx={{ p: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SlackIcon />
+                  General Mentoring
+                </Typography>
+                <Typography variant="body2" paragraph>
+                  Stay flexible and help any team that asks questions in <strong>#ask-a-mentor</strong> or <strong>#help</strong> channels.
+                  This approach allows you to assist multiple teams with quick questions and provides broad support.
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Best for:</strong> Experienced mentors who want maximum flexibility and enjoy variety in their interactions.
+                </Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper elevation={1} sx={{ p: 3, bgcolor: 'secondary.light', color: 'secondary.contrastText' }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <InfoIcon />
+                  Team-Specific Mentoring
+                </Typography>
+                <Typography variant="body2" paragraph>
+                  Choose to work closely with one specific team throughout the hackathon. This allows for deeper collaboration
+                  and more comprehensive guidance on their project.
+                </Typography>
+                <Typography variant="body2">
+                  <strong>How to pair:</strong> Either ask to be matched with a team or find a team you want to work with,
+                  then mention your preference in our <strong>private mentor Slack channel</strong>.
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          <Alert severity="info" sx={{ mt: 3 }}>
+            <Typography variant="body2">
+              <strong>Note:</strong> You can switch between these approaches during the event. Many mentors start with general
+              mentoring and then focus on specific teams that need more intensive support.
+            </Typography>
+          </Alert>
 
           <Box sx={{ mt: 4, p: 3, bgcolor: 'rgba(0, 0, 0, 0.03)', borderRadius: 2, textAlign: 'center' }}>
             <Typography variant="h6" gutterBottom>
