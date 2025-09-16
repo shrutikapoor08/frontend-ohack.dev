@@ -71,74 +71,74 @@ const DrawerHeader = styled(Box)(({ theme }) => ({
 }));
 
 const adminPages = [
-  { 
-    path: "/admin", 
-    label: "Dashboard", 
+  {
+    path: "/admin",
+    label: "Dashboard",
     icon: <DashboardIcon color="primary" />
   },
-  { 
-    path: "/admin/check-in", 
-    label: "Check In", 
-    icon: <HandshakeIcon color="primary" />
-  },
-  { 
-    path: "/admin/certificates", 
-    label: "Certificates", 
-    icon: <CertificateIcon color="secondary" />
-  },
-  { 
-    path: "/admin/nonprofit", 
-    label: "Nonprofit", 
-    icon: <BusinessIcon color="primary" />
-  },
-  { 
-    path: "/admin/problems", 
-    label: "Problems", 
-    icon: <AssignmentIcon color="success" />
-  },
-  { 
-    path: "/admin/nonprofit/application", 
-    label: "Nonprofit Applications", 
-    icon: <BusinessIcon style={{ color: "#f57c00" }} />
-  },
-  { 
-    path: "/admin/profile", 
-    label: "Profile", 
-    icon: <ProfileIcon color="primary" />
-  },
-  { 
-    path: "/admin/volunteer", 
-    label: "Volunteer", 
-    icon: <HandshakeIcon color="secondary" />
-  },
-  { 
-    path: "/admin/teams", 
-    label: "Teams", 
-    icon: <TeamsIcon color="info" />
-  },
-  { 
-    path: "/admin/judging", 
-    label: "Judging", 
-    icon: <JudgingIcon style={{ color: "#673ab7" }} />
-  },
-  { 
-    path: "/admin/time-tracking", 
-    label: "Time Tracking", 
-    icon: <TimeIcon style={{ color: "#9c27b0" }} />
-  },
-  { 
-    path: "/admin/hackathons", 
-    label: "Hackathons", 
+  {
+    path: "/admin/hackathons",
+    label: "Hackathons",
     icon: <EventIcon color="error" />
   },
-  { 
-    path: "/admin/giveaways", 
-    label: "Giveaways", 
+  {
+    path: "/admin/check-in",
+    label: "Check In",
+    icon: <HandshakeIcon color="primary" />
+  },
+  {
+    path: "/admin/certificates",
+    label: "Certificates",
+    icon: <CertificateIcon color="secondary" />
+  },
+  {
+    path: "/admin/nonprofit",
+    label: "Nonprofit",
+    icon: <BusinessIcon color="primary" />
+  },
+  {
+    path: "/admin/problems",
+    label: "Problems",
+    icon: <AssignmentIcon color="success" />
+  },
+  {
+    path: "/admin/nonprofit/application",
+    label: "Nonprofit Applications",
+    icon: <BusinessIcon style={{ color: "#f57c00" }} />
+  },
+  {
+    path: "/admin/profile",
+    label: "Profile",
+    icon: <ProfileIcon color="primary" />
+  },
+  {
+    path: "/admin/volunteer",
+    label: "Volunteer",
+    icon: <HandshakeIcon color="secondary" />
+  },
+  {
+    path: "/admin/teams",
+    label: "Teams",
+    icon: <TeamsIcon color="info" />
+  },
+  {
+    path: "/admin/judging",
+    label: "Judging",
+    icon: <JudgingIcon style={{ color: "#673ab7" }} />
+  },
+  {
+    path: "/admin/time-tracking",
+    label: "Time Tracking",
+    icon: <TimeIcon style={{ color: "#9c27b0" }} />
+  },
+  {
+    path: "/admin/giveaways",
+    label: "Giveaways",
     icon: <GiftIcon style={{ color: "#ff9800" }} />
   },
-  { 
-    path: "/admin/social-media", 
-    label: "Social Media", 
+  {
+    path: "/admin/social-media",
+    label: "Social Media",
     icon: <ShareIcon style={{ color: "#1DA1F2" }} />
   },
 ];

@@ -34,11 +34,11 @@ import PersonIcon from '@mui/icons-material/Person';
 import useHackathonEvents from "../../../hooks/use-hackathon-events";
 
 const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
-  const { accessToken } = useAuthInfo();
+  const { accessToken, user } = useAuthInfo();
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  
+
   // Authentication
   const org = userClass.getOrgByName("Opportunity Hack Org");
   const orgId = org.orgId;
@@ -60,6 +60,7 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
   const [lastScanned, setLastScanned] = useState(null);
   const [scanResult, setScanResult] = useState(null);
   const [checkInHistory, setCheckInHistory] = useState([]);
+  const [allCheckedInPeople, setAllCheckedInPeople] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -128,13 +129,74 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     }
   }, [accessToken, orgId]);
 
+  // Fetch all checked-in people with details
+  const fetchAllCheckedInPeople = useCallback(async (eventId) => {
+    if (!eventId) return;
+
+    const volunteerTypes = ['mentor', 'judge', 'volunteer', 'hacker', 'sponsor'];
+    const allPeople = [];
+
+    try {
+      const promises = volunteerTypes.map(async (type) => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/hackathon/${eventId}/${type}/checkins`,
+          {
+            headers: {
+              authorization: `Bearer ${accessToken}`,
+              "content-type": "application/json",
+              "X-Org-Id": orgId,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          // Get only checked-in volunteers with their full details
+          const checkedInPeople = Array.isArray(data.data)
+            ? data.data.filter(volunteer => volunteer.checkedIn === true).map(volunteer => ({
+                ...volunteer,
+                volunteerType: type,
+                eventId: eventId
+              }))
+            : [];
+
+          return checkedInPeople;
+        } else {
+          return [];
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const flattenedPeople = results.flat();
+
+      // Sort by check-in time (most recent first)
+      const sortedPeople = flattenedPeople.sort((a, b) => {
+        const timeA = new Date(a.checkedInAt || 0);
+        const timeB = new Date(b.checkedInAt || 0);
+        return timeB - timeA;
+      });
+
+      setAllCheckedInPeople(sortedPeople);
+    } catch (error) {
+      console.error('Error fetching checked-in people:', error);
+      setAllCheckedInPeople([]);
+    }
+  }, [accessToken, orgId]);
+
   // Handle hackathon event selection
   const handleEventChange = (eventId) => {
     setSelectedEventId(eventId);
     setManualEventId(eventId); // Also set it for manual entry
+
+    // Update URL to reflect the selected event without page reload
     if (eventId) {
+      const currentPath = router.asPath.split('?')[0];
+      router.replace(`${currentPath}?event_id=${eventId}`, undefined, { shallow: true });
       fetchCheckInCounts(eventId);
+      fetchAllCheckedInPeople(eventId);
     } else {
+      // Remove event_id parameter from URL
+      router.replace(router.pathname, undefined, { shallow: true });
       setCheckInCounts({
         mentor: 0,
         judge: 0,
@@ -142,21 +204,37 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
         hacker: 0,
         sponsor: 0
       });
+      setAllCheckedInPeople([]);
     }
   };
+
+  // Handle URL parameters and initial event selection
+  useEffect(() => {
+    const { event_id } = router.query;
+    if (event_id && hackathons.length > 0) {
+      // Check if the event_id from URL parameter exists in our hackathons list
+      const eventExists = hackathons.some(hackathon => hackathon.event_id === event_id);
+      if (eventExists && event_id !== selectedEventId) {
+        setSelectedEventId(event_id);
+        setManualEventId(event_id);
+      }
+    }
+  }, [router.query, hackathons, selectedEventId]);
 
   // Auto-refresh check-in counts every 7 seconds
   useEffect(() => {
     if (!selectedEventId) return;
 
     fetchCheckInCounts(selectedEventId);
-    
+    fetchAllCheckedInPeople(selectedEventId);
+
     const interval = setInterval(() => {
       fetchCheckInCounts(selectedEventId);
+      fetchAllCheckedInPeople(selectedEventId);
     }, 7000);
 
     return () => clearInterval(interval);
-  }, [selectedEventId, fetchCheckInCounts]);
+  }, [selectedEventId, fetchCheckInCounts, fetchAllCheckedInPeople]);
 
   // Define processCheckIn before handleScan
   const processCheckIn = useCallback(async (eventId, volunteerId, volunteerType) => {
@@ -185,11 +263,17 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
         throw new Error(`${volunteerType} with ID ${volunteerId} not found for event ${eventId}`);
       }
 
-      // Update volunteer with check-in timestamp
+      // Update volunteer with check-in timestamp and admin info
       const updatedVolunteer = {
         ...volunteer,
         checkedInAt: new Date().toISOString(),
-        checkedIn: true
+        checkedIn: true,
+        checkedInBy: {
+          userId: user?.userId,
+          email: user?.email,
+          firstName: user?.firstName,
+          lastName: user?.lastName
+        }
       };
 
       // Send update to API
@@ -227,9 +311,10 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
         severity: "success",
       });
 
-      // Refresh check-in counts after successful check-in
+      // Refresh check-in counts and people list after successful check-in
       if (selectedEventId) {
         fetchCheckInCounts(selectedEventId);
+        fetchAllCheckedInPeople(selectedEventId);
       }
 
     } catch (error) {
@@ -256,7 +341,7 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, orgId, selectedEventId, fetchCheckInCounts]);
+  }, [accessToken, orgId, selectedEventId, fetchCheckInCounts, fetchAllCheckedInPeople, user?.userId, user?.email, user?.firstName, user?.lastName]);
 
   const handleScan = useCallback(async (data) => {
     if (data && data.text && data.text !== lastScanned) {
@@ -386,19 +471,33 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
                 label="Hackathon Event"
                 onChange={(e) => handleEventChange(e.target.value)}
               >
+                <MenuItem value="">
+                  <em>Select an event...</em>
+                </MenuItem>
                 {Array.isArray(hackathons) &&
                   hackathons
                     .filter(hackathon => hackathon?.event_id)
+                    .sort((a, b) => new Date(b.start_date || 0) - new Date(a.start_date || 0)) // Sort newest first
                     .map((hackathon) => (
                       <MenuItem
                         key={hackathon.event_id}
                         value={hackathon.event_id}
                       >
                         {hackathon.title || hackathon.event_id}
+                        {hackathon.start_date && (
+                          <Typography variant="caption" color="textSecondary" sx={{ ml: 1 }}>
+                            ({new Date(hackathon.start_date).getFullYear()})
+                          </Typography>
+                        )}
                       </MenuItem>
                     ))}
               </Select>
             </FormControl>
+            {router.query.event_id && (
+              <Typography variant="caption" color="primary" sx={{ display: 'block', mt: 1 }}>
+                📎 Event pre-selected from URL parameter
+              </Typography>
+            )}
           </Grid>
           <Grid item xs={12} md={8}>
             {selectedEventId && (
@@ -542,53 +641,78 @@ const AdminCheckInPage = withRequiredAuthInfo(({ userClass }) => {
           </Paper>
         </Grid>
 
-        {/* Check-In History */}
+        {/* All Checked-In People */}
         <Grid item xs={12} md={4}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <PersonIcon sx={{ mr: 1 }} />
-              <Typography variant="h6">Recent Check-Ins</Typography>
+              <Typography variant="h6">All Checked-In People</Typography>
+              {allCheckedInPeople.length > 0 && (
+                <Chip
+                  size="small"
+                  label={`${allCheckedInPeople.length} total`}
+                  variant="outlined"
+                  sx={{ ml: 'auto' }}
+                />
+              )}
             </Box>
-            
-            {checkInHistory.length === 0 ? (
+
+            {allCheckedInPeople.length === 0 ? (
               <Typography variant="body2" color="textSecondary">
-                No check-ins yet today
+                No one has checked in yet
               </Typography>
             ) : (
               <Box sx={{ maxHeight: '600px', overflowY: 'auto' }}>
-                {checkInHistory.map((record) => (
-                  <Card key={record.id} sx={{ mb: 1, cursor: 'pointer' }} 
-                        onClick={() => record.success && handleViewVolunteer(record.eventId, record.volunteerId, record.volunteerType)}>
-                    <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Chip
-                          size="small"
-                          icon={record.success ? <CheckCircleIcon /> : <ErrorIcon />}
-                          label={record.success ? "Success" : "Failed"}
-                          color={record.success ? "success" : "error"}
-                          sx={{ mr: 1 }}
-                        />
+                {allCheckedInPeople.map((person) => {
+                  const isCheckedInByCurrentUser = person.checkedInBy?.userId === user?.userId;
+                  return (
+                    <Card
+                      key={`${person.id}-${person.volunteerType}`}
+                      sx={{
+                        mb: 1,
+                        cursor: 'pointer',
+                        border: isCheckedInByCurrentUser ? '2px solid' : 'none',
+                        borderColor: isCheckedInByCurrentUser ? 'primary.main' : 'transparent',
+                        bgcolor: isCheckedInByCurrentUser ? 'primary.50' : 'background.paper'
+                      }}
+                      onClick={() => handleViewVolunteer(person.eventId, person.id, person.volunteerType)}
+                    >
+                      <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Chip
+                            size="small"
+                            icon={<CheckCircleIcon />}
+                            label={isCheckedInByCurrentUser ? "You checked in" : "Checked in"}
+                            color={isCheckedInByCurrentUser ? "primary" : "success"}
+                            sx={{ mr: 1 }}
+                          />
+                          <Typography variant="caption" color="textSecondary">
+                            {person.checkedInAt ? new Date(person.checkedInAt).toLocaleString() : 'Unknown time'}
+                          </Typography>
+                        </Box>
+
+                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                          {person.name || 'Unknown'}
+                        </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          {new Date(record.timestamp).toLocaleString()}
+                          {person.volunteerType} • Click to view
                         </Typography>
-                      </Box>
-                      
-                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                        {record.volunteerName || 'Unknown'}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {record.eventId} • {record.volunteerType}
-                        {record.success && ' • Click to view'}
-                      </Typography>
-                      
-                      {!record.success && record.error && (
-                        <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 0.5 }}>
-                          {record.error}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+
+                        {person.checkedInBy && !isCheckedInByCurrentUser && (
+                          <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 0.5 }}>
+                            Checked in by: {person.checkedInBy.firstName} {person.checkedInBy.lastName}
+                          </Typography>
+                        )}
+
+                        {person.checkedInBy && isCheckedInByCurrentUser && (
+                          <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 0.5 }}>
+                            ✓ You checked this person in
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </Box>
             )}
           </Paper>

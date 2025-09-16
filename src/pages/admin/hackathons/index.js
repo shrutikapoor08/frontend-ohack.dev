@@ -29,10 +29,26 @@ import {
   ListItemSecondaryAction,
   Tabs,
   Tab,
+  Card,
+  CardContent,
+  CardActions,
+  Stack,
+  Chip,
 } from "@mui/material";
-import { Edit as EditIcon, Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
+import {
+  Edit as EditIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  ExpandMore as ExpandMoreIcon,
+  Group as TeamsIcon,
+  VolunteerActivism as VolunteerIcon,
+  CheckCircle as CheckInIcon,
+  Gavel as JudgingIcon,
+  Launch as LaunchIcon
+} from "@mui/icons-material";
 import { LocalizationProvider, DatePicker, DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { useRouter } from "next/router";
 import AdminPage from "../../../components/admin/AdminPage";
 import DonationManagement from "../../../components/admin/DonationManagement";
 import CountdownManagement from "../../../components/admin/CountdownManagement";
@@ -41,7 +57,7 @@ import HackathonDuplicator from "../../../components/admin/HackathonDuplicator";
 import NonprofitManagement from "../../../components/admin/NonprofitManagement";
 
 const AdminHackathonPage = () => {
-
+  const router = useRouter();
   const { accessToken, userClass } = useAuthInfo();
   const [hackathons, setHackathons] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -326,49 +342,163 @@ const AdminHackathonPage = () => {
       {loading ? (
         <CircularProgress />
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Event ID</TableCell>
-                <TableCell>Start Date (Newest First)</TableCell>
-                <TableCell>End Date</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {hackathons.map((hackathon) => (
-                <TableRow key={hackathon.id}>
-                  <TableCell>{hackathon.title}</TableCell>
-                  <TableCell>{hackathon.event_id}</TableCell>
-                  <TableCell>{hackathon.start_date}</TableCell>
-                  <TableCell>{hackathon.end_date}</TableCell>
-                  <TableCell>{hackathon.location}</TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => handleEditHackathon(hackathon)}>
-                      <EditIcon />
-                    </IconButton>
-                    <HackathonDuplicator
-                      hackathon={hackathon}
-                      onDuplicate={(newHackathon) => {
-                        fetchHackathons(); // Refresh the list after duplication
-                        setSnackbar({
-                          open: true,
-                          message: "Hackathon duplicated successfully",
-                          severity: "success",
-                        });
-                      }}
-                      accessToken={accessToken}
-                      orgId={orgId}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Grid container spacing={3}>
+          {hackathons.map((hackathon) => (
+            <Grid item xs={12} lg={6} key={hackathon.id}>
+              <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
+                  {/* Header */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" component="h2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                        {hackathon.title}
+                      </Typography>
+                      <Chip
+                        label={hackathon.event_id}
+                        color="primary"
+                        size="small"
+                        sx={{ mb: 1 }}
+                      />
+                    </Box>
+                    <Box>
+                      <IconButton onClick={() => handleEditHackathon(hackathon)} size="small">
+                        <EditIcon />
+                      </IconButton>
+                      <HackathonDuplicator
+                        hackathon={hackathon}
+                        onDuplicate={(newHackathon) => {
+                          fetchHackathons();
+                          setSnackbar({
+                            open: true,
+                            message: "Hackathon duplicated successfully",
+                            severity: "success",
+                          });
+                        }}
+                        accessToken={accessToken}
+                        orgId={orgId}
+                      />
+                    </Box>
+                  </Box>
+
+                  {/* Event Details */}
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      📅 {hackathon.start_date} to {hackathon.end_date}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      📍 {hackathon.location}
+                    </Typography>
+                    {hackathon.description && (
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        {hackathon.description.length > 100
+                          ? `${hackathon.description.substring(0, 100)}...`
+                          : hackathon.description
+                        }
+                      </Typography>
+                    )}
+                  </Stack>
+                </CardContent>
+
+                <CardActions sx={{ p: 1.5, pt: 0, flexDirection: 'column', alignItems: 'stretch' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', textAlign: 'left' }}>
+                    Admin Tools:
+                  </Typography>
+
+                  {/* Admin Tool Buttons - Compact Stack Layout */}
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        size="small"
+                        startIcon={<TeamsIcon />}
+                        variant="outlined"
+                        onClick={() => router.push(`/admin/teams?event_id=${hackathon.event_id}`)}
+                        sx={{
+                          flex: 1,
+                          textTransform: 'none',
+                          fontSize: '0.7rem',
+                          minHeight: 32,
+                          px: 0.5,
+                          '& .MuiButton-startIcon': {
+                            mr: 0.5
+                          }
+                        }}
+                      >
+                        Teams
+                      </Button>
+                      <Button
+                        size="small"
+                        startIcon={<VolunteerIcon />}
+                        variant="outlined"
+                        onClick={() => router.push(`/admin/volunteer?event_id=${hackathon.event_id}`)}
+                        sx={{
+                          flex: 1,
+                          textTransform: 'none',
+                          fontSize: '0.7rem',
+                          minHeight: 32,
+                          px: 0.5,
+                          '& .MuiButton-startIcon': {
+                            mr: 0.5
+                          }
+                        }}
+                      >
+                        Volunteer
+                      </Button>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        size="small"
+                        startIcon={<CheckInIcon />}
+                        variant="outlined"
+                        onClick={() => router.push(`/admin/check-in?event_id=${hackathon.event_id}`)}
+                        sx={{
+                          flex: 1,
+                          textTransform: 'none',
+                          fontSize: '0.7rem',
+                          minHeight: 32,
+                          px: 0.5,
+                          '& .MuiButton-startIcon': {
+                            mr: 0.5
+                          }
+                        }}
+                      >
+                        Check-in
+                      </Button>
+                      <Button
+                        size="small"
+                        startIcon={<JudgingIcon />}
+                        variant="outlined"
+                        onClick={() => router.push(`/admin/judging?event_id=${hackathon.event_id}`)}
+                        sx={{
+                          flex: 1,
+                          textTransform: 'none',
+                          fontSize: '0.7rem',
+                          minHeight: 32,
+                          px: 0.5,
+                          '& .MuiButton-startIcon': {
+                            mr: 0.5
+                          }
+                        }}
+                      >
+                        Judging
+                      </Button>
+                    </Box>
+                  </Stack>
+
+                  {/* View Event Link */}
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<LaunchIcon />}
+                    onClick={() => window.open(`/hack/${hackathon.event_id}`, '_blank')}
+                    sx={{ textTransform: 'none', minHeight: 36 }}
+                  >
+                    View Event Page
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       )}
 
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
