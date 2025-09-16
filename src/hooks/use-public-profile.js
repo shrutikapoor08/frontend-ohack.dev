@@ -23,60 +23,37 @@ export default function usePublicProfile(userId) {
       // Fetch the basic profile data
       const profileResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/messages/profile/${userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
 
       if (!profileResponse.ok) {
+        if (profileResponse.status === 404) {
+          throw new Error('Profile not found');
+        }
         throw new Error(`Failed to fetch profile: ${profileResponse.status}`);
       }
 
       const profileData = await profileResponse.json();
       setProfile(profileData);
 
-      // Try to fetch privacy settings for this user
-      // This might fail if the backend doesn't support it yet, which is fine
-      try {
-        const privacyResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy/${userId}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        );
-
-        if (privacyResponse.ok) {
-          const privacyData = await privacyResponse.json();
-          setPrivacySettings(privacyData);
-        } else {
-          // Default to all public if no privacy settings found
-          setPrivacySettings({
-            github_username: "public",
-            current_role: "public",
-            current_company: "public",
-            why_are_you_here: "public",
-            badges: "public",
-            feedback: "public",
-            what: "public",
-            how: "public",
-            hackathon_history: "public",
-          });
-        }
-      } catch (privacyError) {
-        console.log("Privacy settings not available, defaulting to public");
-        // Default to all public if privacy endpoint doesn't exist
-        setPrivacySettings({
-          github_username: "public",
-          current_role: "public",
-          current_company: "public",
-          why_are_you_here: "public",
-          badges: "public",
-          feedback: "public",
-          what: "public",
-          how: "public",
-          hackathon_history: "public",
-        });
-      }
+      // Set privacy settings to public by default for public profiles
+      // In the future, this could be fetched from a public endpoint
+      setPrivacySettings({
+        github_username: "public",
+        current_role: "public",
+        current_company: "public",
+        why_are_you_here: "public",
+        badges: "public",
+        feedback: "public",
+        what: "public",
+        how: "public",
+        hackathon_history: "public",
+      });
 
       // Set feedback URL for this user
       setFeedbackUrl(`/feedback/${userId}`);
