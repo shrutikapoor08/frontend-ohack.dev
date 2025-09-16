@@ -28,8 +28,9 @@ import HistoryIcon from "@mui/icons-material/History";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 import usePublicProfile from "../../hooks/use-public-profile";
-import BadgeList from "../badge-list";
-import ProfileHackathonList from "../profile-hackathon-list";
+import PublicBadgeList from "./PublicBadgeList";
+import PublicHackathonList from "./PublicHackathonList";
+import PublicFeedback from "./PublicFeedback";
 import HelpUsBuildOHack from "../HelpUsBuildOHack/HelpUsBuildOHack";
 
 const PublicProfile = () => {
@@ -343,17 +344,7 @@ const PublicProfile = () => {
                 </Typography>
 
                 {isPublic("badges") ? (
-                  badges && badges.length > 0 ? (
-                    <BadgeList badges={badges} />
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ fontStyle: "italic" }}
-                    >
-                      No badges earned yet
-                    </Typography>
-                  )
+                  <PublicBadgeList badges={badges} />
                 ) : (
                   <PrivateContentPlaceholder
                     icon={EmojiEventsIcon}
@@ -383,23 +374,13 @@ const PublicProfile = () => {
                 </Typography>
 
                 {isPublic("hackathon_history") ? (
-                  hackathons && hackathons.length > 0 ? (
-                    <>
-                      <Typography variant="body2" sx={{ mb: 2 }}>
-                        Track record of participation, mentoring, and judging at
-                        Opportunity Hack events.
-                      </Typography>
-                      <ProfileHackathonList hackathons={hackathons} />
-                    </>
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ fontStyle: "italic" }}
-                    >
-                      No hackathon participation recorded yet
+                  <>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                      Track record of participation, mentoring, and judging at
+                      Opportunity Hack events.
                     </Typography>
-                  )
+                    <PublicHackathonList hackathons={hackathons} />
+                  </>
                 ) : (
                   <PrivateContentPlaceholder
                     icon={HistoryIcon}
@@ -428,30 +409,11 @@ const PublicProfile = () => {
                   Community Feedback
                 </Typography>
 
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  Community feedback and ratings from Opportunity Hack members.
-                </Typography>
-
-                <Box sx={{ 
-                  p: 2, 
-                  backgroundColor: 'action.hover', 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  textAlign: 'center'
-                }}>
-                  <Typography variant="body1" sx={{ mb: 2 }}>
-                    Want to see detailed feedback information or send feedback?
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<FeedbackIcon />}
-                    component={Link}
-                    href={feedbackUrl}
-                  >
-                    Send Feedback to {profile?.name || "User"}
-                  </Button>
-                </Box>
+                <PublicFeedback 
+                  feedbackUrl={feedbackUrl} 
+                  history={profile?.history} 
+                  userName={profile?.name}
+                />
               </CardContent>
             </Paper>
           )}

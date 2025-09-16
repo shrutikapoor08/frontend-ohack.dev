@@ -29,7 +29,7 @@ describe('usePublicProfile', () => {
       ]
     };
 
-    const expectedPrivacyData = {
+    const mockPrivacyData = {
       github_username: 'public',
       current_role: 'public',
       current_company: 'public',
@@ -42,10 +42,16 @@ describe('usePublicProfile', () => {
     };
 
     // Mock successful profile fetch
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockProfileData),
-    });
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockProfileData),
+      })
+      // Mock successful privacy settings fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPrivacyData),
+      });
 
     const { result } = renderHook(() => usePublicProfile('test-user-id'));
 
@@ -60,16 +66,27 @@ describe('usePublicProfile', () => {
 
     // Check that data was loaded correctly
     expect(result.current.profile).toEqual(mockProfileData);
-    expect(result.current.privacySettings).toEqual(expectedPrivacyData);
+    expect(result.current.privacySettings).toEqual(mockPrivacyData);
     expect(result.current.badges).toEqual(mockProfileData.badges);
     expect(result.current.hackathons).toEqual(mockProfileData.hackathons);
     expect(result.current.feedbackUrl).toBe('/feedback/test-user-id');
     expect(result.current.error).toBe(null);
 
     // Verify fetch was called correctly
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
       'https://api.ohack.dev/api/messages/profile/test-user-id',
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.ohack.dev/api/users/profile/privacy/test-user-id',
       {
         method: 'GET',
         headers: {
@@ -90,6 +107,36 @@ describe('usePublicProfile', () => {
 
     expect(result.current.profile).toBe(null);
     expect(result.current.error).toBe('Network error');
+  });
+
+  it('should default to private settings when privacy endpoint fails', async () => {
+    const mockProfileData = { name: 'John Doe' };
+
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockProfileData),
+      })
+      .mockRejectedValueOnce(new Error('Privacy endpoint not found'));
+
+    const { result } = renderHook(() => usePublicProfile('test-user-id'));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.profile).toEqual(mockProfileData);
+    expect(result.current.privacySettings).toEqual({
+      github_username: "private",
+      current_role: "private", 
+      current_company: "private",
+      why_are_you_here: "private",
+      badges: "private",
+      feedback: "private",
+      what: "private",
+      how: "private",
+      hackathon_history: "private"
+    });
   });
 
   it('should handle 404 profile not found', async () => {

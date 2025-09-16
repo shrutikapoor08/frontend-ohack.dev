@@ -41,19 +41,51 @@ export default function usePublicProfile(userId) {
       const profileData = await profileResponse.json();
       setProfile(profileData);
 
-      // Set privacy settings to public by default for public profiles
-      // In the future, this could be fetched from a public endpoint
-      setPrivacySettings({
-        github_username: "public",
-        current_role: "public",
-        current_company: "public",
-        why_are_you_here: "public",
-        badges: "public",
-        feedback: "public",
-        what: "public",
-        how: "public",
-        hackathon_history: "public",
-      });
+      // Try to fetch privacy settings for this user
+      // If unavailable, default to private (secure by default)
+      try {
+        const privacyResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile/privacy/${userId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        if (privacyResponse.ok) {
+          const privacyData = await privacyResponse.json();
+          setPrivacySettings(privacyData);
+        } else {
+          // Default to private (secure by default) if no privacy settings found
+          setPrivacySettings({
+            github_username: "private",
+            current_role: "private",
+            current_company: "private",
+            why_are_you_here: "private",
+            badges: "private",
+            feedback: "private",
+            what: "private",
+            how: "private",
+            hackathon_history: "private",
+          });
+        }
+      } catch (privacyError) {
+        console.log('Privacy settings not available, defaulting to private for security');
+        // Default to private (secure by default) if privacy endpoint doesn't exist
+        setPrivacySettings({
+          github_username: "private",
+          current_role: "private",
+          current_company: "private",
+          why_are_you_here: "private",
+          badges: "private",
+          feedback: "private",
+          what: "private",
+          how: "private",
+          hackathon_history: "private",
+        });
+      }
 
       // Set feedback URL for this user
       setFeedbackUrl(`/feedback/${userId}`);
