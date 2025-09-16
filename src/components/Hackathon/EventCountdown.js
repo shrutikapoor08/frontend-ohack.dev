@@ -25,6 +25,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import PrintIcon from '@mui/icons-material/Print';
+import EventNoteIcon from '@mui/icons-material/EventNote';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 const TimelineContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -370,25 +372,33 @@ const EventCountdown = ({ countdowns, eventId }) => {
 
   const sortedEvents = [...countdowns].sort((a, b) => Moment(a.time).diff(Moment(b.time)));
 
+  const handleViewAgenda = () => {
+    if (eventId) {
+      window.open(`/hack/${eventId}/agenda`, '_blank');
+    }
+  };
+
   return (
     <TimelineContainer elevation={2}>
       <Box mb={3}>
-        { false && <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
           <Typography variant="h5" gutterBottom fontWeight="bold">
             Event Timeline
           </Typography>
-          <Tooltip title="Print Timeline">
+          <Tooltip title="View Full Agenda" arrow>
             <Button
               variant="outlined"
               size="small"
-              onClick={handlePrintTimeline}
-              startIcon={<PrintIcon />}
+              onClick={handleViewAgenda}
+              startIcon={<EventNoteIcon />}
+              endIcon={<OpenInNewIcon sx={{ fontSize: '16px' }} />}
               sx={{
                 minWidth: 'auto',
                 px: 2,
                 py: 1,
                 borderRadius: 2,
                 textTransform: 'none',
+                fontSize: '0.8rem',
                 '&:hover': {
                   backgroundColor: theme.palette.primary.main,
                   color: theme.palette.primary.contrastText,
@@ -396,10 +406,10 @@ const EventCountdown = ({ countdowns, eventId }) => {
                 }
               }}
             >
-              {isMobile ? '' : 'Print'}
+              {isMobile ? '' : 'Agenda'}
             </Button>
           </Tooltip>
-        </Box>}
+        </Box>
         <LinearProgress 
           variant="determinate" 
           value={progress} 
