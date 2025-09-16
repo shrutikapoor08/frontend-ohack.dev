@@ -25,9 +25,11 @@ import {
   Tab
 } from "@mui/material";
 import useProfileApi from "../../hooks/use-profile-api.js";
+import usePrivacySettings from "../../hooks/use-privacy-settings.js";
 import BadgeList from "../../components/badge-list";
 import ProfileHackathonList from "../../components/profile-hackathon-list";
 import FeedbackLite from "../../components/feedback-lite";
+import PrivacyToggle from "../../components/PrivacyToggle/PrivacyToggle";
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import LoginOrRegister from '../LoginOrRegister/LoginOrRegister2';
 import HeartGauge from '../HeartGauge/HeartGauge';
@@ -93,6 +95,7 @@ export default function Profile(props) {
   const { isLoggedIn, user } = useAuthInfo();
   const { badges, hackathons, profile, feedback_url, update_profile_metadata, isLoading } =
     useProfileApi({});
+  const { privacySettings, togglePrivacySetting, isLoading: privacyLoading } = usePrivacySettings();
   const theme = useTheme();
   const [githubHistory, setGithubHistory] = useState([]);
   const [isGithubLoading, setIsGithubLoading] = useState(false);
@@ -709,29 +712,48 @@ export default function Profile(props) {
                         <Skeleton variant="rectangular" height={56} />
                       ) : (
                         <LoadingOverlay isLoading={isLoading} field="role">
-                          <CustomSelect
-                            label="What hat are you currently wearing?"
-                            value={role}
-                            onChange={onRoleChange}
-                            options={roleOptions}
-                            id="role-select"
-                          />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CustomSelect
+                              label="What hat are you currently wearing?"
+                              value={role}
+                              onChange={onRoleChange}
+                              options={roleOptions}
+                              id="role-select"
+                              sx={{ flex: 1 }}
+                            />
+                            <PrivacyToggle
+                              field="current_role"
+                              isPrivate={privacySettings.current_role === 'private'}
+                              onToggle={togglePrivacySetting}
+                              size="small"
+                              disabled={privacyLoading}
+                            />
+                          </Box>
                         </LoadingOverlay>
                       )}
                     </Grid>
                     
                     <Grid item xs={12} sm={6} md={4}>
-                      <FormControl fullWidth>            
-                        <TextField
-                          id="github"
-                          onChange={handleGithubChange}
-                          label="GitHub username (not email)"
-                          value={github || ""}
-                          fullWidth
-                          variant="outlined"
-                          InputLabelProps={{ shrink: Boolean(github) }}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FormControl fullWidth>            
+                          <TextField
+                            id="github"
+                            onChange={handleGithubChange}
+                            label="GitHub username (not email)"
+                            value={github || ""}
+                            fullWidth
+                            variant="outlined"
+                            InputLabelProps={{ shrink: Boolean(github) }}
+                          />
+                        </FormControl>
+                        <PrivacyToggle
+                          field="github_username"
+                          isPrivate={privacySettings.github_username === 'private'}
+                          onToggle={togglePrivacySetting}
+                          size="small"
+                          disabled={privacyLoading}
                         />
-                      </FormControl>
+                      </Box>
                     </Grid>
                     
                     <Grid item xs={12} sm={6} md={4}>
@@ -751,17 +773,26 @@ export default function Profile(props) {
                     </Grid>
                     
                     <Grid item xs={12} sm={6} md={4}>
-                      <FormControl fullWidth>            
-                        <TextField
-                          id="company"
-                          onChange={handleCompanyChange}
-                          label="Company (if working)"
-                          value={company || ""}
-                          fullWidth
-                          variant="outlined"
-                          InputLabelProps={{ shrink: Boolean(company) }}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FormControl fullWidth>            
+                          <TextField
+                            id="company"
+                            onChange={handleCompanyChange}
+                            label="Company (if working)"
+                            value={company || ""}
+                            fullWidth
+                            variant="outlined"
+                            InputLabelProps={{ shrink: Boolean(company) }}
+                          />
+                        </FormControl>
+                        <PrivacyToggle
+                          field="current_company"
+                          isPrivate={privacySettings.current_company === 'private'}
+                          onToggle={togglePrivacySetting}
+                          size="small"
+                          disabled={privacyLoading}
                         />
-                      </FormControl>
+                      </Box>
                     </Grid>
                     
                     <Grid item xs={12} sm={6} md={4}>
@@ -793,19 +824,30 @@ export default function Profile(props) {
                     </Grid>
                     
                     <Grid item xs={12}>
-                      <FormControl fullWidth>            
-                        <TextField
-                          id="why"
-                          onChange={handleWhyChange}
-                          label="Why are you here with us at OHack?"
-                          value={why || ""}
-                          multiline
-                          rows={2}
-                          fullWidth
-                          variant="outlined"
-                          InputLabelProps={{ shrink: Boolean(why) }}
-                        />
-                      </FormControl>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                        <FormControl fullWidth>            
+                          <TextField
+                            id="why"
+                            onChange={handleWhyChange}
+                            label="Why are you here with us at OHack?"
+                            value={why || ""}
+                            multiline
+                            rows={2}
+                            fullWidth
+                            variant="outlined"
+                            InputLabelProps={{ shrink: Boolean(why) }}
+                          />
+                        </FormControl>
+                        <Box sx={{ mt: 1 }}>
+                          <PrivacyToggle
+                            field="why_are_you_here"
+                            isPrivate={privacySettings.why_are_you_here === 'private'}
+                            onToggle={togglePrivacySetting}
+                            size="small"
+                            disabled={privacyLoading}
+                          />
+                        </Box>
+                      </Box>
                     </Grid>
                     
                     <Grid item xs={12}>
@@ -1022,16 +1064,56 @@ export default function Profile(props) {
                   </Typography>
                   
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="h5" sx={{ mb: 2 }}>Badges</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h5">Badges</Typography>
+                      <PrivacyToggle
+                        field="badges"
+                        isPrivate={privacySettings.badges === 'private'}
+                        onToggle={togglePrivacySetting}
+                        size="small"
+                        disabled={privacyLoading}
+                      />
+                    </Box>
                     {isLoading ? (
                       <Skeleton variant="rectangular" height={100} />
                     ) : (
-                      <BadgeList badges={badges} />
+                      <>
+                        <BadgeList badges={badges} />
+                        {badges && badges.length > 0 && (
+                          <Box sx={{ 
+                            mt: 2, 
+                            p: 2, 
+                            backgroundColor: 'action.hover', 
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}>
+                            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <EmojiEventsIcon fontSize="small" color="primary" />
+                              <strong>Congratulations on your achievement!</strong> 
+                              If you've reached a milestone and are eligible for a prize, please{' '}
+                              <Link href="/contact?type=prize" underline="hover" color="primary">
+                                contact us
+                              </Link>
+                              {' '}to claim it.
+                            </Typography>
+                          </Box>
+                        )}
+                      </>
                     )}
                   </Box>
                   
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="h5" sx={{ mb: 2 }}>Hackathons</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h5">Hackathons</Typography>
+                      <PrivacyToggle
+                        field="hackathon_history"
+                        isPrivate={privacySettings.hackathon_history === 'private'}
+                        onToggle={togglePrivacySetting}
+                        size="small"
+                        disabled={privacyLoading}
+                      />
+                    </Box>
                     <Typography variant="body2" sx={{ mb: 2 }}>
                       We've tried our best to keep track of each time you've volunteered,
                       mentored, or judged a hackathon. If anything is missing, please let us know on Slack!
@@ -1044,7 +1126,16 @@ export default function Profile(props) {
                   </Box>
                   
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="h5" sx={{ mb: 2 }}>Feedback Exchange</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h5">Feedback Exchange</Typography>
+                      <PrivacyToggle
+                        field="feedback"
+                        isPrivate={privacySettings.feedback === 'private'}
+                        onToggle={togglePrivacySetting}
+                        size="small"
+                        disabled={privacyLoading}
+                      />
+                    </Box>
                     <Typography variant="body2" sx={{ mb: 2 }}>
                       Feedback you've given and received from the community.
                     </Typography>

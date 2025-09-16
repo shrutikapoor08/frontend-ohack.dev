@@ -17,19 +17,17 @@ import Stack from '@mui/material/Stack';
 import {  
     Snackbar 
 } from '@mui/material'
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
+import PrivacyToggle from './PrivacyToggle/PrivacyToggle';
+import usePrivacySettings from '../hooks/use-privacy-settings';
 
 
 // TODO: Is this part of a dead tree?
 export default function FeedbackLite ( {feedback_url, history} ){
     const [open, setOpen] = useState(false);
+    const { privacySettings, togglePrivacySetting } = usePrivacySettings();
 
-    const [whatPrivate, setWhatPrivate] = useState(true);
-    const [howPrivate, setHowPrivate] = useState(true);
-    
-    const whatPrivateText = whatPrivate ? "Private" : "Public";
-    const howPrivateText = howPrivate ? "Private" : "Public";
+    const whatPrivate = privacySettings.what === 'private';
+    const howPrivate = privacySettings.how === 'private';
 
 
     const defaultHistory = {
@@ -73,14 +71,6 @@ export default function FeedbackLite ( {feedback_url, history} ){
     The more correct term is likely Fragment
     */    
     
-    const handleWhatPrivateClick = () => {
-        setWhatPrivate( !whatPrivate );
-    }
-
-    const handleHowPrivateClick = () => {
-        setHowPrivate(!howPrivate);
-    }
-
     const handleClick = () => {
         setOpen(true);
 
@@ -125,10 +115,10 @@ export default function FeedbackLite ( {feedback_url, history} ){
         </Stack>
         <h2 className="profile__title">
           What{" "}
-          <FormControlLabel
-            onClick={handleWhatPrivateClick}
-            control={<Switch defaultChecked />}
-            label={whatPrivateText}
+          <PrivacyToggle
+            field="what"
+            isPrivate={whatPrivate}
+            onToggle={togglePrivacySetting}
           />
         </h2>
         What you've completed for nonprofits
@@ -281,10 +271,10 @@ export default function FeedbackLite ( {feedback_url, history} ){
         </p>
         <h2 className="profile__title">
           How{" "}
-          <FormControlLabel
-            onClick={handleHowPrivateClick}
-            control={<Switch defaultChecked />}
-            label={howPrivateText}
+          <PrivacyToggle
+            field="how"
+            isPrivate={howPrivate}
+            onToggle={togglePrivacySetting}
           />
         </h2>
         How you went about it
