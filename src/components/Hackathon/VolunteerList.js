@@ -967,13 +967,18 @@ const VolunteerList = ({ event_id, type }) => {
     const totalSlots = slots.length;
     const shouldShowExpanded = totalSlots > 4;
 
+    // Count how many date groups we're showing when collapsed
+    const dateGroups = Object.keys(slotsByDate);
+    const visibleDateGroups = isExpanded ? dateGroups.length : Math.min(dateGroups.length, 2);
+    const hiddenDateGroups = dateGroups.length - visibleDateGroups;
+
     return (
       <AvailabilitySection>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="subtitle2" color="primary">
             📅 Volunteer Schedule ({totalSlots} shifts)
           </Typography>
-          {shouldShowExpanded && (
+          {shouldShowExpanded && hiddenDateGroups > 0 && (
             <Typography variant="caption" color="text.secondary">
               {isExpanded ? 'Showing all shifts' : `Showing first few of ${totalSlots} shifts`}
             </Typography>
@@ -1023,11 +1028,11 @@ const VolunteerList = ({ event_id, type }) => {
           })}
         </Stack>
 
-        {shouldShowExpanded && (
+        {shouldShowExpanded && hiddenDateGroups > 0 && (
           <ExpandButton onClick={() => toggleExpanded(volunteerName)} sx={{ mt: 2 }}>
             <Typography variant="body2" color="primary" sx={{ mr: 1 }}>
-              {isExpanded 
-                ? 'Show Less' 
+              {isExpanded
+                ? 'Show Less'
                 : `Show All ${totalSlots} Volunteer Shifts`
               }
             </Typography>
