@@ -21,11 +21,18 @@ import {
   TableHead,
   TableRow,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Avatar,
+  Tooltip,
+  Badge
 } from "@mui/material";
 import { styled } from "@mui/system";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import PersonIcon from '@mui/icons-material/Person';
+import ComputerIcon from '@mui/icons-material/Computer';
+import GroupsIcon from '@mui/icons-material/Groups';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -47,12 +54,53 @@ const TimeSlotCell = styled(TableCell)(({ theme, available }) => ({
   minWidth: '60px',
 }));
 
+const MentorCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(1),
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.spacing(1),
+  '&:hover': {
+    boxShadow: theme.shadows[2],
+  }
+}));
+
+const TimeSlotSection = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  padding: theme.spacing(1.5),
+  backgroundColor: theme.palette.grey[50],
+  borderRadius: theme.spacing(1),
+  border: `1px solid ${theme.palette.divider}`,
+}));
+
 const MentorAvailability = ({ volunteers }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [expandedDates, setExpandedDates] = useState(new Set());
   const [showPastDates, setShowPastDates] = useState(false);
   const [compactView, setCompactView] = useState(true);
+
+  // Helper function to extract expertise from volunteer data
+  const extractExpertise = (volunteer) => {
+    const expertise = [];
+    
+    // Check various fields for expertise information
+    if (volunteer.skills) expertise.push(...volunteer.skills.split(',').map(s => s.trim()));
+    if (volunteer.expertise) expertise.push(...volunteer.expertise.split(',').map(s => s.trim()));
+    if (volunteer.technologies) expertise.push(...volunteer.technologies.split(',').map(s => s.trim()));
+    if (volunteer.programming_languages) expertise.push(...volunteer.programming_languages.split(',').map(s => s.trim()));
+    
+    // Remove duplicates and empty strings
+    return [...new Set(expertise.filter(e => e && e.length > 0))];
+  };
+
+  // Helper function to get mentor initials for avatar
+  const getMentorInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
+  };
 
   // Helper function to check if a date is in the past
   const isPastDate = (dateString) => {
@@ -106,6 +154,8 @@ const MentorAvailability = ({ volunteers }) => {
       if (volunteer.isSelected && volunteer.volunteer_type === "mentor") {
         if (volunteer?.availability) {
           const mentorId = volunteer.id || volunteer.email || volunteer.name;
+          const mentorExpertise = extractExpertise(volunteer);
+          const isCheckedIn = volunteer.checkedIn === true;
           const slots = [];
           let currentSlot = "";
           const parts = volunteer.availability.split(", ");
@@ -154,7 +204,9 @@ const MentorAvailability = ({ volunteers }) => {
                         total: 0,
                         inPerson: 0,
                         remote: 0,
+                        checkedIn: 0,
                         mentors: new Set(),
+                        mentorList: [],
                         name: period.name,
                         emoji: period.emoji,
                         short: period.short
@@ -166,7 +218,11 @@ const MentorAvailability = ({ volunteers }) => {
                   dateGroups[datePart].uniqueMentors.add(mentorId);
                   dateGroups[datePart].mentorDetails.set(mentorId, {
                     name: volunteer.name,
-                    isInPerson: volunteer.isInPerson
+                    isInPerson: volunteer.isInPerson,
+                    expertise: mentorExpertise,
+                    email: volunteer.email,
+                    company: volunteer.company,
+                    isCheckedIn: isCheckedIn
                   });
                   
                   // Map time period to key
@@ -174,10 +230,22 @@ const MentorAvailability = ({ volunteers }) => {
                   if (periodKey && dateGroups[datePart][periodKey]) {
                     dateGroups[datePart][periodKey].total++;
                     dateGroups[datePart][periodKey].mentors.add(mentorId);
+                    dateGroups[datePart][periodKey].mentorList.push({
+                      id: mentorId,
+                      name: volunteer.name,
+                      isInPerson: volunteer.isInPerson,
+                      expertise: mentorExpertise,
+                      email: volunteer.email,
+                      company: volunteer.company,
+                      isCheckedIn: isCheckedIn
+                    });
                     if (volunteer.isInPerson) {
                       dateGroups[datePart][periodKey].inPerson++;
                     } else {
                       dateGroups[datePart][periodKey].remote++;
+                    }
+                    if (isCheckedIn) {
+                      dateGroups[datePart][periodKey].checkedIn++;
                     }
                   }
                 }
@@ -209,7 +277,7 @@ const MentorAvailability = ({ volunteers }) => {
           dateA = parseInt(dayMatchA[3], 10);
         } else {
           monthA = dayMatchA[1];
-          dateA = parseInt(dayMatchA[2], 10);
+          dateB = parseInt(dayMatchA[2], 10);
         }
         
         if (dayMatchB.length === 4) {
@@ -260,6 +328,107 @@ const MentorAvailability = ({ volunteers }) => {
     });
     return uniqueMentors.size;
   }, [volunteers]);
+
+  const renderMentorCard = (mentor) => (
+    <MentorCard key={mentor.id} variant="outlined">
+      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+          <Badge
+            overlap="circular"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            badgeContent={
+              mentor.isCheckedIn ? (
+                <CheckCircleIcon 
+                  sx={{ 
+                    color: theme.palette.success.main, 
+                    fontSize: '16px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%'
+                  }} 
+                />
+              ) : null
+            }
+          >
+            <Avatar 
+              sx={{ 
+                width: 32, 
+                height: 32, 
+                bgcolor: mentor.isInPerson ? theme.palette.primary.main : theme.palette.secondary.main,
+                fontSize: '0.875rem'
+              }}
+            >
+              {getMentorInitials(mentor.name)}
+            </Avatar>
+          </Badge>
+          
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {mentor.name}
+                {mentor.isCheckedIn && (
+                  <Chip
+                    label="Checked In"
+                    size="small"
+                    color="success"
+                    variant="filled"
+                    sx={{ ml: 1, fontSize: '0.6rem', height: '18px' }}
+                  />
+                )}
+              </Typography>
+              <Tooltip title={mentor.isInPerson ? "Available In-Person" : "Available Remote"}>
+                <Chip
+                  icon={mentor.isInPerson ? <GroupsIcon /> : <ComputerIcon />}
+                  label={mentor.isInPerson ? "In-Person" : "Remote"}
+                  size="small"
+                  color={mentor.isInPerson ? "primary" : "secondary"}
+                  variant="outlined"
+                />
+              </Tooltip>
+            </Box>
+            
+            {mentor.company && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                {mentor.company}
+              </Typography>
+            )}
+            
+            {mentor.expertise && mentor.expertise.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {mentor.expertise.slice(0, isMobile ? 2 : 4).map((skill, idx) => (
+                  <Chip
+                    key={idx}
+                    label={skill}
+                    size="small"
+                    variant="outlined"
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      height: '20px',
+                      '& .MuiChip-label': { px: 1 }
+                    }}
+                  />
+                ))}
+                {mentor.expertise.length > (isMobile ? 2 : 4) && (
+                  <Tooltip title={mentor.expertise.slice(isMobile ? 2 : 4).join(', ')}>
+                    <Chip
+                      label={`+${mentor.expertise.length - (isMobile ? 2 : 4)}`}
+                      size="small"
+                      variant="filled"
+                      color="info"
+                      sx={{ 
+                        fontSize: '0.65rem',
+                        height: '20px',
+                        '& .MuiChip-label': { px: 1 }
+                      }}
+                    />
+                  </Tooltip>
+                )}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </CardContent>
+    </MentorCard>
+  );
 
   return (
     <StyledPaper elevation={3}>
@@ -330,6 +499,9 @@ const MentorAvailability = ({ volunteers }) => {
             const isExpanded = expandedDates.has(date);
             const totalSlots = timePeriods.reduce((sum, period) => sum + dayData[period.key].total, 0);
             const uniqueMentorCount = dayData.uniqueMentors.size;
+            const checkedInCount = Array.from(dayData.uniqueMentors).filter(mentorId => 
+              dayData.mentorDetails.get(mentorId)?.isCheckedIn
+            ).length;
             const isPast = isPastDate(date);
             
             return (
@@ -346,6 +518,15 @@ const MentorAvailability = ({ volunteers }) => {
                         color="primary" 
                         variant="outlined"
                       />
+                      {checkedInCount > 0 && (
+                        <Chip 
+                          icon={<CheckCircleIcon />}
+                          label={`${checkedInCount} checked in`} 
+                          size="small" 
+                          color="success" 
+                          variant="outlined"
+                        />
+                      )}
                       {totalSlots !== uniqueMentorCount && (
                         <Chip 
                           label={`${totalSlots} slots`} 
@@ -403,6 +584,7 @@ const MentorAvailability = ({ volunteers }) => {
                                         {slotData.inPerson > 0 && `👥${slotData.inPerson}`}
                                         {slotData.inPerson > 0 && slotData.remote > 0 && ' '}
                                         {slotData.remote > 0 && `💻${slotData.remote}`}
+                                        {slotData.checkedIn > 0 && ` ✅${slotData.checkedIn}`}
                                       </Typography>
                                     )}
                                   </Box>
@@ -414,55 +596,71 @@ const MentorAvailability = ({ volunteers }) => {
                       </Table>
                     </TableContainer>
                   ) : (
-                    // Original chip view - showing unique mentors per period
-                    <Grid container spacing={1} alignItems="center">
+                    // Enhanced expanded view with mentor details
+                    <Box>
                       {timePeriods.map((period) => {
                         const slotData = dayData[period.key];
-                        const uniqueInPeriod = slotData.mentors.size;
-                        if (uniqueInPeriod === 0) return null;
+                        if (slotData.mentorList.length === 0) return null;
                         
                         return (
-                          <Grid item key={period.key}>
-                            <Chip
-                              icon={<span>{period.emoji}</span>}
-                              label={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Typography variant="caption" component="span">
-                                    {isMobile ? period.short : period.name}
-                                  </Typography>
-                                  <Typography variant="caption" component="span" sx={{ fontWeight: 'bold' }}>
-                                    ({uniqueInPeriod})
-                                  </Typography>
-                                  {slotData.total > uniqueInPeriod && (
-                                    <Typography variant="caption" component="span" sx={{ opacity: 0.7 }}>
-                                      •{slotData.total}s
-                                    </Typography>
-                                  )}
-                                  {!isMobile && (slotData.inPerson > 0 || slotData.remote > 0) && (
-                                    <Typography variant="caption" component="span" sx={{ ml: 0.5, opacity: 0.8 }}>
-                                      {slotData.inPerson > 0 && `👥${slotData.inPerson}`}
-                                      {slotData.inPerson > 0 && slotData.remote > 0 && ' '}
-                                      {slotData.remote > 0 && `💻${slotData.remote}`}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              }
-                              sx={{ 
-                                backgroundColor: theme.palette.success.light,
-                                color: theme.palette.success.contrastText 
-                              }}
-                              size="small"
-                            />
-                          </Grid>
+                          <TimeSlotSection key={period.key}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <span>{period.emoji}</span>
+                                {period.name}
+                              </Typography>
+                              <Chip
+                                label={`${slotData.mentors.size} mentor${slotData.mentors.size !== 1 ? 's' : ''}`}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                              {slotData.checkedIn > 0 && (
+                                <Chip
+                                  icon={<CheckCircleIcon />}
+                                  label={`${slotData.checkedIn} checked in`}
+                                  size="small"
+                                  color="success"
+                                  variant="outlined"
+                                />
+                              )}
+                              {slotData.inPerson > 0 && (
+                                <Chip
+                                  icon={<GroupsIcon />}
+                                  label={`${slotData.inPerson} in-person`}
+                                  size="small"
+                                  color="primary"
+                                  variant="outlined"
+                                />
+                              )}
+                              {slotData.remote > 0 && (
+                                <Chip
+                                  icon={<ComputerIcon />}
+                                  label={`${slotData.remote} remote`}
+                                  size="small"
+                                  color="secondary"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                            
+                            <Grid container spacing={1}>
+                              {slotData.mentorList.map((mentor, idx) => (
+                                <Grid item xs={12} sm={6} md={4} key={`${mentor.id}-${idx}`}>
+                                  {renderMentorCard(mentor)}
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </TimeSlotSection>
                         );
                       })}
-                    </Grid>
+                    </Box>
                   )}
                   
                   <Collapse in={isExpanded}>
                     <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        Legend: 👥 In-Person • 💻 Remote • Numbers show unique mentors • "s" = total slots
+                        Legend: 👥 In-Person • 💻 Remote • ✅ Checked In • Numbers show unique mentors • "s" = total slots
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Available mentors: {Array.from(dayData.uniqueMentors).map(mentorId => {

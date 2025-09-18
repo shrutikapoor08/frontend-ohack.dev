@@ -253,13 +253,41 @@ const AvailableMentorsSection = styled(Box)(({ theme }) => ({
 
 const AvailableMentorChip = styled(Chip)(({ theme, isInPerson }) => ({
   margin: theme.spacing(0.5),
+  height: 'auto',
+  minHeight: '32px',
+  padding: theme.spacing(0.5),
   backgroundColor: isInPerson
     ? theme.palette.success.main
     : theme.palette.info.main,
   color: theme.palette.success.contrastText,
-  "&:hover": {
-    backgroundColor: theme.palette.success.dark,
+  '& .MuiChip-label': {
+    padding: theme.spacing(0.5, 1),
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    lineHeight: 1.2,
   },
+  "&:hover": {
+    backgroundColor: isInPerson 
+      ? theme.palette.success.dark
+      : theme.palette.info.dark,
+    transform: 'translateY(-2px)',
+    boxShadow: theme.shadows[4],
+  },
+}));
+
+const MentorName = styled(Typography)(({ theme }) => ({
+  fontWeight: 600,
+  fontSize: '0.875rem',
+  lineHeight: 1.1,
+  marginBottom: theme.spacing(0.25),
+}));
+
+const MentorExpertise = styled(Typography)(({ theme }) => ({
+  fontSize: '0.75rem',
+  opacity: 0.9,
+  lineHeight: 1.1,
+  fontWeight: 400,
 }));
 
 const AvailabilitySection = styled(Box)(({ theme }) => ({
@@ -870,7 +898,7 @@ const VolunteerList = ({ event_id, type }) => {
         
         // Parse format: "Friday, Oct 10: Doors Open & Registration - 🍕 Food Service (8:00am - 11:00am)"
         // More flexible regex to capture various emoji patterns
-        const match = slot.match(/^(\w+,\s+\w+\s+\d+):\s+([^-]+?)\s*-\s*([🍕🧹📸🎤🎯🔧💻📋🎨🔒🎵🏃‍♂️🛠️📊🎪🎭🎬🎮🎲🎯🎨🎪🎭🎬🎮🎲])\s+([^(]+?)\s*\(([^)]+)\)/);
+        const match = slot.match(/^(\w+,\s+\w+\s+\d+):\s+([^-]+?)\s*-\s*([🍕🧹📸🎤🎯🔧💻📋🎨🔒🎵🏃‍♂️🛠️📊🎪🎭🎬🎮🎲])\s+([^(]+?)\s*\(([^)]+)\)/);
         
         if (match) {
           const [, dateStr, eventName, emoji, role, timeRange] = match;
@@ -1430,31 +1458,75 @@ const VolunteerList = ({ event_id, type }) => {
         Array.isArray(availableMentors) &&
         availableMentors.length > 0 && (
           <AvailableMentorsSection>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span>🟢</span>
               Currently Available Mentors:
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                ({availableMentors.length} available now)
+              </Typography>
             </Typography>
-            {availableMentors.map((mentor) => (
-              <Tooltip
-                title={
-                  <span style={{ fontSize: "14px" }}>
-                    {mentor?.isInPerson
-                      ? "Available now (in-person)"
-                      : "Available now (remote)"}
-                  </span>
-                }
-                key={mentor?.name || `mentor-${Math.random().toString(36)}`}
-              >
-                <AvailableMentorChip
-                  key={
-                    mentor?.name || `mentor-chip-${Math.random().toString(36)}`
-                  }
-                  label={mentor?.name || "Mentor"}
-                  onClick={() => scrollToMentor(mentor?.name || "")}
-                  isInPerson={!!mentor?.isInPerson}
-                  clickable
-                />
-              </Tooltip>
-            ))}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+              {availableMentors.map((mentor) => {
+                // Extract expertise for display
+                const expertise = getFieldValue(mentor, FIELD_CONFIG.expertise) || 
+                                getFieldValue(mentor, FIELD_CONFIG.skills) ||
+                                getFieldValue(mentor, FIELD_CONFIG.primaryRoles) ||
+                                getFieldValue(mentor, FIELD_CONFIG.company) ||
+                                'General Support';
+                
+                // Truncate expertise for chip display (show first 2-3 skills)
+                const expertiseArray = Array.isArray(expertise) ? expertise : expertise.split(/[,;|]/).map(s => s.trim());
+                const displayExpertise = expertiseArray.slice(0, 2).join(' • ');
+                const fullExpertise = expertiseArray.join(' • ');
+                
+                const tooltipContent = (
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      {mentor?.name || "Mentor"}
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                      {mentor?.isInPerson ? "📍 Available now (in-person)" : "💻 Available now (remote)"}
+                    </Typography>
+                    {getFieldValue(mentor, FIELD_CONFIG.company) && (
+                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                        🏢 {getFieldValue(mentor, FIELD_CONFIG.company)}
+                      </Typography>
+                    )}
+                    <Typography variant="caption" sx={{ display: 'block' }}>
+                      🎯 {fullExpertise}
+                    </Typography>
+                  </Box>
+                );
+
+                return (
+                  <Tooltip
+                    title={tooltipContent}
+                    key={mentor?.name || `mentor-${Math.random().toString(36)}`}
+                    arrow
+                    placement="top"
+                  >
+                    <AvailableMentorChip
+                      label={
+                        <Box>
+                          <MentorName component="div">
+                            {mentor?.name || "Mentor"}
+                          </MentorName>
+                          <MentorExpertise component="div">
+                            {displayExpertise}
+                          </MentorExpertise>
+                        </Box>
+                      }
+                      onClick={() => scrollToMentor(mentor?.name || "")}
+                      isInPerson={!!mentor?.isInPerson}
+                      clickable
+                    />
+                  </Tooltip>
+                );
+              })}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+              💡 Click any mentor to scroll to their full profile below
+            </Typography>
           </AvailableMentorsSection>
         )}
 
