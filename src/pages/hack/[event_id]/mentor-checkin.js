@@ -57,6 +57,7 @@ const MentorCheckinPage = () => {
   const [currentActiveSlot, setCurrentActiveSlot] = useState(null);
   const [showPreviousSlots, setShowPreviousSlots] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmCheckoutDialogOpen, setConfirmCheckoutDialogOpen] = useState(false);
 
   // Helper function to check if a time slot is current
   const isCurrentTimeSlot = (slot) => {    
@@ -607,7 +608,13 @@ const MentorCheckinPage = () => {
   };
 
   // Handle check-out
-  const handleCheckout = async () => {
+  const handleCheckoutClick = () => {
+    setConfirmCheckoutDialogOpen(true);
+  };
+
+  const handleConfirmCheckout = async () => {
+    setConfirmCheckoutDialogOpen(false);
+
     if (!isLoggedIn || !mentorData) {
       setError('You must be logged in as a registered mentor to check out.');
       return;
@@ -628,7 +635,7 @@ const MentorCheckinPage = () => {
       if (response.data) {
         setCheckedIn(false);
         setSuccess('You have successfully checked out as a mentor.');
-        setSnackbarMessage('Checked out successfully! Thanks for your support!');
+        setSnackbarMessage('Checked out successfully! Teams have been notified in #ask-a-mentor that you are no longer available.');
         setSnackbarOpen(true);
       }
     } catch (err) {
@@ -637,6 +644,10 @@ const MentorCheckinPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancelCheckout = () => {
+    setConfirmCheckoutDialogOpen(false);
   };
 
   // Handle snackbar close
@@ -898,11 +909,11 @@ const MentorCheckinPage = () => {
                     <Button
                       variant="contained"
                       color="error"
-                      onClick={handleCheckout}
+                      onClick={handleCheckoutClick}
                       disabled={isSubmitting}
-                      startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+                      startIcon={isSubmitting ? <CircularProgress size={20} /> : <SlackIcon />}
                     >
-                      Check Out
+                      Check Out & Notify Teams
                     </Button>
                   ) : (
                     <Button
@@ -1071,6 +1082,59 @@ const MentorCheckinPage = () => {
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Checking In...' : 'Check In & Send Notification'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Check-out Confirmation Dialog */}
+        <Dialog
+          open={confirmCheckoutDialogOpen}
+          onClose={handleCancelCheckout}
+          aria-labelledby="checkout-confirm-dialog-title"
+          aria-describedby="checkout-confirm-dialog-description"
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle id="checkout-confirm-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SlackIcon color="error" />
+            Confirm Mentor Check-out
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="checkout-confirm-dialog-description">
+              Are you ready to check out as a mentor? This action will:
+            </DialogContentText>
+            <Box sx={{ mt: 2, pl: 2 }}>
+              <Typography variant="body2" component="div" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                <SlackIcon sx={{ mr: 1, fontSize: 16, color: 'error.main' }} />
+                Send an automatic message to <strong>#ask-a-mentor</strong> on Slack
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                <InfoIcon sx={{ mr: 1, fontSize: 16, color: 'error.main' }} />
+                Notify all teams that you are no longer available
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ display: 'flex', alignItems: 'center' }}>
+                <CancelOutlinedIcon sx={{ mr: 1, fontSize: 16, color: 'error.main' }} />
+                Mark you as "Unavailable" in the mentor system
+              </Typography>
+            </Box>
+            <Alert severity="warning" sx={{ mt: 3 }}>
+              <Typography variant="body2">
+                Teams will be notified that you are no longer available for mentoring. You can check back in anytime if you become available again.
+              </Typography>
+            </Alert>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 1 }}>
+            <Button onClick={handleCancelCheckout} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmCheckout}
+              variant="contained"
+              color="error"
+              startIcon={<SlackIcon />}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Checking Out...' : 'Check Out & Send Notification'}
             </Button>
           </DialogActions>
         </Dialog>
