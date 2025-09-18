@@ -387,7 +387,21 @@ export default function CensusPage() {
 
   // Check if judge should be shown for a time slot (only last day 3pm-5:30pm)
   const isJudgeTimeSlot = (timeSlot) => {
-    return timeSlot.includes('Judging') && timeSlot.includes('3:00pm - 5:30pm');
+    // Check if this is a judging time slot
+    if (!timeSlot.includes('Judging')) return false;
+
+    // Get the last day of the hackathon
+    if (!eventData?.end_date) return false;
+
+    const lastDay = new Date(eventData.end_date);
+    const lastDayName = lastDay.toLocaleDateString('en-US', { weekday: 'long' });
+    const lastMonthDay = lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    // Check if the time slot is for the last day and contains judging
+    return timeSlot.includes(lastDayName) && 
+           timeSlot.includes(lastMonthDay) && 
+           timeSlot.includes('Judging') && 
+           timeSlot.includes('3:00pm - 5:30pm');
   };
 
   if (loading) {
