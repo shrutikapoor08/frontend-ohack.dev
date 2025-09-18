@@ -104,11 +104,15 @@ const HeroBanner = ({ children }) => {
                 );
               }}
               href="/nonprofits/apply"
+              style={{ minWidth: '280px', width: '100%', maxWidth: '280px' }}
             >
               Send us a project
             </ButtonBasicStyle>
 
-            <ButtonGoldStyle onClick={openCodeSample}>
+            <ButtonGoldStyle 
+              onClick={openCodeSample}
+              style={{ minWidth: '280px', width: '100%', maxWidth: '280px' }}
+            >
               Create an OHack Slack account
             </ButtonGoldStyle>
 
@@ -118,6 +122,7 @@ const HeroBanner = ({ children }) => {
                 disableElevation
                 onClick={handleLoginClick}
                 className="login-button"
+                style={{ minWidth: '280px', width: '100%', maxWidth: '280px' }}
               >
                 Log In
               </LoginButton>
@@ -125,7 +130,7 @@ const HeroBanner = ({ children }) => {
 
             {isLoggedIn && (
               <ButtonBasicStyle
-                style={{ color: "white", backgroundColor: "#FFC107" }}
+                style={{ color: "white", backgroundColor: "#FFC107", minWidth: '280px', width: '100%', maxWidth: '280px' }}
                 onClick={() => {
                   trackButtonClick("profile_button", "View your profile", {
                     user_status: "logged_in",
@@ -156,6 +161,7 @@ const HeroBanner = ({ children }) => {
                 );
               }}
               href="/projects"
+              style={{ minWidth: '280px', width: '100%', maxWidth: '280px' }}
             >
               All projects you can work on
             </ButtonBasicStyle>
@@ -172,7 +178,7 @@ const HeroBanner = ({ children }) => {
                   { source: "hero_banner", button: "paypal" }
                 );
               }}
-              style={{ color: "white", backgroundColor: "blue" }}
+              style={{ color: "white", backgroundColor: "blue", minWidth: '280px', width: '100%', maxWidth: '280px' }}
               target="_blank"
               rel="noopener noreferrer"
               href="https://givebutter.com/a5MSes"
@@ -195,6 +201,7 @@ const HeroBanner = ({ children }) => {
                 );
               }}
               href="/hack/request"
+              style={{ minWidth: '280px', width: '100%', maxWidth: '280px' }}
             >
               Request a hackathon
             </ButtonBasicStyle>
