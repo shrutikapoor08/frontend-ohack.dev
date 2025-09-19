@@ -400,11 +400,11 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
       }
 
       const endpoints = [
-        `${baseUrl}/api/messages/hackathon/${selectedEventId}/mentor`,
-        `${baseUrl}/api/messages/hackathon/${selectedEventId}/judge`,
-        `${baseUrl}/api/messages/hackathon/${selectedEventId}/volunteer`,
-        `${baseUrl}/api/messages/hackathon/${selectedEventId}/hacker`,
-        `${baseUrl}/api/messages/hackathon/${selectedEventId}/sponsor`,
+        `${baseUrl}/api/messages/admin/hackathon/${selectedEventId}/mentor`,
+        `${baseUrl}/api/messages/admin/hackathon/${selectedEventId}/judge`,
+        `${baseUrl}/api/messages/admin/hackathon/${selectedEventId}/volunteer`,
+        `${baseUrl}/api/messages/admin/hackathon/${selectedEventId}/hacker`,
+        `${baseUrl}/api/messages/admin/hackathon/${selectedEventId}/sponsor`,
       ];
 
       const headers = {
