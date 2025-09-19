@@ -92,10 +92,10 @@ const NonprofitList = ({ nonprofits, teams, eventId }) => {
         id="nonprofit-section-heading"
         fontWeight="bold"
       >
-        Step 2. Find a project to work on
+        Step 2. Choose your hackathon project
       </Typography>
       <Typography variant="body2" color="textSecondary" paragraph>
-        All of the nonprofits below are looking for volunteers to help them with their projects.
+        <strong>These are the only projects you can work on during this hackathon.</strong> Select one that matches your team's skills and interests.
       </Typography>
       <Grid container spacing={3}>
         {nonprofits.map((nonprofit) => (
