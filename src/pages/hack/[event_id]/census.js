@@ -20,7 +20,18 @@ import {
   CardContent,
   Divider,
   Link,
-  Tooltip
+  Tooltip,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import HackathonHeader from '../../../components/Hackathon/HackathonHeader';
@@ -32,6 +43,11 @@ import SchoolIcon from '@mui/icons-material/School';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import GroupIcon from '@mui/icons-material/Group';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import PeopleIcon from '@mui/icons-material/People';
 
 const CensusContainer = styled(Container)(({ theme }) => ({
   marginTop: theme.spacing(3),
@@ -72,6 +88,213 @@ const StatusChip = styled(Chip)(({ theme }) => ({
   fontSize: '0.75rem',
 }));
 
+// Reusable Role Table Component
+const RoleTable = ({ role, people, timeSlots, renderPersonInfo, isPersonAvailableAtTime, emptyMessage, icon, color = 'primary' }) => {
+  const roleTitle = role.charAt(0).toUpperCase() + role.slice(1);
+
+  if (people.length === 0) {
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          {React.cloneElement(icon, { sx: { mr: 1, color: `${color}.main` } })}
+          {roleTitle} (0)
+        </Typography>
+        <Alert severity="info">
+          {emptyMessage || `No ${role} available for the selected time slots.`}
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (timeSlots.length === 0) {
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          {React.cloneElement(icon, { sx: { mr: 1, color: `${color}.main` } })}
+          {roleTitle} ({people.length})
+        </Typography>
+        <Alert severity="info">
+          No time slots selected to show {role} availability.
+        </Alert>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        {React.cloneElement(icon, { sx: { mr: 1, color: `${color}.main` } })}
+        {roleTitle} ({people.length})
+      </Typography>
+
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TimeColumnHeader>Time Slot</TimeColumnHeader>
+              <TableCell sx={{ fontWeight: 'bold', backgroundColor: `${color}.light`, color: `${color}.contrastText` }}>
+                Available {roleTitle}
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {timeSlots.map((timeSlot, index) => {
+              const availablePeople = people.filter(person => isPersonAvailableAtTime(person, timeSlot));
+
+              return (
+                <TableRow key={index}>
+                  <TimeColumnHeader>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {timeSlot.replace(/[🌅☀️🏙️🌆🌃🌙]/g, '').replace(/PST/g, '').trim()}
+                    </Typography>
+                  </TimeColumnHeader>
+
+                  <PersonCell>
+                    {availablePeople.length > 0 ? (
+                      availablePeople.map((person, idx) => (
+                        <Box key={idx} sx={{ mb: idx < availablePeople.length - 1 ? 2 : 0 }}>
+                          {renderPersonInfo(person)}
+                          {idx < availablePeople.length - 1 && <Divider sx={{ mt: 1 }} />}
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="caption" color="text.disabled">
+                        No {role} available
+                      </Typography>
+                    )}
+                  </PersonCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+};
+
+// Hacker Table Component
+const HackerTable = ({ hackers }) => {
+  if (hackers.length === 0) {
+    return (
+      <Alert severity="info" sx={{ mb: 3 }}>
+        No hackers registered for this event yet.
+      </Alert>
+    );
+  }
+
+  return (
+    <TableContainer component={Paper} sx={{ mb: 3 }}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell><strong>Name</strong></TableCell>
+            <TableCell><strong>Details</strong></TableCell>
+            <TableCell><strong>Location</strong></TableCell>
+            <TableCell><strong>Experience</strong></TableCell>
+            <TableCell><strong>Team Status</strong></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {hackers.map((hacker, index) => (
+            <TableRow key={index}>
+              <TableCell>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {hacker.name}
+                  </Typography>
+                  {hacker.pronouns && (
+                    <StatusChip
+                      icon={<PersonIcon />}
+                      label={hacker.pronouns}
+                      size="small"
+                      color="default"
+                    />
+                  )}
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {hacker.arizonaResident !== undefined && (
+                    <StatusChip
+                      label={hacker.arizonaResident ? "AZ Resident" : "Out of State"}
+                      size="small"
+                      color={hacker.arizonaResident ? "success" : "default"}
+                    />
+                  )}
+                  {hacker.participantType && (
+                    <StatusChip
+                      label={hacker.participantType}
+                      size="small"
+                      color="primary"
+                    />
+                  )}
+                  {hacker.participationCount && (
+                    <StatusChip
+                      icon={<EmojiEventsIcon />}
+                      label={`${hacker.participationCount} events`}
+                      size="small"
+                      color="secondary"
+                    />
+                  )}
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {hacker.state && (
+                    <Typography variant="caption" color="text.secondary">
+                      <LocationOnIcon fontSize="small" /> {hacker.state}
+                      {hacker.country && hacker.country !== 'USA' && `, ${hacker.country}`}
+                    </Typography>
+                  )}
+                  {hacker.schoolOrganization && (
+                    <Typography variant="caption" color="text.secondary">
+                      <SchoolIcon fontSize="small" /> {hacker.schoolOrganization}
+                    </Typography>
+                  )}
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {hacker.skills && (
+                    <Typography variant="caption" color="text.secondary">
+                      💻 {Array.isArray(hacker.skills) ? hacker.skills.slice(0, 3).join(', ') : hacker.skills}
+                    </Typography>
+                  )}
+                  {hacker.socialCauses && (
+                    <Typography variant="caption" color="text.secondary">
+                      <FavoriteIcon fontSize="small" /> {Array.isArray(hacker.socialCauses) ? hacker.socialCauses.slice(0, 2).join(', ') : hacker.socialCauses}
+                    </Typography>
+                  )}
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                {hacker.teamStatus && (
+                  <StatusChip
+                    icon={<GroupIcon />}
+                    label={hacker.teamStatus}
+                    size="small"
+                    color={hacker.teamStatus.includes('have a team') ? 'success' : 'primary'}
+                  />
+                )}
+                {hacker.teamMatchingPreferredSize && (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Preferred size: {hacker.teamMatchingPreferredSize}
+                  </Typography>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
+
 export default function CensusPage() {
   const router = useRouter();
   const { event_id } = router.query;
@@ -83,6 +306,10 @@ export default function CensusPage() {
   const [judges, setJudges] = useState([]);
   const [hackers, setHackers] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
+
+  // Filter and UI state
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState(new Set());
+  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch all data
   useEffect(() => {
@@ -125,6 +352,9 @@ export default function CensusPage() {
         // Process availability data to create time slots
         const slots = processAvailabilityData(selectedMentors, selectedVolunteers, eventData);
         setTimeSlots(slots);
+
+        // Initialize with all time slots selected by default
+        setSelectedTimeSlots(new Set(slots));
 
       } catch (error) {
         console.error('Error fetching census data:', error);
@@ -398,11 +628,61 @@ export default function CensusPage() {
     const lastMonthDay = lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     // Check if the time slot is for the last day and contains judging
-    return timeSlot.includes(lastDayName) && 
-           timeSlot.includes(lastMonthDay) && 
-           timeSlot.includes('Judging') && 
+    return timeSlot.includes(lastDayName) &&
+           timeSlot.includes(lastMonthDay) &&
+           timeSlot.includes('Judging') &&
            timeSlot.includes('3:00pm - 5:30pm');
   };
+
+  // Filter management functions
+  const handleTimeSlotToggle = (timeSlot) => {
+    setSelectedTimeSlots(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(timeSlot)) {
+        newSet.delete(timeSlot);
+      } else {
+        newSet.add(timeSlot);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllTimeSlots = () => {
+    setSelectedTimeSlots(new Set(timeSlots));
+  };
+
+  const handleDeselectAllTimeSlots = () => {
+    setSelectedTimeSlots(new Set());
+  };
+
+  const getFilteredTimeSlots = () => {
+    return timeSlots.filter(slot => selectedTimeSlots.has(slot));
+  };
+
+  // Get role-specific data filtered by time slots
+  const getFilteredData = (role) => {
+    const filteredSlots = getFilteredTimeSlots();
+
+    switch (role) {
+      case 'mentors':
+        return mentors.filter(person =>
+          filteredSlots.some(slot => isPersonAvailableAtTime(person, slot))
+        );
+      case 'volunteers':
+        return volunteers.filter(person =>
+          filteredSlots.some(slot => isPersonAvailableAtTime(person, slot))
+        );
+      case 'judges':
+        // Show judges only if judging time slots are selected
+        const hasJudgingSlots = filteredSlots.some(slot => isJudgeTimeSlot(slot));
+        return hasJudgingSlots ? judges : [];
+      case 'hackers':
+        return hackers; // Hackers are always shown
+      default:
+        return [];
+    }
+  };
+
 
   if (loading) {
     return (
@@ -442,218 +722,145 @@ export default function CensusPage() {
         )}
 
         <Typography variant="h5" gutterBottom sx={{ mt: 3, mb: 2 }}>
-          📊 Availability Census
+          📊 Participant Census
         </Typography>
 
         <Typography variant="body2" color="text.secondary" paragraph>
-          This census shows when mentors, volunteers, and judges are available during the hackathon.
-          Only participants who have been selected are shown.
+          Interactive census showing when participants are available during the hackathon.
+          Filter by time slots and view each role separately for better focus.
         </Typography>
 
-        {timeSlots.length > 0 ? (
-          <TableContainer component={Paper} sx={{ mt: 3, overflowX: 'auto' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TimeColumnHeader>Time Slot</TimeColumnHeader>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'primary.light', color: 'primary.contrastText' }}>
-                    Mentors ({mentors.length})
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'secondary.light', color: 'secondary.contrastText' }}>
-                    Volunteers ({volunteers.length})
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'success.light', color: 'success.contrastText' }}>
-                    Judges ({judges.length})
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {timeSlots.map((timeSlot, index) => {
-                  const availableMentors = mentors.filter(mentor => isPersonAvailableAtTime(mentor, timeSlot));
-                  const availableVolunteers = volunteers.filter(volunteer => isPersonAvailableAtTime(volunteer, timeSlot));
-                  const availableJudges = isJudgeTimeSlot(timeSlot) ? judges : [];
+        {/* Time Slot Filter */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6">
+              <AccessTimeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Time Slot Filter
+            </Typography>
+            <Box>
+              <Button
+                size="small"
+                onClick={handleSelectAllTimeSlots}
+                disabled={selectedTimeSlots.size === timeSlots.length}
+                sx={{ mr: 1 }}
+              >
+                Select All
+              </Button>
+              <Button
+                size="small"
+                onClick={handleDeselectAllTimeSlots}
+                disabled={selectedTimeSlots.size === 0}
+                color="error"
+              >
+                Clear All
+              </Button>
+            </Box>
+          </Box>
 
-                  return (
-                    <TableRow key={index}>
-                      <TimeColumnHeader>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {timeSlot.replace(/[🌅☀️🏙️🌆🌃🌙]/g, '').replace(/PST/g, '').trim()}
-                        </Typography>
-                      </TimeColumnHeader>
+          <Box sx={{ mb: 2 }}>
+            <Chip
+              label={`${selectedTimeSlots.size} of ${timeSlots.length} time slots selected`}
+              color={selectedTimeSlots.size > 0 ? 'primary' : 'default'}
+              icon={<FilterListIcon />}
+            />
+          </Box>
 
-                      <PersonCell>
-                        {availableMentors.length > 0 ? (
-                          availableMentors.map((mentor, idx) => (
-                            <Box key={idx} sx={{ mb: idx < availableMentors.length - 1 ? 2 : 0 }}>
-                              {renderMentorInfo(mentor)}
-                              {idx < availableMentors.length - 1 && <Divider sx={{ mt: 1 }} />}
-                            </Box>
-                          ))
-                        ) : (
-                          <Typography variant="caption" color="text.disabled">
-                            No mentors available
+          <Accordion expanded={showFilters} onChange={(_, expanded) => setShowFilters(expanded)}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2">
+                {showFilters ? 'Hide' : 'Show'} Time Slot Selection
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <FormGroup>
+                <Grid container spacing={1}>
+                  {timeSlots.map((timeSlot) => (
+                    <Grid item xs={12} sm={6} md={4} key={timeSlot}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={selectedTimeSlots.has(timeSlot)}
+                            onChange={() => handleTimeSlotToggle(timeSlot)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Typography variant="caption">
+                            {timeSlot.replace(/[🌅☀️🏙️🌆🌃🌙]/g, '').replace(/PST/g, '').trim()}
                           </Typography>
-                        )}
-                      </PersonCell>
+                        }
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </FormGroup>
+            </AccordionDetails>
+          </Accordion>
+        </Paper>
 
-                      <PersonCell>
-                        {availableVolunteers.length > 0 ? (
-                          availableVolunteers.map((volunteer, idx) => (
-                            <Box key={idx} sx={{ mb: idx < availableVolunteers.length - 1 ? 2 : 0 }}>
-                              {renderVolunteerInfo(volunteer)}
-                              {idx < availableVolunteers.length - 1 && <Divider sx={{ mt: 1 }} />}
-                            </Box>
-                          ))
-                        ) : (
-                          <Typography variant="caption" color="text.disabled">
-                            No volunteers available
-                          </Typography>
-                        )}
-                      </PersonCell>
-
-                      <PersonCell>
-                        {availableJudges.length > 0 ? (
-                          availableJudges.map((judge, idx) => (
-                            <Box key={idx} sx={{ mb: idx < availableJudges.length - 1 ? 2 : 0 }}>
-                              {renderJudgeInfo(judge)}
-                              {idx < availableJudges.length - 1 && <Divider sx={{ mt: 1 }} />}
-                            </Box>
-                          ))
-                        ) : (
-                          <Typography variant="caption" color="text.disabled">
-                            {isJudgeTimeSlot(timeSlot) ? 'No judges available' : 'Not judging time'}
-                          </Typography>
-                        )}
-                      </PersonCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+        {selectedTimeSlots.size === 0 ? (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              No time slots selected. Please select at least one time slot to view participant availability.
+            </Typography>
+          </Alert>
         ) : (
-          <Alert severity="info">No availability data found for this event.</Alert>
+          <Grid container spacing={3}>
+            {/* Mentors Table */}
+            <Grid item xs={12}>
+              <RoleTable
+                role="mentors"
+                people={getFilteredData('mentors')}
+                timeSlots={getFilteredTimeSlots()}
+                renderPersonInfo={renderMentorInfo}
+                isPersonAvailableAtTime={isPersonAvailableAtTime}
+                icon={<PeopleIcon />}
+                color="primary"
+              />
+            </Grid>
+
+            {/* Volunteers Table */}
+            <Grid item xs={12}>
+              <RoleTable
+                role="volunteers"
+                people={getFilteredData('volunteers')}
+                timeSlots={getFilteredTimeSlots()}
+                renderPersonInfo={renderVolunteerInfo}
+                isPersonAvailableAtTime={isPersonAvailableAtTime}
+                icon={<WorkIcon />}
+                color="secondary"
+              />
+            </Grid>
+
+            {/* Judges Table - Smart Visibility */}
+            {getFilteredTimeSlots().some(slot => isJudgeTimeSlot(slot)) && (
+              <Grid item xs={12}>
+                <RoleTable
+                  role="judges"
+                  people={getFilteredData('judges')}
+                  timeSlots={getFilteredTimeSlots().filter(slot => isJudgeTimeSlot(slot))}
+                  renderPersonInfo={renderJudgeInfo}
+                  isPersonAvailableAtTime={() => true} // Judges are available during judging slots
+                  emptyMessage="No judges available for judging time slots"
+                  icon={<EmojiEventsIcon />}
+                  color="success"
+                />
+              </Grid>
+            )}
+
+            {/* Hackers Table - Always Show */}
+            <Grid item xs={12}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <GroupIcon sx={{ mr: 1, color: 'info.main' }} />
+                  Hackers ({hackers.length})
+                </Typography>
+                <HackerTable hackers={hackers} />
+              </Box>
+            </Grid>
+          </Grid>
         )}
 
-        {/* Hacker Section - Separate Table */}
-        <HackerTableContainer elevation={3}>
-          <Typography variant="h6" gutterBottom>
-            👨‍💻 Hackers ({hackers.length})
-          </Typography>
-
-          {hackers.length > 0 ? (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Details</strong></TableCell>
-                    <TableCell><strong>Location</strong></TableCell>
-                    <TableCell><strong>Experience</strong></TableCell>
-                    <TableCell><strong>Team Status</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {hackers.map((hacker, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {hacker.name}
-                          </Typography>
-                          {hacker.pronouns && (
-                            <StatusChip
-                              icon={<PersonIcon />}
-                              label={hacker.pronouns}
-                              size="small"
-                              color="default"
-                            />
-                          )}
-                        </Box>
-                      </TableCell>
-
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {hacker.arizonaResident !== undefined && (
-                            <StatusChip
-                              label={hacker.arizonaResident ? "AZ Resident" : "Out of State"}
-                              size="small"
-                              color={hacker.arizonaResident ? "success" : "default"}
-                            />
-                          )}
-                          {hacker.participantType && (
-                            <StatusChip
-                              label={hacker.participantType}
-                              size="small"
-                              color="primary"
-                            />
-                          )}
-                          {hacker.participationCount && (
-                            <StatusChip
-                              icon={<EmojiEventsIcon />}
-                              label={`${hacker.participationCount} events`}
-                              size="small"
-                              color="secondary"
-                            />
-                          )}
-                        </Box>
-                      </TableCell>
-
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {hacker.state && (
-                            <Typography variant="caption" color="text.secondary">
-                              <LocationOnIcon fontSize="small" /> {hacker.state}
-                              {hacker.country && hacker.country !== 'USA' && `, ${hacker.country}`}
-                            </Typography>
-                          )}
-                          {hacker.schoolOrganization && (
-                            <Typography variant="caption" color="text.secondary">
-                              <SchoolIcon fontSize="small" /> {hacker.schoolOrganization}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {hacker.skills && (
-                            <Typography variant="caption" color="text.secondary">
-                              💻 {Array.isArray(hacker.skills) ? hacker.skills.slice(0, 3).join(', ') : hacker.skills}
-                            </Typography>
-                          )}
-                          {hacker.socialCauses && (
-                            <Typography variant="caption" color="text.secondary">
-                              <FavoriteIcon fontSize="small" /> {Array.isArray(hacker.socialCauses) ? hacker.socialCauses.slice(0, 2).join(', ') : hacker.socialCauses}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-
-                      <TableCell>
-                        {hacker.teamStatus && (
-                          <StatusChip
-                            icon={<GroupIcon />}
-                            label={hacker.teamStatus}
-                            size="small"
-                            color={hacker.teamStatus.includes('have a team') ? 'success' : 'primary'}
-                          />
-                        )}
-                        {hacker.teamMatchingPreferredSize && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Preferred size: {hacker.teamMatchingPreferredSize}
-                          </Typography>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Alert severity="info">No hackers registered for this event yet.</Alert>
-          )}
-        </HackerTableContainer>
 
         <Box sx={{ mt: 4 }}>
           <Typography variant="caption" color="text.secondary">
