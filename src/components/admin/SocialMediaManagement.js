@@ -31,7 +31,9 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  FormControl
+  FormControl,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -42,12 +44,17 @@ import {
   Info as InfoIcon,
   ExpandMore as ExpandMoreIcon,
   Preview as PreviewIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Email as EmailIcon,
+  Share as ShareIcon,
+  Group as GroupIcon
 } from '@mui/icons-material';
 import { useEnv } from '../../context/env.context';
 import { SocialMediaManager } from '../../lib/social-media/SocialMediaManager';
 import { SUPPORTED_PLATFORMS } from '../../lib/social-media/index';
 import { useAuthInfo } from '@propelauth/react';
+import BatchEmailDialog from './BatchEmailDialog';
+import axios from 'axios';
 
 const SocialMediaManagement = ({ onSnackbar }) => {
   const { accessToken, userClass } = useAuthInfo();
@@ -67,6 +74,13 @@ const SocialMediaManagement = ({ onSnackbar }) => {
     sending: false
   });
 
+  // Email functionality state
+  const [currentTab, setCurrentTab] = useState(0);
+  const [slackUsers, setSlackUsers] = useState([]);
+  const [loadingSlackUsers, setLoadingSlackUsers] = useState(true);
+  const [batchEmailDialog, setBatchEmailDialog] = useState(false);
+  const [emailResults, setEmailResults] = useState(null);
+
   // Settings state
   const [settings, setSettings] = useState({
     dryRun: true,
@@ -75,6 +89,50 @@ const SocialMediaManagement = ({ onSnackbar }) => {
     autoRefresh: false,
     slackChannel: 'general'
   });
+
+  // Fetch active Slack users for email functionality
+  const fetchActiveSlackUsers = useCallback(async () => {
+    if (!apiServerUrl || !accessToken) return;
+
+    try {
+      setLoadingSlackUsers(true);
+      const org = userClass?.getOrgByName("Opportunity Hack Org");
+      const orgId = org?.orgId;
+
+      const response = await axios.get(
+        `${apiServerUrl}/api/slack/admin/users/active?active_days=10000`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "X-Org-Id": orgId,
+          },
+        }
+      );
+
+      if (response.data && response.data.users) {
+        const activeUsers = response.data.users
+          .filter(user => !user.deleted && !user.is_bot)
+          .map(user => ({
+            id: user.id,
+            name: user.name,
+            real_name: user.real_name,
+            email: user.email,
+            tz: user.tz,
+            isSelected: true // Default to selected for batch email
+          }));
+        setSlackUsers(activeUsers);
+        onSnackbar?.(`Loaded ${activeUsers.length} active Slack users`, 'success');
+      } else {
+        onSnackbar?.('Failed to fetch Slack users', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching active Slack users:', error);
+      onSnackbar?.('Failed to fetch active Slack users', 'error');
+    } finally {
+      setLoadingSlackUsers(false);
+    }
+  }, [apiServerUrl, accessToken, userClass]);
 
   // Fetch news from backend
   const fetchNews = useCallback(async (socialMediaManager) => {
@@ -132,12 +190,17 @@ const SocialMediaManagement = ({ onSnackbar }) => {
     initializeManager();
   }, [apiServerUrl, accessToken, userClass]); // Add accessToken and userClass dependencies
 
-  // Separate useEffect for fetching news when manager is ready  
+  // Separate useEffect for fetching news when manager is ready
   useEffect(() => {
     if (manager) {
       fetchNews(manager);
     }
   }, [manager]); // Only depend on manager, not fetchNews
+
+  // Fetch Slack users when component mounts
+  useEffect(() => {
+    fetchActiveSlackUsers();
+  }, [fetchActiveSlackUsers]);
 
   // Post news to social media
   const handlePostNews = async () => {
@@ -206,10 +269,10 @@ const SocialMediaManagement = ({ onSnackbar }) => {
   // Send adhoc message to Slack
   const handleSendAdhocMessage = async () => {
     if (!manager || !adhocMessage.text.trim()) return;
-    
+
     try {
       setAdhocMessage({ ...adhocMessage, sending: true });
-      
+
       const slackService = manager.getService('slack');
       if (!slackService) {
         onSnackbar?.('Slack service not available', 'error');
@@ -217,7 +280,7 @@ const SocialMediaManagement = ({ onSnackbar }) => {
       }
 
       const result = await slackService.post(adhocMessage.text, adhocMessage.channel);
-      
+
       if (result.success) {
         onSnackbar?.(`Message sent to #${adhocMessage.channel}`, 'success');
         setAdhocMessage({ text: '', channel: adhocMessage.channel, sending: false });
@@ -230,6 +293,23 @@ const SocialMediaManagement = ({ onSnackbar }) => {
     } finally {
       setAdhocMessage({ ...adhocMessage, sending: false });
     }
+  };
+
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  // Handle batch email completion
+  const handleEmailComplete = (summary) => {
+    setEmailResults(summary);
+    onSnackbar?.(`Email batch complete: ${summary.successful}/${summary.total} successful`, summary.successful === summary.total ? 'success' : 'warning');
+  };
+
+  // Get orgId for email functionality
+  const getOrgId = () => {
+    const org = userClass?.getOrgByName("Opportunity Hack Org");
+    return org?.orgId;
   };
 
   const getPlatformStatusColor = (status) => {
@@ -252,6 +332,26 @@ const SocialMediaManagement = ({ onSnackbar }) => {
 
   return (
     <Box>
+      {/* Tab Navigation */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={currentTab} onChange={handleTabChange} aria-label="social media tabs">
+          <Tab
+            icon={<ShareIcon />}
+            label="Social Media"
+            id="tab-0"
+            aria-controls="tabpanel-0"
+          />
+          <Tab
+            icon={<EmailIcon />}
+            label="Email Communication"
+            id="tab-1"
+            aria-controls="tabpanel-1"
+          />
+        </Tabs>
+      </Paper>
+
+      {/* Tab Panel 0: Social Media */}
+      <Box hidden={currentTab !== 0}>
       {/* Platform Status Cards */}
       <Box sx={{ mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -646,6 +746,121 @@ const SocialMediaManagement = ({ onSnackbar }) => {
           <Button onClick={() => setPreviewDialog({ open: false, newsItem: null, platform: null })}>Close</Button>
         </DialogActions>
       </Dialog>
+      </Box>
+
+      {/* Tab Panel 1: Email Communication */}
+      <Box hidden={currentTab !== 1}>
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              <GroupIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Email Communication to Slack Community
+            </Typography>
+            <Box>
+              <Button
+                startIcon={<RefreshIcon />}
+                onClick={fetchActiveSlackUsers}
+                disabled={loadingSlackUsers}
+                sx={{ mr: 2 }}
+              >
+                Refresh Users
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<EmailIcon />}
+                onClick={() => setBatchEmailDialog(true)}
+                disabled={loadingSlackUsers || slackUsers.length === 0}
+              >
+                Send Batch Email
+              </Button>
+            </Box>
+          </Box>
+
+          {loadingSlackUsers ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Chip
+                  label={`${slackUsers.length} active Slack users`}
+                  color={slackUsers.length > 0 ? 'primary' : 'default'}
+                  icon={<GroupIcon />}
+                />
+                <Chip
+                  label={`${slackUsers.filter(u => u.email).length} with email addresses`}
+                  color="secondary"
+                  icon={<EmailIcon />}
+                />
+              </Box>
+
+              {slackUsers.length === 0 ? (
+                <Alert severity="info">
+                  No active Slack users found. Try refreshing or check your Slack integration.
+                </Alert>
+              ) : (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      This feature allows you to send emails to all active Slack community members who have email addresses.
+                      Use this for community-wide announcements, updates, or important information.
+                    </Typography>
+                  </Alert>
+
+                  <Typography variant="subtitle2" gutterBottom>
+                    Recent Users Preview:
+                  </Typography>
+                  <Grid container spacing={1} sx={{ mb: 2 }}>
+                    {slackUsers.slice(0, 12).map((user, index) => (
+                      <Grid item key={user.id}>
+                        <Chip
+                          size="small"
+                          label={user.real_name || user.name}
+                          color={user.email ? 'success' : 'default'}
+                          variant={user.email ? 'filled' : 'outlined'}
+                        />
+                      </Grid>
+                    ))}
+                    {slackUsers.length > 12 && (
+                      <Grid item>
+                        <Chip
+                          size="small"
+                          label={`+${slackUsers.length - 12} more`}
+                          color="info"
+                          variant="outlined"
+                        />
+                      </Grid>
+                    )}
+                  </Grid>
+                </>
+              )}
+
+              {emailResults && (
+                <Alert severity={emailResults.successful === emailResults.total ? 'success' : 'warning'} sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    Last email batch: {emailResults.successful}/{emailResults.total} successful
+                    {emailResults.failed > 0 && ` (${emailResults.failed} failed)`}
+                  </Typography>
+                </Alert>
+              )}
+            </>
+          )}
+        </Paper>
+      </Box>
+
+      {/* Batch Email Dialog */}
+      <BatchEmailDialog
+        open={batchEmailDialog}
+        onClose={() => setBatchEmailDialog(false)}
+        volunteers={slackUsers}
+        volunteerType="community members"
+        accessToken={accessToken}
+        orgId={getOrgId()}
+        eventId={null}
+        onComplete={handleEmailComplete}
+        isSelectedUsers={true}
+      />
     </Box>
   );
 };

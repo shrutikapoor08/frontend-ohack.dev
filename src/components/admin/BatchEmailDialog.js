@@ -145,6 +145,39 @@ const MESSAGE_TEMPLATES = {
         icon: "👥"
       }
     ]
+  },
+  COMMUNITY: {
+    category: "Community Communications",
+    templates: [
+      {
+        id: "community_announcement",
+        title: "Community Announcement",
+        applicableRoles: ["community members", "community", "slack"],
+        message: "Hello Opportunity Hack Community! 🌟\n\nWe have some exciting news to share with all of our amazing community members who make our mission possible.\n\n📢 [Your announcement here]\n\n🙏 Thank you for being part of our community and helping us create lasting impact for nonprofits through technology.\n\n💬 Join the discussion on Slack\n🌐 Stay updated: https://www.ohack.dev\n📱 Follow us: @opportunityhack on all socials\n\nTogether, we're changing the world! 💫",
+        icon: "📢"
+      },
+      {
+        id: "community_newsletter",
+        title: "Community Newsletter",
+        applicableRoles: ["community members", "community", "slack"],
+        message: "📧 Opportunity Hack Community Update\n\nHello amazing community members! 👋\n\nHere's what's been happening in our community:\n\n🎯 **Recent Impact:**\n• [Add recent achievements]\n• [Add project highlights]\n• [Add community milestones]\n\n📅 **Upcoming Events:**\n• [Add upcoming hackathons]\n• [Add mentorship opportunities]\n• [Add community meetings]\n\n🌟 **Community Spotlight:**\n[Highlight a community member, project, or nonprofit]\n\n📚 **Resources & Opportunities:**\n• Track your volunteer hours: https://www.ohack.dev/volunteer/track\n• Explore our projects: https://www.ohack.dev\n• Join discussions on Slack\n\n💙 Thank you for being part of our mission to create lasting technology solutions for nonprofits!\n\nStay connected: @opportunityhack on all socials",
+        icon: "📰"
+      },
+      {
+        id: "community_event_reminder",
+        title: "Event Reminder",
+        applicableRoles: ["community members", "community", "slack"],
+        message: "⏰ Don't Miss Out! Event Reminder\n\nHey community! Just a friendly reminder about our upcoming event:\n\n📅 **[EVENT NAME]**\n🗓️ Date: [DATE]\n⏰ Time: [TIME]\n📍 Location: [LOCATION/VIRTUAL LINK]\n\n🎯 **What to Expect:**\n• [Add event highlights]\n• [Add what attendees will learn/do]\n• [Add networking opportunities]\n\n🚀 **How to Join:**\n[Add registration/join information]\n\n💡 **Why Attend:**\n• Make a real impact for nonprofits\n• Learn new technologies\n• Meet like-minded changemakers\n• Build your portfolio\n\n⏱️ Track your volunteer time: https://www.ohack.dev/volunteer/track\n\nSee you there! 🌟\n\nQuestions? Reply to this email or ask in Slack.\n\nStay connected: @opportunityhack on all socials",
+        icon: "📅"
+      },
+      {
+        id: "community_thanks",
+        title: "Community Appreciation",
+        applicableRoles: ["community members", "community", "slack"],
+        message: "🙏 A Heartfelt Thank You to Our Amazing Community!\n\nDear Opportunity Hack Community,\n\nWe wanted to take a moment to express our genuine gratitude for each and every one of you. Whether you're a developer, designer, project manager, mentor, or nonprofit advocate - you are the heart of our mission.\n\n💫 **Your Impact:**\n• [Add specific community achievements]\n• [Add nonprofit success stories]\n• [Add volunteer hour milestones]\n\n🌟 **What Makes You Special:**\n• Your passion for social good\n• Your technical expertise shared freely\n• Your dedication to helping nonprofits\n• Your collaborative spirit\n\n📈 **Looking Ahead:**\nTogether, we're building a future where technology serves humanity. Every line of code, every design element, every mentoring session creates ripples of positive change.\n\n⏱️ Don't forget to track your volunteer hours: https://www.ohack.dev/volunteer/track\n\n💬 Keep the conversations going on Slack - we love seeing your ideas and collaborations!\n\nWith immense gratitude,\nThe Opportunity Hack Team 💙\n\nStay connected: @opportunityhack on all socials",
+        icon: "💝"
+      }
+    ]
   }
 };
 
@@ -523,18 +556,56 @@ const BatchEmailDialog = ({
 
                 {/* Users to be emailed */}
                 <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
-                  Users to be emailed:
+                  Users to be emailed ({eligibleUsers.length} total):
                 </Typography>
-                <Box sx={{ mb: 2, maxHeight: '150px', overflow: 'auto' }}>
-                  {eligibleUsers.map((user, index) => (
-                    <Chip
-                      key={index}
-                      label={`${user.name || 'Unknown'} (${user.email})`}
-                      size="small"
-                      sx={{ m: 0.5 }}
-                      icon={<PersonIcon />}
-                    />
-                  ))}
+                <Box sx={{ mb: 2 }}>
+                  {eligibleUsers.length <= 20 ? (
+                    // Show all users if 20 or fewer
+                    <Box sx={{ maxHeight: '150px', overflow: 'auto' }}>
+                      {eligibleUsers.map((user, index) => (
+                        <Chip
+                          key={index}
+                          label={`${user.name || 'Unknown'} (${user.email})`}
+                          size="small"
+                          sx={{ m: 0.5 }}
+                          icon={<PersonIcon />}
+                        />
+                      ))}
+                    </Box>
+                  ) : (
+                    // Show preview for large lists
+                    <>
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="info">
+                          <Typography variant="body2">
+                            📧 Batch email will be sent to <strong>{eligibleUsers.length}</strong> users.
+                            Preview of first 10 users shown below:
+                          </Typography>
+                        </Alert>
+                      </Box>
+                      <Box sx={{ maxHeight: '120px', overflow: 'auto', mb: 2 }}>
+                        {eligibleUsers.slice(0, 10).map((user, index) => (
+                          <Chip
+                            key={index}
+                            label={`${user.name || 'Unknown'} (${user.email})`}
+                            size="small"
+                            sx={{ m: 0.5 }}
+                            icon={<PersonIcon />}
+                          />
+                        ))}
+                        <Chip
+                          label={`+${eligibleUsers.length - 10} more users`}
+                          size="small"
+                          sx={{ m: 0.5 }}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        💡 All {eligibleUsers.length} users will receive the email when you click "Send to {eligibleUsers.length} Users"
+                      </Typography>
+                    </>
+                  )}
                 </Box>
               </Box>
             )}

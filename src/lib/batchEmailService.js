@@ -128,9 +128,9 @@ class BatchEmailService {
    * @returns {Array} Filtered users ready for email sending
    */
   static filterEligibleUsers(users) {
-    return users.filter(user => 
-      user.isSelected && 
-      user.email && 
+    return users.filter(user =>
+      (user.isSelected !== undefined ? user.isSelected : true) && // Default to selected for community members
+      user.email &&
       user.email.trim() !== '' &&
       user.id // Must have an ID for the API endpoint
     );
@@ -202,12 +202,15 @@ class BatchEmailService {
   static getRecipientType(volunteerType) {
     const typeMap = {
       'mentors': 'mentor',
-      'judges': 'judge', 
+      'judges': 'judge',
       'volunteers': 'volunteer',
       'hackers': 'hacker',
-      'sponsors': 'sponsor'
+      'sponsors': 'sponsor',
+      'community members': 'community',
+      'community': 'community',
+      'slack': 'community'
     };
-    
+
     return typeMap[volunteerType] || volunteerType;
   }
 }
