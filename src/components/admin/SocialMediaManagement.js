@@ -81,6 +81,17 @@ const SocialMediaManagement = ({ onSnackbar }) => {
   const [batchEmailDialog, setBatchEmailDialog] = useState(false);
   const [emailResults, setEmailResults] = useState(null);
 
+  // Additional recipients state
+  const [additionalEmails, setAdditionalEmails] = useState([]);
+  const [emailInput, setEmailInput] = useState('');
+  const [csvFile, setCsvFile] = useState(null);
+  const [processingEmails, setProcessingEmails] = useState(false);
+
+  // Selection state
+  const [selectedSlackUsers, setSelectedSlackUsers] = useState(new Set());
+  const [slackSearchFilter, setSlackSearchFilter] = useState('');
+  const [showSlackBrowser, setShowSlackBrowser] = useState(false);
+
   // Settings state
   const [settings, setSettings] = useState({
     dryRun: true,
@@ -119,7 +130,7 @@ const SocialMediaManagement = ({ onSnackbar }) => {
             real_name: user.real_name,
             email: user.email,
             tz: user.tz,
-            isSelected: true // Default to selected for batch email
+            isSelected: false // Start with no one selected
           }));
         setSlackUsers(activeUsers);
         onSnackbar?.(`Loaded ${activeUsers.length} active Slack users`, 'success');
@@ -310,6 +321,165 @@ const SocialMediaManagement = ({ onSnackbar }) => {
   const getOrgId = () => {
     const org = userClass?.getOrgByName("Opportunity Hack Org");
     return org?.orgId;
+  };
+
+  // Email parsing and validation utilities
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
+  const parseEmailsFromText = (text) => {
+    if (!text) return [];
+
+    // Split by common delimiters: comma, semicolon, space, newline
+    const emails = text
+      .split(/[,;\s\n]+/)
+      .map(email => email.trim())
+      .filter(email => email.length > 0)
+      .filter(validateEmail);
+
+    return [...new Set(emails)]; // Remove duplicates
+  };
+
+  const parseCsvFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result;
+          const lines = text.split('\n');
+          const emails = [];
+
+          lines.forEach(line => {
+            // Split by comma and extract potential emails
+            const fields = line.split(',').map(field => field.trim().replace(/[\"']/g, ''));
+            fields.forEach(field => {
+              if (validateEmail(field)) {
+                emails.push(field);
+              }
+            });
+          });
+
+          resolve([...new Set(emails)]); // Remove duplicates
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
+  // Handle email input processing
+  const handleAddEmails = async () => {
+    if (!emailInput.trim() && !csvFile) return;
+
+    setProcessingEmails(true);
+
+    try {
+      let newEmails = [];
+
+      if (emailInput.trim()) {
+        newEmails = parseEmailsFromText(emailInput);
+      }
+
+      if (csvFile) {
+        const csvEmails = await parseCsvFile(csvFile);
+        newEmails = [...new Set([...newEmails, ...csvEmails])];
+      }
+
+      if (newEmails.length === 0) {
+        onSnackbar?.('No valid emails found', 'warning');
+        return;
+      }
+
+      // Convert to user objects
+      const emailUsers = newEmails.map((email, index) => ({
+        id: `custom_${Date.now()}_${index}`,
+        name: email.split('@')[0], // Use email prefix as name
+        real_name: email.split('@')[0],
+        email: email,
+        isSelected: true,
+        source: 'custom'
+      }));
+
+      const existingEmails = new Set([...slackUsers.map(u => u.email), ...additionalEmails.map(u => u.email)]);
+      const uniqueNewEmails = emailUsers.filter(user => !existingEmails.has(user.email));
+
+      setAdditionalEmails(prev => [...prev, ...uniqueNewEmails]);
+      setEmailInput('');
+      setCsvFile(null);
+
+      onSnackbar?.(`Added ${uniqueNewEmails.length} new emails (${newEmails.length - uniqueNewEmails.length} duplicates skipped)`, 'success');
+    } catch (error) {
+      console.error('Error processing emails:', error);
+      onSnackbar?.('Error processing emails: ' + error.message, 'error');
+    } finally {
+      setProcessingEmails(false);
+    }
+  };
+
+  // Remove custom email
+  const handleRemoveCustomEmail = (emailToRemove) => {
+    setAdditionalEmails(prev => prev.filter(user => user.email !== emailToRemove));
+  };
+
+  // Clear all custom emails
+  const handleClearCustomEmails = () => {
+    setAdditionalEmails([]);
+    setEmailInput('');
+    setCsvFile(null);
+  };
+
+  // Selection management functions
+  const toggleSlackUserSelection = (userId) => {
+    setSelectedSlackUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllSlackUsers = () => {
+    const filteredUsers = getFilteredSlackUsers();
+    setSelectedSlackUsers(new Set(filteredUsers.map(u => u.id)));
+  };
+
+  const deselectAllSlackUsers = () => {
+    setSelectedSlackUsers(new Set());
+  };
+
+  const getFilteredSlackUsers = () => {
+    if (!slackSearchFilter.trim()) return slackUsers.filter(u => u.email);
+
+    const searchTerm = slackSearchFilter.toLowerCase();
+    return slackUsers.filter(user =>
+      user.email &&
+      (
+        user.name?.toLowerCase().includes(searchTerm) ||
+        user.real_name?.toLowerCase().includes(searchTerm) ||
+        user.email?.toLowerCase().includes(searchTerm)
+      )
+    );
+  };
+
+  const getSelectedUsers = () => {
+    const selectedSlack = slackUsers
+      .filter(user => selectedSlackUsers.has(user.id) && user.email)
+      .map(user => ({
+        ...user,
+        isSelected: true // Mark as selected for BatchEmailDialog
+      }));
+    return [...selectedSlack, ...additionalEmails];
+  };
+
+  const getSelectedUsersCount = () => {
+    return selectedSlackUsers.size + additionalEmails.length;
   };
 
   const getPlatformStatusColor = (status) => {
@@ -782,58 +952,84 @@ const SocialMediaManagement = ({ onSnackbar }) => {
             </Box>
           ) : (
             <>
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <Chip
-                  label={`${slackUsers.length} active Slack users`}
-                  color={slackUsers.length > 0 ? 'primary' : 'default'}
-                  icon={<GroupIcon />}
-                />
-                <Chip
-                  label={`${slackUsers.filter(u => u.email).length} with email addresses`}
-                  color="secondary"
-                  icon={<EmailIcon />}
-                />
-              </Box>
+              {/* Selection Summary */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  📧 Selected Recipients ({getSelectedUsersCount()})
+                </Typography>
 
-              {slackUsers.length === 0 ? (
-                <Alert severity="info">
-                  No active Slack users found. Try refreshing or check your Slack integration.
-                </Alert>
-              ) : (
-                <>
+                {getSelectedUsersCount() === 0 ? (
                   <Alert severity="info" sx={{ mb: 2 }}>
                     <Typography variant="body2">
-                      This feature allows you to send emails to all active Slack community members who have email addresses.
-                      Use this for community-wide announcements, updates, or important information.
+                      <strong>No recipients selected.</strong> Choose from Slack community members or add custom email addresses to get started.
                     </Typography>
                   </Alert>
-
-                  <Typography variant="subtitle2" gutterBottom>
-                    Recent Users Preview:
-                  </Typography>
-                  <Grid container spacing={1} sx={{ mb: 2 }}>
-                    {slackUsers.slice(0, 12).map((user, index) => (
-                      <Grid item key={user.id}>
-                        <Chip
-                          size="small"
-                          label={user.real_name || user.name}
-                          color={user.email ? 'success' : 'default'}
-                          variant={user.email ? 'filled' : 'outlined'}
-                        />
-                      </Grid>
-                    ))}
-                    {slackUsers.length > 12 && (
-                      <Grid item>
-                        <Chip
-                          size="small"
-                          label={`+${slackUsers.length - 12} more`}
-                          color="info"
-                          variant="outlined"
-                        />
-                      </Grid>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                    {selectedSlackUsers.size > 0 && (
+                      <Chip
+                        label={`${selectedSlackUsers.size} from Slack`}
+                        color="primary"
+                        icon={<GroupIcon />}
+                      />
                     )}
-                  </Grid>
-                </>
+                    {additionalEmails.length > 0 && (
+                      <Chip
+                        label={`${additionalEmails.length} custom emails`}
+                        color="success"
+                        icon={<EmailIcon />}
+                      />
+                    )}
+                    <Chip
+                      label={`${getSelectedUsersCount()} total recipients`}
+                      color="info"
+                      variant="outlined"
+                      icon={<EmailIcon />}
+                    />
+                  </Box>
+                )}
+              </Box>
+
+              {/* Action Buttons */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<GroupIcon />}
+                  onClick={() => setShowSlackBrowser(true)}
+                  disabled={loadingSlackUsers || slackUsers.length === 0}
+                >
+                  Browse Slack Users ({slackUsers.filter(u => u.email).length} available)
+                </Button>
+
+                {getSelectedUsersCount() > 0 && (
+                  <Button
+                    variant="contained"
+                    startIcon={<EmailIcon />}
+                    onClick={() => setBatchEmailDialog(true)}
+                    color="primary"
+                  >
+                    Send Email to {getSelectedUsersCount()} Recipients
+                  </Button>
+                )}
+
+                {(selectedSlackUsers.size > 0 || additionalEmails.length > 0) && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      setSelectedSlackUsers(new Set());
+                      setAdditionalEmails([]);
+                    }}
+                  >
+                    Clear All Selections
+                  </Button>
+                )}
+              </Box>
+
+              {slackUsers.length === 0 && (
+                <Alert severity="warning">
+                  No active Slack users found. Try refreshing or check your Slack integration.
+                </Alert>
               )}
 
               {emailResults && (
@@ -847,13 +1043,254 @@ const SocialMediaManagement = ({ onSnackbar }) => {
             </>
           )}
         </Paper>
+
+        {/* Additional Recipients Section */}
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            <EmailIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Additional Recipients
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Add custom email addresses beyond the Slack community. You can copy/paste emails or upload a CSV file.
+          </Typography>
+
+          <Grid container spacing={2}>
+            {/* Email Input Section */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" gutterBottom>
+                Copy/Paste Emails
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                placeholder="Paste emails here... (comma, semicolon, space, or newline separated)
+Example:
+john@example.com, jane@test.com
+user@domain.org; admin@site.net"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                variant="outlined"
+                disabled={processingEmails}
+                sx={{ mb: 2 }}
+              />
+            </Grid>
+
+            {/* CSV Upload Section */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" gutterBottom>
+                Upload CSV File
+              </Typography>
+              <Box
+                sx={{
+                  border: '2px dashed',
+                  borderColor: csvFile ? 'success.main' : 'grey.300',
+                  borderRadius: 1,
+                  p: 2,
+                  textAlign: 'center',
+                  bgcolor: csvFile ? 'success.50' : 'grey.50',
+                  mb: 2,
+                  height: 120,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
+                <input
+                  accept=".csv,.txt"
+                  style={{ display: 'none' }}
+                  id="csv-upload"
+                  type="file"
+                  onChange={(e) => setCsvFile(e.target.files[0])}
+                  disabled={processingEmails}
+                />
+                <label htmlFor="csv-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    disabled={processingEmails}
+                    sx={{ mb: 1 }}
+                  >
+                    Choose CSV File
+                  </Button>
+                </label>
+                {csvFile ? (
+                  <Typography variant="body2" color="success.main">
+                    ✓ {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)
+                  </Typography>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    CSV with emails in any column
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* Action Buttons */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleAddEmails}
+              disabled={processingEmails || (!emailInput.trim() && !csvFile)}
+              startIcon={processingEmails ? <CircularProgress size={16} /> : <EmailIcon />}
+            >
+              {processingEmails ? 'Processing...' : 'Add Emails'}
+            </Button>
+            {additionalEmails.length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleClearCustomEmails}
+                disabled={processingEmails}
+              >
+                Clear All ({additionalEmails.length})
+              </Button>
+            )}
+          </Box>
+
+          {/* Custom Emails Display */}
+          {additionalEmails.length > 0 && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" gutterBottom>
+                Custom Recipients ({additionalEmails.length}):
+              </Typography>
+              <Box sx={{ maxHeight: '200px', overflow: 'auto' }}>
+                <Grid container spacing={1}>
+                  {additionalEmails.map((user, index) => (
+                    <Grid item key={user.id}>
+                      <Chip
+                        label={user.email}
+                        size="small"
+                        onDelete={() => handleRemoveCustomEmail(user.email)}
+                        color="secondary"
+                        variant="outlined"
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            </>
+          )}
+        </Paper>
       </Box>
+
+      {/* Slack User Browser Dialog */}
+      <Dialog
+        open={showSlackBrowser}
+        onClose={() => setShowSlackBrowser(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { height: '80vh' } }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              <GroupIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Browse Slack Users
+            </Typography>
+            <Typography variant="subtitle2" color="text.secondary">
+              {selectedSlackUsers.size} of {getFilteredSlackUsers().length} selected
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent>
+          {/* Search and Bulk Actions */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              placeholder="Search by name or email..."
+              value={slackSearchFilter}
+              onChange={(e) => setSlackSearchFilter(e.target.value)}
+              size="small"
+              sx={{ flexGrow: 1, minWidth: 250 }}
+              InputProps={{
+                startAdornment: <Box sx={{ mr: 1 }}>🔍</Box>
+              }}
+            />
+            <Button
+              size="small"
+              onClick={selectAllSlackUsers}
+              disabled={getFilteredSlackUsers().length === 0}
+            >
+              Select All ({getFilteredSlackUsers().length})
+            </Button>
+            <Button
+              size="small"
+              onClick={deselectAllSlackUsers}
+              disabled={selectedSlackUsers.size === 0}
+              color="error"
+            >
+              Clear All
+            </Button>
+          </Box>
+
+          {/* Users List */}
+          <Box sx={{ maxHeight: '400px', overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+            {getFilteredSlackUsers().length === 0 ? (
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  {slackSearchFilter.trim() ? 'No users match your search.' : 'No users with email addresses found.'}
+                </Typography>
+              </Box>
+            ) : (
+              <List dense>
+                {getFilteredSlackUsers().map((user) => (
+                  <ListItem key={user.id} divider>
+                    <ListItemIcon>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={selectedSlackUsers.has(user.id)}
+                            onChange={() => toggleSlackUserSelection(user.id)}
+                          />
+                        }
+                        label=""
+                        sx={{ m: 0 }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={user.real_name || user.name}
+                      secondary={user.email}
+                      primaryTypographyProps={{ fontWeight: selectedSlackUsers.has(user.id) ? 'bold' : 'normal' }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+
+          {/* Selection Summary */}
+          {selectedSlackUsers.size > 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                ✓ <strong>{selectedSlackUsers.size}</strong> Slack users selected for email delivery
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setShowSlackBrowser(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => setShowSlackBrowser(false)}
+            variant="contained"
+            disabled={selectedSlackUsers.size === 0}
+          >
+            Apply Selection ({selectedSlackUsers.size} users)
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Batch Email Dialog */}
       <BatchEmailDialog
         open={batchEmailDialog}
         onClose={() => setBatchEmailDialog(false)}
-        volunteers={slackUsers}
+        volunteers={getSelectedUsers()}
         volunteerType="community members"
         accessToken={accessToken}
         orgId={getOrgId()}

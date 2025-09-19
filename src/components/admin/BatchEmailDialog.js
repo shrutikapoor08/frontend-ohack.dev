@@ -577,9 +577,17 @@ const BatchEmailDialog = ({
                     <>
                       <Box sx={{ mb: 2 }}>
                         <Alert severity="info">
-                          <Typography variant="body2">
-                            📧 Batch email will be sent to <strong>{eligibleUsers.length}</strong> users.
-                            Preview of first 10 users shown below:
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            📧 Batch email will be sent to <strong>{eligibleUsers.length}</strong> users:
+                          </Typography>
+                          <Typography variant="caption" component="div">
+                            • {eligibleUsers.filter(u => u.source !== 'custom').length} from Slack community
+                            {eligibleUsers.filter(u => u.source === 'custom').length > 0 &&
+                              ` • ${eligibleUsers.filter(u => u.source === 'custom').length} custom recipients`
+                            }
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                            Preview of first 10 users shown below (🟢 = custom, ⚪ = Slack):
                           </Typography>
                         </Alert>
                       </Box>
@@ -591,6 +599,8 @@ const BatchEmailDialog = ({
                             size="small"
                             sx={{ m: 0.5 }}
                             icon={<PersonIcon />}
+                            color={user.source === 'custom' ? 'success' : 'default'}
+                            variant={user.source === 'custom' ? 'outlined' : 'filled'}
                           />
                         ))}
                         <Chip
