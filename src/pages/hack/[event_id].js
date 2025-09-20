@@ -10,14 +10,12 @@ import {
   Button, 
   styled, 
   Box, 
-  Paper, 
-  Fab, 
-  Zoom 
+  Paper
 } from "@mui/material";
-import { KeyboardArrowUp as KeyboardArrowUpIcon } from '@mui/icons-material';
 import Script from 'next/script';
 import HackathonHeader from "../../components/Hackathon/HackathonHeader";
 import TableOfContents from '../../components/Hackathon/TableOfContents';
+import FloatingNavigation from '../../components/Hackathon/FloatingNavigation';
 
 // Create a visually-hidden style for accessibility
 const VisuallyHidden = styled('span')({
@@ -31,38 +29,6 @@ const VisuallyHidden = styled('span')({
   whiteSpace: 'nowrap',
   borderWidth: '0',
 });
-
-// Styled Back to Top button
-const BackToTopButton = styled(Fab)(({ theme }) => ({
-  position: 'fixed',
-  bottom: theme.spacing(2),
-  right: theme.spacing(2),
-  zIndex: 1000,
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-  '&:hover': {
-    backgroundColor: theme.palette.primary.dark,
-    transform: 'scale(1.1)',
-  },
-  transition: 'all 0.3s ease-in-out',
-  // Touch-friendly size for mobile
-  [theme.breakpoints.down('sm')]: {
-    width: 48,
-    height: 48,
-    bottom: theme.spacing(3),
-    right: theme.spacing(3),
-  },
-  // Larger size for desktop with better hover effects
-  [theme.breakpoints.up('sm')]: {
-    width: 56,
-    height: 56,
-    '&:hover': {
-      backgroundColor: theme.palette.primary.dark,
-      transform: 'scale(1.15)',
-      boxShadow: theme.shadows[8],
-    },
-  },
-}));
 
 const LinksContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -201,7 +167,6 @@ const getFaqData = () => import('../../data/faqData').then(module => module.defa
 
 export default function HackathonEvent({ eventData }) {
   const router = useRouter();
-  const [showBackToTop, setShowBackToTop] = useState(false);
   const [faqData, setFaqData] = useState(null);
   
   // If fallback is true and the page is being generated,
@@ -223,15 +188,6 @@ export default function HackathonEvent({ eventData }) {
           }, 100); // Small delay to ensure the page has rendered
         }
       }
-
-      // Handle back to top button visibility
-      const handleScroll = () => {
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        setShowBackToTop(scrollTop > 300); // Show after scrolling 300px
-      };
-
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => window.removeEventListener('scroll', handleScroll);
     }
   }, []);
 
@@ -274,13 +230,7 @@ export default function HackathonEvent({ eventData }) {
     };
   }, [faqData]);
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
-
+  // Loading state
   if (isLoading || !event) {
     return (
       <Container maxWidth="lg" component="main" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
@@ -1049,17 +999,8 @@ export default function HackathonEvent({ eventData }) {
         </Grid>
       </Container>
 
-      {/* Back to Top Button */}
-      <Zoom in={showBackToTop} timeout={300}>
-        <BackToTopButton
-          onClick={scrollToTop}
-          aria-label="Back to top"
-          title="Back to top"
-          size="medium"
-        >
-          <KeyboardArrowUpIcon />
-        </BackToTopButton>
-      </Zoom>
+      {/* Floating Navigation Component */}
+      <FloatingNavigation />
     </>
   );
 }
