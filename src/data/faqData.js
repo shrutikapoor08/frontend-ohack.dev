@@ -62,6 +62,23 @@ const faqData = [
       icon: "🗓️",
     },
     {
+      question: "What is a hacker? Like someone who breaks into computers?",
+      answer: (
+        <>
+          A hacker is someone who enjoys exploring the details of systems and
+          stretching their capabilities. In the context of Opportunity Hack,
+          hackers use their skills to create innovative solutions for
+          nonprofits.
+
+          Review the Hacker below for more details.
+          <Button variant="contained" color="primary" href="/about/hackers">
+            Learn more about hackers
+          </Button>
+        </>
+      ),
+      icon: "👨‍💻",
+    },
+    {
       question: "Who can participate?",
       answer:
         "Anyone passionate about using technology for social good can participate, including students, professionals, and hobbyists. We welcome participants of all skill levels, from beginners to experts.",
@@ -90,7 +107,13 @@ const faqData = [
       answer:
         "For in-person events, bring your laptop, charger, and any other devices you might need. If you want to sleep overnight, bring a pillow or something comfortable to wear that will keep you warm. For virtual events, ensure you have a stable internet connection.",
       icon: "🎒",
-    },
+    },    
+    {
+      question: "Is this just software, or can we work on hardware too?",
+      answer:
+        "We've only seen software solutions at this point, but that doesn't mean hardware projects are off the table. If you have a hardware idea, we encourage you to explore it as long as it solves the nonprofit problem.",
+      icon: "💻",
+    },    
     {
       question: "What if I'm in high school?",
       answer:
@@ -116,7 +139,7 @@ const faqData = [
     {
       question: "What kind of projects can I work on?",
       answer:
-        "Projects are focused on solving real-world problems for nonprofits. These can range from developing new websites or mobile apps to creating data analysis tools or improving existing systems.",
+        "Projects are focused on solving real-world problems for nonprofits and are specific to each hackathon. These can range from developing new websites or mobile apps to creating data analysis tools or improving existing systems.",
       icon: "🚀",
     },
     {
@@ -210,6 +233,12 @@ const faqData = [
       answer:
         "Follow us on social media and join our Slack community for the latest updates and announcements.",
       icon: "📢",
+    },
+    {
+      question: "I see you have closed the Judge Applications, can I still apply?",
+      answer:
+        "Unfortunately, once the applications are closed, we cannot accept any new judges. However, we encourage you to apply for future opportunities!",
+      icon: "❌",
     },
     {
       question: "Do you offer longer-term opportunities beyond weekend hackathons?",
