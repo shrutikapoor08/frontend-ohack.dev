@@ -33,14 +33,14 @@ const MESSAGE_TEMPLATES = {
         id: "hacker_approved",
         title: "Hacker Application Approved",
         applicableRoles: ["hacker", "hackers"],
-        message: "🎉 You're in! Welcome to Opportunity Hack!\n\nYour hacker application is approved. Get ready to build impactful solutions for nonprofits alongside amazing teammates.\n\n🚀 Next steps:\n• Join our Slack for updates\n• Start exploring nonprofit projects\n• Track your impact: https://www.ohack.dev/volunteer/track\n\nLet's change the world, one line of code at a time! 💻\n\nStay connected: @opportunityhack on all socials",
+        message: "🎉 You're in! Welcome to Opportunity Hack!\n\nYour hacker application is approved. Get ready to build impactful solutions for nonprofits alongside amazing teammates.\n\n🚀 Next steps:\n• Join our Slack for updates\n• Wait for us to announce nonprofit projects at https://www.ohack.dev/hack/[EVENT_ID]\n• Learn what's expected: https://www.ohack.dev/about/hackers\n• Understand judging criteria: https://www.ohack.dev/about/judges\n• Optional: Track your volunteer hours (if you want to keep track): https://www.ohack.dev/volunteer/track\n\nLet's change the world, one line of code at a time! 💻\n\nStay connected: @opportunityhack on all socials",
         icon: "✅"
       },
       {
         id: "mentor_approved",
         title: "Mentor Application Approved",
         applicableRoles: ["mentor", "mentors"],
-        message: "🌟 Welcome to our mentor squad!\n\nYour expertise will guide teams to create life-changing solutions for nonprofits. Thank you for sharing your knowledge!\n\n📚 Resources:\n• Mentor guide: https://www.ohack.dev/about/mentors\n• Event check-in: https://www.ohack.dev/hack/[EVENT_ID]/mentor-checkin\n• Track your impact: https://www.ohack.dev/volunteer/track\n\nReady to inspire the next generation of changemakers? 🚀",
+        message: "🌟 Welcome to our mentor squad!\n\nYour expertise will guide teams to create life-changing solutions for nonprofits. Thank you for sharing your knowledge!\n\n📚 Resources:\n• Mentor guide: https://www.ohack.dev/about/mentors\n• Event check-in: https://www.ohack.dev/hack/[EVENT_ID]/mentor-checkin\n• Optional: Track your volunteer hours (if you want to keep track): https://www.ohack.dev/volunteer/track\n\nReady to inspire the next generation of changemakers? 🚀",
         icon: "🎯"
       },
       {
