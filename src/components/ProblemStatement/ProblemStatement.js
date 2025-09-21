@@ -227,7 +227,7 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
   const [helpingType, setHelpingType] = useState("");  
   const [expanded, setExpanded] = useState("Events");
   const [tabValue, setTabValue] = useState('Events');
-  const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedSection, setExpandedSection] = useState('events'); // Default to events expanded
   const { get_user_by_id, profile, handle_help_toggle } = useProfileApi();
   const [helperProfiles, setHelperProfiles] = useState({});
   const [isCheckingHelperStatus, setIsCheckingHelperStatus] = useState(false);
@@ -835,50 +835,50 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
 
           <CardContent sx={{ p: 4 }}>
             {/* Engagement Metrics */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={4}>
+            <Grid container spacing={isMobile ? 2 : 3} sx={{ mb: 4 }}>
+              <Grid item xs={12} sm={4}>
                 <Zoom in timeout={600} style={{ transitionDelay: '200ms' }}>
                   <MetricCard>
                     <Stack alignItems="center" spacing={1}>
                       <Badge badgeContent={countOfHackers} color="primary" max={99}>
-                        <DeveloperModeIcon color="primary" sx={{ fontSize: 32 }} />
+                        <DeveloperModeIcon color="primary" sx={{ fontSize: isMobile ? 28 : 32 }} />
                       </Badge>
-                      <Typography variant="h6" fontWeight={700}>
+                      <Typography variant={isMobile ? "body1" : "h6"} fontWeight={700}>
                         {countOfHackers}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" textAlign="center">
                         Developer{countOfHackers === 1 ? '' : 's'}
                       </Typography>
                     </Stack>
                   </MetricCard>
                 </Zoom>
               </Grid>
-              <Grid item xs={4}>
+              <Grid item xs={12} sm={4}>
                 <Zoom in timeout={600} style={{ transitionDelay: '400ms' }}>
                   <MetricCard>
                     <Stack alignItems="center" spacing={1}>
                       <Badge badgeContent={countOfMentors} color="secondary" max={99}>
-                        <SupportIcon color="secondary" sx={{ fontSize: 32 }} />
+                        <SupportIcon color="secondary" sx={{ fontSize: isMobile ? 28 : 32 }} />
                       </Badge>
-                      <Typography variant="h6" fontWeight={700}>
+                      <Typography variant={isMobile ? "body1" : "h6"} fontWeight={700}>
                         {countOfMentors}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" textAlign="center">
                         Mentor{countOfMentors === 1 ? '' : 's'}
                       </Typography>
                     </Stack>
                   </MetricCard>
                 </Zoom>
               </Grid>
-              <Grid item xs={4}>
+              <Grid item xs={12} sm={4}>
                 <Zoom in timeout={600} style={{ transitionDelay: '600ms' }}>
                   <MetricCard>
                     <Stack alignItems="center" spacing={1}>
-                      <EventIcon color="action" sx={{ fontSize: 32 }} />
-                      <Typography variant="h6" fontWeight={700}>
+                      <EventIcon color="action" sx={{ fontSize: isMobile ? 28 : 32 }} />
+                      <Typography variant={isMobile ? "body1" : "h6"} fontWeight={700}>
                         {eventsCount}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" textAlign="center">
                         Event{eventsCount === 1 ? '' : 's'}
                       </Typography>
                     </Stack>
@@ -887,21 +887,49 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
               </Grid>
             </Grid>
 
-            {/* Description Preview */}
-            <Typography 
-              variant="body1" 
-              sx={{ 
+            {/* Project Description */}
+            <Box
+              sx={{
                 mb: 4,
-                lineHeight: 1.7,
-                fontSize: '1.1rem',
-                color: 'text.secondary'
+                p: 3,
+                backgroundColor: '#f8fafc',
+                borderRadius: 2,
+                border: '1px solid #e2e8f0'
               }}
             >
-              {problem_statement.description?.length > 200 
-                ? `${problem_statement.description.substring(0, 200)}...`
-                : problem_statement.description
-              }
-            </Typography>
+              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <NotesIcon color="primary" />
+                Project Description
+              </Typography>
+              <Box sx={{
+                '& p': { marginBottom: 2 },
+                '& ul, & ol': { paddingLeft: 3, marginBottom: 2 },
+                '& h1, & h2, & h3, & h4, & h5, & h6': { marginTop: 2, marginBottom: 1, fontWeight: 600 },
+                '& blockquote': {
+                  borderLeft: '4px solid #e2e8f0',
+                  paddingLeft: 2,
+                  marginLeft: 0,
+                  fontStyle: 'italic',
+                  backgroundColor: '#f1f5f9',
+                  padding: 2,
+                  borderRadius: 1
+                },
+                '& code': {
+                  backgroundColor: '#f1f5f9',
+                  padding: '2px 6px',
+                  borderRadius: 1,
+                  fontSize: '0.9em'
+                },
+                '& pre': {
+                  backgroundColor: '#f1f5f9',
+                  padding: 2,
+                  borderRadius: 1,
+                  overflow: 'auto'
+                }
+              }}>
+                <ReactMarkdown>{problem_statement.description}</ReactMarkdown>
+              </Box>
+            </Box>
 
             {/* Help Toggle */}
             <Box sx={{ mb: 4 }}>
@@ -915,52 +943,42 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
 
             {/* Expandable Sections */}
             <Stack spacing={3}>
-              {/* Full Description */}
-              <SectionCard>
-                <SectionHeader onClick={() => handleSectionToggle('description')}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <NotesIcon color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
-                      Project Description
-                    </Typography>
-                  </Stack>
-                  <IconButton>
-                    <ExpandMoreIcon 
-                      sx={{ 
-                        transform: expandedSection === 'description' ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.3s'
-                      }} 
-                    />
-                  </IconButton>
-                </SectionHeader>
-                <Collapse in={expandedSection === 'description'}>
-                  <Box sx={{ p: 3 }}>
-                    <ReactMarkdown>{problem_statement.description}</ReactMarkdown>
-                  </Box>
-                </Collapse>
-              </SectionCard>
 
               {/* Reference Documents */}
               {problem_statement.references?.length > 0 && (
                 <SectionCard>
-                  <SectionHeader onClick={() => handleSectionToggle('references')}>
+                  <SectionHeader
+                    onClick={() => handleSectionToggle('references')}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={expandedSection === 'references'}
+                    aria-controls="references-content"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSectionToggle('references');
+                      }
+                    }}
+                  >
                     <Stack direction="row" alignItems="center" spacing={2}>
                       <ArticleIcon color="primary" />
                       <Typography variant="h6" fontWeight={600}>
                         Reference Documents ({problem_statement.references.length})
                       </Typography>
                     </Stack>
-                    <IconButton>
-                      <ExpandMoreIcon 
-                        sx={{ 
+                    <IconButton
+                      aria-label={expandedSection === 'references' ? 'Collapse reference documents' : 'Expand reference documents'}
+                    >
+                      <ExpandMoreIcon
+                        sx={{
                           transform: expandedSection === 'references' ? 'rotate(180deg)' : 'none',
                           transition: 'transform 0.3s'
-                        }} 
+                        }}
                       />
                     </IconButton>
                   </SectionHeader>
                   <Collapse in={expandedSection === 'references'}>
-                    <Box sx={{ p: 3 }}>
+                    <Box id="references-content" sx={{ p: 3 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         📚 Review these documents to understand the problem better. Most are collaborative Google docs!
                       </Typography>
@@ -977,24 +995,38 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
               {/* GitHub Repositories */}
               {problem_statement.github?.length > 0 && (
                 <SectionCard>
-                  <SectionHeader onClick={() => handleSectionToggle('github')}>
+                  <SectionHeader
+                    onClick={() => handleSectionToggle('github')}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={expandedSection === 'github'}
+                    aria-controls="github-content"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSectionToggle('github');
+                      }
+                    }}
+                  >
                     <Stack direction="row" alignItems="center" spacing={2}>
                       <GitHubIcon color="primary" />
                       <Typography variant="h6" fontWeight={600}>
                         Code & Tasks ({problem_statement.github.length} repos)
                       </Typography>
                     </Stack>
-                    <IconButton>
-                      <ExpandMoreIcon 
-                        sx={{ 
+                    <IconButton
+                      aria-label={expandedSection === 'github' ? 'Collapse code repositories' : 'Expand code repositories'}
+                    >
+                      <ExpandMoreIcon
+                        sx={{
                           transform: expandedSection === 'github' ? 'rotate(180deg)' : 'none',
                           transition: 'transform 0.3s'
-                        }} 
+                        }}
                       />
                     </IconButton>
                   </SectionHeader>
                   <Collapse in={expandedSection === 'github'}>
-                    <Box sx={{ p: 3 }}>
+                    <Box id="github-content" sx={{ p: 3 }}>
                       <Grid container spacing={2}>
                         {problem_statement.github.map((repo, index) => (
                           <Grid item xs={12} sm={6} key={index}>
@@ -1037,24 +1069,38 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
 
               {/* Events & Teams */}
               <SectionCard>
-                <SectionHeader onClick={() => handleSectionToggle('events')}>
+                <SectionHeader
+                  onClick={() => handleSectionToggle('events')}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={expandedSection === 'events'}
+                  aria-controls="events-content"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSectionToggle('events');
+                    }
+                  }}
+                >
                   <Stack direction="row" alignItems="center" spacing={2}>
                     <PeopleIcon color="primary" />
                     <Typography variant="h6" fontWeight={600}>
                       Events & Teams ({eventsCount} events)
                     </Typography>
                   </Stack>
-                  <IconButton>
-                    <ExpandMoreIcon 
-                      sx={{ 
+                  <IconButton
+                    aria-label={expandedSection === 'events' ? 'Collapse events and teams' : 'Expand events and teams'}
+                  >
+                    <ExpandMoreIcon
+                      sx={{
                         transform: expandedSection === 'events' ? 'rotate(180deg)' : 'none',
                         transition: 'transform 0.3s'
-                      }} 
+                      }}
                     />
                   </IconButton>
                 </SectionHeader>
                 <Collapse in={expandedSection === 'events'}>
-                  <Box sx={{ p: 3 }}>
+                  <Box id="events-content" sx={{ p: 3 }}>
                     {hackathonEventsLoaded ? (
                       <Events
                         key={problem_statement.id}
