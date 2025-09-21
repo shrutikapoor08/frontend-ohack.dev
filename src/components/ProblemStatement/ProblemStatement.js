@@ -227,7 +227,7 @@ export default function ProblemStatement({ problem_statement_id, user, npo_id })
   const [helpingType, setHelpingType] = useState("");  
   const [expanded, setExpanded] = useState("Events");
   const [tabValue, setTabValue] = useState('Events');
-  const [expandedSection, setExpandedSection] = useState('events'); // Default to events expanded
+  const [expandedSection, setExpandedSection] = useState('references'); // Default to events expanded
   const { get_user_by_id, profile, handle_help_toggle } = useProfileApi();
   const [helperProfiles, setHelperProfiles] = useState({});
   const [isCheckingHelperStatus, setIsCheckingHelperStatus] = useState(false);
