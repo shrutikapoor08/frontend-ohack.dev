@@ -811,7 +811,7 @@ const SlackTutorial = () => {
           
           {/* Praise Bot Section */}
           <Card elevation={2} sx={{ mb: 3 }}>
-            <CardContent sx={{ p: 1 }}>
+            <CardContent sx={{ p: 3 }}>
               <Box 
                 display="flex" 
                 alignItems="center" 
