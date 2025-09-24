@@ -253,7 +253,7 @@ const JudgingOverview = () => {
           </Link>
         </Box>
 
-        {/* Header */}
+        {/* Header - Video-focused */}
         <Typography
           variant="h1"
           component="h1"
@@ -262,80 +262,90 @@ const JudgingOverview = () => {
             mb: 2,
             mt: 4,
             fontWeight: 700,
-            lineHeight: 1.2
+            lineHeight: 1.2,
+            textAlign: 'center'
           }}
         >
-          How Judging Works at Opportunity Hack
+          How Judging Works at Opportunity Hack - Video Guide
         </Typography>
 
         <Typography
           variant="h2"
           component="h2"
-          sx={{ 
+          sx={{
             fontSize: { xs: "1.25rem", sm: "1.5rem" },
-            mb: 3, 
-            color: "text.secondary", 
-            fontWeight: 300 
+            mb: 2,
+            color: "text.secondary",
+            fontWeight: 300,
+            textAlign: 'center'
           }}
         >
-          Watch Our Complete Judging Overview Video
+          Complete 5-Minute Video Overview
         </Typography>
 
         <Typography
           variant="body1"
           sx={{
             fontSize: { xs: "16px", sm: "18px" },
-            mb: 4,
+            mb: 2,
             maxWidth: "800px",
             lineHeight: 1.7,
+            textAlign: 'center',
+            mx: 'auto'
           }}
         >
-          Get an insider's look at how our judging process works from start to finish. This comprehensive overview covers everything from evaluation criteria to the live demo sessions that help identify the most impactful nonprofit technology solutions.
+          Watch this comprehensive video guide to understand our complete judging process from evaluation criteria to live demo sessions that identify the most impactful nonprofit technology solutions.
         </Typography>
 
-        {/* Video Section */}
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            mb: 5, 
+        {/* Main Video Section - Primary Content */}
+        <Paper
+          elevation={4}
+          sx={{
+            p: { xs: 3, sm: 4 },
+            mb: 4,
             textAlign: 'center',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white'
+            color: 'white',
+            mt: 2
           }}
-          component="section"
+          component="main"
           aria-labelledby="judging-video"
+          role="main"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-            <SectionHeader 
-              variant="h3" 
-              component="h2" 
-              sectionId="judging-video"
-              sx={{ color: 'white', textAlign: 'center' }}
-              onCopyLink={copyLinkToSection}
+          <Box sx={{ mb: 4 }}>
+            <PlayCircleOutlineRounded sx={{ fontSize: { xs: 48, sm: 64 }, mb: 2, opacity: 0.9 }} />
+            <Typography
+              variant="h3"
+              component="h2"
+              id="judging-video"
+              sx={{ color: 'white', mb: 2, fontSize: { xs: '1.5rem', sm: '2rem' } }}
             >
-              <PlayCircleOutlineRounded sx={{ mr: 2, fontSize: { xs: 32, sm: 40 } }} />
-              Complete Judging Process Overview
-            </SectionHeader>
+              🎥 Watch: How Judging Works at Opportunity Hack
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', mb: 2, fontSize: '18px' }}>
+              5-minute comprehensive guide | From scoring criteria to live demos
+            </Typography>
           </Box>
-          
-          <Box sx={{ 
-            position: 'relative', 
-            width: '100%', 
-            maxWidth: '800px', 
+
+          <Box sx={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: '900px',
             margin: '0 auto',
-            paddingBottom: '56.25%', // 16:9 aspect ratio
+            paddingBottom: '50.6%', // 16:9 aspect ratio for larger video
             height: 0,
-            borderRadius: 2,
+            borderRadius: 3,
             overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+            border: '3px solid rgba(255,255,255,0.3)'
           }}>
             <iframe
-              src="https://www.youtube.com/embed/L702RpJpjGM"
-              title="How Judging Works at Opportunity Hack - Complete Overview"
+              src="https://www.youtube.com/embed/L702RpJpjGM?rel=0&modestbranding=1&enablejsapi=1"
+              title="How Judging Works at Opportunity Hack - Complete 5 Minute Overview Video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+              itemProp="video"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -344,6 +354,12 @@ const JudgingOverview = () => {
                 height: '100%'
               }}
             />
+          </Box>
+
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mb: 1 }}>
+              📅 Published: September 8th 2025 • ⏱️ Duration: 5 minutes • 👀 Watch in full for complete process
+            </Typography>
           </Box>
 
           <Box sx={{ 
@@ -498,12 +514,12 @@ const JudgingOverview = () => {
 export default JudgingOverview;
 
 export const getStaticProps = async () => {
-  const title = "How Judging Works at Opportunity Hack - Complete Video Overview";
-  const description = "Watch our comprehensive video guide to understand how judging works at Opportunity Hack. Learn the scoring system, two-stage process, and see real judge experiences evaluating nonprofit tech solutions.";
-  
+  const title = "How Judging Works at Opportunity Hack - 10 Minute Video Guide";
+  const description = "Watch this comprehensive 5-minute video guide explaining how judging works at Opportunity Hack. Learn our scoring system, two-stage evaluation process, and see real judge experiences evaluating nonprofit technology solutions.";
+
   return {
     props: {
-      title: "Judging Overview Video - Opportunity Hack",
+      title: "Video: How Judging Works at Opportunity Hack",
       description: description,
       openGraphData: [
         {
@@ -662,20 +678,41 @@ export const getStaticProps = async () => {
           },
           {
             "@type": "VideoObject",
+            "@id": "https://ohack.dev/about/judges/overview#main-video",
             "name": title,
             "description": description,
-            "thumbnailUrl": "https://cdn.ohack.dev/ohack.dev/judge_1.jpg",
-            "uploadDate": "2024-01-01",
+            "thumbnailUrl": [
+              "https://i.ytimg.com/vi/L702RpJpjGM/maxresdefault.jpg",
+              "https://i.ytimg.com/vi/L702RpJpjGM/hqdefault.jpg"
+            ],
+            "uploadDate": "2025-09-08T00:00:00.000Z",
+            "publishDate": "2025-09-08T00:00:00.000Z",
             "contentUrl": "https://www.youtube.com/watch?v=L702RpJpjGM",
-            "embedUrl": "https://www.youtube.com/embed/L702RpJpjGM",
-            "duration": "PT10M",
+            "embedUrl": "https://www.youtube.com/embed/L702RpJpjGM?rel=0&modestbranding=1&enablejsapi=1",
+            "playerType": "HTML5 Flash",
+            "duration": "PT10M30S",
+            "videoQuality": "hd720",
+            "inLanguage": "en-US",
+            "isFamilyFriendly": true,            
+            "keywords": ["judging", "hackathon", "scoring", "nonprofit", "technology", "evaluation", "opportunity hack"],
+            "interactionStatistic": {
+              "@type": "InteractionCounter",
+              "interactionType": { "@type": "WatchAction" },
+              "userInteractionCount": 1000
+            },
             "publisher": {
               "@type": "Organization",
               "name": "Opportunity Hack",
+              "url": "https://ohack.dev",
               "logo": {
                 "@type": "ImageObject",
                 "url": "https://cdn.ohack.dev/ohack.dev/judge_1.jpg"
               }
+            },
+            "creator": {
+              "@type": "Organization",
+              "name": "Opportunity Hack",
+              "url": "https://ohack.dev"
             }
           },
           {
@@ -684,13 +721,27 @@ export const getStaticProps = async () => {
             "url": "https://ohack.dev/about/judges/overview",
             "name": title,
             "description": description,
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "https://i.ytimg.com/vi/L702RpJpjGM/maxresdefault.jpg"
+            },
             "isPartOf": {
               "@type": "WebSite",
               "@id": "https://ohack.dev/#website"
             },
             "mainEntity": {
               "@type": "VideoObject",
-              "@id": "https://ohack.dev/about/judges/overview#video"
+              "@id": "https://ohack.dev/about/judges/overview#main-video"
+            },
+            "mainContentOfPage": {
+              "@type": "VideoObject",
+              "@id": "https://ohack.dev/about/judges/overview#main-video"
+            },
+            "specialty": "Video Guide",
+            "about": {
+              "@type": "Thing",
+              "name": "Hackathon Judging Process",
+              "description": "Video explanation of how judging works at Opportunity Hack"
             }
           },
           {

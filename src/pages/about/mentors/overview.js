@@ -257,7 +257,7 @@ const MentorOverview = () => {
           </Link>
         </Box>
 
-        {/* Header */}
+        {/* Header - Video-focused */}
         <Typography
           variant="h1"
           component="h1"
@@ -266,10 +266,11 @@ const MentorOverview = () => {
             mb: 2,
             mt: 4,
             fontWeight: 700,
-            lineHeight: 1.2
+            lineHeight: 1.2,
+            textAlign: 'center'
           }}
         >
-          What it Means to be a Mentor at Opportunity Hack
+          What it Means to be a Mentor at Opportunity Hack - Video Guide
         </Typography>
 
         <Typography
@@ -277,69 +278,78 @@ const MentorOverview = () => {
           component="h2"
           sx={{
             fontSize: { xs: "1.25rem", sm: "1.5rem" },
-            mb: 3,
+            mb: 2,
             color: "text.secondary",
-            fontWeight: 300
+            fontWeight: 300,
+            textAlign: 'center'
           }}
         >
-          Watch Our Complete Mentoring Overview Video
+          Complete 8-Minute Video Overview
         </Typography>
 
         <Typography
           variant="body1"
           sx={{
             fontSize: { xs: "16px", sm: "18px" },
-            mb: 4,
+            mb: 2,
             maxWidth: "800px",
             lineHeight: 1.7,
+            textAlign: 'center',
+            mx: 'auto'
           }}
         >
-          Get an insider's look at what mentoring really means at Opportunity Hack. This comprehensive guide covers everything from understanding your role and the different types of mentors we need, to best practices for supporting teams building technology solutions that change lives.
+          Watch this comprehensive video guide to understand what mentoring really means at Opportunity Hack, covering your role, mentor types, and best practices for supporting teams building life-changing technology solutions.
         </Typography>
 
-        {/* Video Section */}
+        {/* Main Video Section - Primary Content */}
         <Paper
-          elevation={3}
+          elevation={4}
           sx={{
-            p: { xs: 2, sm: 3 },
-            mb: 5,
+            p: { xs: 3, sm: 4 },
+            mb: 4,
             textAlign: 'center',
             background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-            color: 'white'
+            color: 'white',
+            mt: 2
           }}
-          component="section"
+          component="main"
           aria-labelledby="mentoring-video"
+          role="main"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-            <SectionHeader
+          <Box sx={{ mb: 4 }}>
+            <PlayCircleOutlineRounded sx={{ fontSize: { xs: 48, sm: 64 }, mb: 2, opacity: 0.9 }} />
+            <Typography
               variant="h3"
               component="h2"
-              sectionId="mentoring-video"
-              sx={{ color: 'white', textAlign: 'center' }}
-              onCopyLink={copyLinkToSection}
+              id="mentoring-video"
+              sx={{ color: 'white', mb: 2, fontSize: { xs: '1.5rem', sm: '2rem' } }}
             >
-              <PlayCircleOutlineRounded sx={{ mr: 2, fontSize: { xs: 32, sm: 40 } }} />
-              Complete Mentoring Process Overview
-            </SectionHeader>
+              🎥 Watch: What it Means to be a Mentor at Opportunity Hack
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', mb: 2, fontSize: '18px' }}>
+              8-minute comprehensive guide | From role understanding to best practices
+            </Typography>
           </Box>
 
           <Box sx={{
             position: 'relative',
             width: '100%',
-            maxWidth: '800px',
+            maxWidth: '900px',
             margin: '0 auto',
-            paddingBottom: '56.25%', // 16:9 aspect ratio
+            paddingBottom: '50.6%', // 16:9 aspect ratio for larger video
             height: 0,
-            borderRadius: 2,
+            borderRadius: 3,
             overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+            border: '3px solid rgba(255,255,255,0.3)'
           }}>
             <iframe
-              src="https://www.youtube.com/embed/CllTEbzdQJY"
-              title="What it Means to be a Mentor with Opportunity Hack - Complete Overview"
+              src="https://www.youtube.com/embed/CllTEbzdQJY?rel=0&modestbranding=1&enablejsapi=1"
+              title="What it Means to be a Mentor with Opportunity Hack - Complete 8 Minute Overview Video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+              itemProp="video"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -348,6 +358,12 @@ const MentorOverview = () => {
                 height: '100%'
               }}
             />
+          </Box>
+
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mb: 1 }}>
+              📅 Published: September 22nd 2025 • ⏱️ Duration: 8 minutes • 👀 Watch in full for complete understanding
+            </Typography>
           </Box>
 
           <Box sx={{
@@ -561,12 +577,12 @@ const MentorOverview = () => {
 export default MentorOverview;
 
 export const getStaticProps = async () => {
-  const title = "What it Means to be a Mentor at Opportunity Hack - Complete Video Overview";
-  const description = "Watch our comprehensive video guide to understand what mentoring means at Opportunity Hack. Learn about mentor roles, best practices, and see how you can guide teams building life-changing tech solutions for nonprofits.";
+  const title = "What it Means to be a Mentor at Opportunity Hack - 8 Minute Video Guide";
+  const description = "Watch this comprehensive 8-minute video guide explaining what mentoring means at Opportunity Hack. Learn about mentor roles, types of mentors needed, and best practices for guiding teams building life-changing tech solutions for nonprofits.";
 
   return {
     props: {
-      title: "Mentor Overview Video - Opportunity Hack",
+      title: "Video: What it Means to be a Mentor at Opportunity Hack",
       description: description,
       openGraphData: [
         {
@@ -728,7 +744,7 @@ export const getStaticProps = async () => {
             "name": title,
             "description": description,
             "thumbnailUrl": "https://cdn.ohack.dev/ohack.dev/2024_hackathon_4.webp",
-            "uploadDate": "2024-01-01",
+            "uploadDate": "2025-09-22",
             "contentUrl": "https://www.youtube.com/watch?v=CllTEbzdQJY",
             "embedUrl": "https://www.youtube.com/embed/CllTEbzdQJY",
             "duration": "PT8M",

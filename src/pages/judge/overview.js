@@ -256,7 +256,7 @@ const JudgeDashboardOverview = () => {
           </Link>
         </Box>
 
-        {/* Header */}
+        {/* Header - Video-focused */}
         <Typography
           variant="h1"
           component="h1"
@@ -265,80 +265,90 @@ const JudgeDashboardOverview = () => {
             mb: 2,
             mt: 4,
             fontWeight: 700,
-            lineHeight: 1.2
+            lineHeight: 1.2,
+            textAlign: 'center'
           }}
         >
-          How to Use the Judge Dashboard
+          How to Use the Judge Dashboard - Video Tutorial
         </Typography>
 
         <Typography
           variant="h2"
           component="h2"
-          sx={{ 
+          sx={{
             fontSize: { xs: "1.25rem", sm: "1.5rem" },
-            mb: 3, 
-            color: "text.secondary", 
-            fontWeight: 300 
+            mb: 2,
+            color: "text.secondary",
+            fontWeight: 300,
+            textAlign: 'center'
           }}
         >
-          Complete Video Guide to Judging Hackathon Projects
+          Complete 8-Minute Video Tutorial
         </Typography>
 
         <Typography
           variant="body1"
           sx={{
             fontSize: { xs: "16px", sm: "18px" },
-            mb: 4,
+            mb: 2,
             maxWidth: "800px",
             lineHeight: 1.7,
+            textAlign: 'center',
+            mx: 'auto'
           }}
         >
-          Master our judging platform with this comprehensive tutorial. Learn how to navigate the dashboard, evaluate projects in both rounds, and provide meaningful feedback that helps teams improve their nonprofit technology solutions.
+          Watch this comprehensive video tutorial to master our judging platform. Learn how to navigate the dashboard, evaluate projects in both rounds, and provide meaningful feedback that helps teams improve their nonprofit technology solutions.
         </Typography>
 
-        {/* Video Section */}
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            mb: 5, 
+        {/* Main Video Section - Primary Content */}
+        <Paper
+          elevation={4}
+          sx={{
+            p: { xs: 3, sm: 4 },
+            mb: 4,
             textAlign: 'center',
             background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-            color: 'white'
+            color: 'white',
+            mt: 2
           }}
-          component="section"
+          component="main"
           aria-labelledby="dashboard-video"
+          role="main"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-            <SectionHeader 
-              variant="h3" 
-              component="h2" 
-              sectionId="dashboard-video"
-              sx={{ color: 'white', textAlign: 'center' }}
-              onCopyLink={copyLinkToSection}
+          <Box sx={{ mb: 4 }}>
+            <PlayCircleOutlineRounded sx={{ fontSize: { xs: 48, sm: 64 }, mb: 2, opacity: 0.9 }} />
+            <Typography
+              variant="h3"
+              component="h2"
+              id="dashboard-video"
+              sx={{ color: 'white', mb: 2, fontSize: { xs: '1.5rem', sm: '2rem' } }}
             >
-              <PlayCircleOutlineRounded sx={{ mr: 2, fontSize: { xs: 32, sm: 40 } }} />
-              Complete Dashboard Tutorial
-            </SectionHeader>
+              🎥 Watch: How to Use the Judge Dashboard
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', mb: 2, fontSize: '18px' }}>
+              8-minute comprehensive tutorial | Master the judging interface
+            </Typography>
           </Box>
           
-          <Box sx={{ 
-            position: 'relative', 
-            width: '100%', 
-            maxWidth: '800px', 
+          <Box sx={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: '900px',
             margin: '0 auto',
-            paddingBottom: '56.25%', // 16:9 aspect ratio
+            paddingBottom: '50.6%', // 16:9 aspect ratio for larger video
             height: 0,
-            borderRadius: 2,
+            borderRadius: 3,
             overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+            border: '3px solid rgba(255,255,255,0.3)'
           }}>
             <iframe
-              src="https://www.youtube.com/embed/ZmciEvdre24"
-              title="How to Use the Judge Dashboard - Opportunity Hack Tutorial"
+              src="https://www.youtube.com/embed/ZmciEvdre24?rel=0&modestbranding=1&enablejsapi=1"
+              title="How to Use the Judge Dashboard - Complete Opportunity Hack Tutorial Video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+              itemProp="video"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -347,6 +357,12 @@ const JudgeDashboardOverview = () => {
                 height: '100%'
               }}
             />
+          </Box>
+
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mb: 1 }}>
+              📅 Updated: September 8th 2025 • ⏱️ Duration: 8 minutes • 👀 Complete walkthrough of judging tool
+            </Typography>
           </Box>
 
           <Box sx={{ 
@@ -532,12 +548,12 @@ const JudgeDashboardOverview = () => {
 export default JudgeDashboardOverview;
 
 export const getStaticProps = async () => {
-  const title = "Judge Dashboard Tutorial - How to Evaluate Hackathon Projects | Opportunity Hack";
-  const description = "Complete video guide to using the Opportunity Hack judge dashboard. Learn to evaluate projects in Round 1 & 2, navigate the scoring interface, and provide effective feedback to teams.";
-  
+  const title = "Judge Dashboard Tutorial - 8 Minute Video Guide | Opportunity Hack";
+  const description = "Watch this comprehensive 8-minute video tutorial on using the Opportunity Hack judge dashboard. Learn to evaluate projects in Round 1 & 2, navigate the scoring interface, and provide effective feedback to teams creating nonprofit technology solutions.";
+
   return {
     props: {
-      title: "Judge Dashboard Tutorial - Opportunity Hack",
+      title: "Video: Judge Dashboard Tutorial - Opportunity Hack",
       description: description,
       openGraphData: [
         {
@@ -696,20 +712,41 @@ export const getStaticProps = async () => {
           },
           {
             "@type": "VideoObject",
+            "@id": "https://ohack.dev/judge/overview#main-video",
             "name": title,
             "description": description,
-            "thumbnailUrl": "https://cdn.ohack.dev/ohack.dev/judge_1.jpg",
-            "uploadDate": "2024-01-01",
+            "thumbnailUrl": [
+              "https://i.ytimg.com/vi/ZmciEvdre24/maxresdefault.jpg",
+              "https://i.ytimg.com/vi/ZmciEvdre24/hqdefault.jpg"
+            ],
+            "uploadDate": "2025-08-08T00:00:00.000Z",
+            "publishDate": "2025-08-08T00:00:00.000Z",
             "contentUrl": "https://www.youtube.com/watch?v=ZmciEvdre24",
-            "embedUrl": "https://www.youtube.com/embed/ZmciEvdre24",
+            "embedUrl": "https://www.youtube.com/embed/ZmciEvdre24?rel=0&modestbranding=1&enablejsapi=1",
+            "playerType": "HTML5 Flash",
             "duration": "PT15M",
+            "videoQuality": "hd720",
+            "inLanguage": "en-US",
+            "isFamilyFriendly": true,
+            "keywords": ["judge", "dashboard", "hackathon", "tutorial", "evaluation", "scoring", "nonprofit", "technology", "opportunity hack"],
+            "interactionStatistic": {
+              "@type": "InteractionCounter",
+              "interactionType": { "@type": "WatchAction" },
+              "userInteractionCount": 500
+            },
             "publisher": {
               "@type": "Organization",
               "name": "Opportunity Hack",
+              "url": "https://ohack.dev",
               "logo": {
                 "@type": "ImageObject",
                 "url": "https://cdn.ohack.dev/ohack.dev/judge_1.jpg"
               }
+            },
+            "creator": {
+              "@type": "Organization",
+              "name": "Opportunity Hack",
+              "url": "https://ohack.dev"
             }
           },
           {
@@ -718,13 +755,27 @@ export const getStaticProps = async () => {
             "url": "https://ohack.dev/judge/overview",
             "name": title,
             "description": description,
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "https://i.ytimg.com/vi/ZmciEvdre24/maxresdefault.jpg"
+            },
             "isPartOf": {
               "@type": "WebSite",
               "@id": "https://ohack.dev/#website"
             },
             "mainEntity": {
               "@type": "VideoObject",
-              "@id": "https://ohack.dev/judge/overview#video"
+              "@id": "https://ohack.dev/judge/overview#main-video"
+            },
+            "mainContentOfPage": {
+              "@type": "VideoObject",
+              "@id": "https://ohack.dev/judge/overview#main-video"
+            },
+            "specialty": "Video Tutorial",
+            "about": {
+              "@type": "Thing",
+              "name": "Judge Dashboard Tutorial",
+              "description": "Video tutorial for using the judge dashboard at Opportunity Hack"
             }
           },
           {
