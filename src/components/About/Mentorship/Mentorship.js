@@ -40,7 +40,8 @@ import {
   PersonRounded,
   FavoriteRounded,
   AssignmentRounded,
-  SupportRounded
+  SupportRounded,
+  PlayCircleOutlineRounded
 } from '@mui/icons-material';
 
 const trackOnClickButtonClickWithGoogleAndFacebook = (buttonName) => {
@@ -188,6 +189,7 @@ const Mentorship = () => {
                     behavior: "smooth",
                   });
                 }, 100);
+                trackOnClickButtonClickWithGoogleAndFacebook("find_events_hero");
               }}
             >
               Find Events to Mentor
@@ -201,11 +203,49 @@ const Mentorship = () => {
               fullWidth
               href="/volunteer"
               startIcon={<GroupsRounded />}
+              onClick={() => trackOnClickButtonClickWithGoogleAndFacebook("explore_roles_hero")}
             >
               Explore All Roles
             </Button>
           </Grid>
         </Grid>
+
+        {/* Video Overview CTA - Strategic placement */}
+        <Paper
+          sx={{
+            p: 3,
+            mb: 4,
+            textAlign: 'center',
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+            color: 'white',
+            maxWidth: '700px',
+            mx: 'auto'
+          }}
+        >
+          <PlayCircleOutlineRounded sx={{ fontSize: 48, mb: 2 }} />
+          <Typography variant="h4" component="h2" gutterBottom>
+            New to Mentoring at OHack?
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 3, fontSize: '18px' }}>
+            Watch our complete overview video to understand what mentoring really means, see different mentor types, and learn best practices from experienced mentors.
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            sx={{
+              bgcolor: 'white',
+              color: 'primary.main',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+              fontSize: '16px',
+              px: 4
+            }}
+            href="/about/mentors/overview"
+            startIcon={<PlayCircleOutlineRounded />}
+            onClick={() => trackOnClickButtonClickWithGoogleAndFacebook('watch_overview_video')}
+          >
+            Watch Mentoring Overview Video
+          </Button>
+        </Paper>
       </TitleContainer>
 
       {/* Hero Image Section */}
@@ -501,7 +541,7 @@ const Mentorship = () => {
           <Typography
             variant="body1"
             sx={{
-              mb: 4,
+              mb: 3,
               maxWidth: "700px",
               fontSize: "18px",
               color: "text.secondary",
@@ -510,6 +550,24 @@ const Mentorship = () => {
             Essential information to help you be an effective mentor and create
             the best experience for both you and your teams.
           </Typography>
+
+          <Alert severity="info" sx={{ mb: 4, maxWidth: "700px" }}>
+            <Typography variant="body1" gutterBottom>
+              <strong>Want to see these guidelines in action?</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Our mentoring overview video shows real examples of best practices and walks through everything you need to know about being an effective mentor.
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              href="/about/mentors/overview"
+              startIcon={<PlayCircleOutlineRounded />}
+              onClick={() => trackOnClickButtonClickWithGoogleAndFacebook('watch_overview_from_guidelines')}
+            >
+              Watch the Overview Video
+            </Button>
+          </Alert>
 
           {mentorGuidelines.map((guideline, index) => (
             <Accordion key={index} sx={{ mb: 2 }}>
