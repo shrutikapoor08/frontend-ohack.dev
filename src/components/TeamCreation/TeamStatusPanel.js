@@ -435,7 +435,7 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                     Track Your Hours
                   </Typography>
                   <Typography variant="body2" paragraph>
-                    Don't forget to track your volunteer hours to earn recognition and rewards.
+                    Don't forget to track your volunteer hours if you need them for school or work!
                   </Typography>
                   <ActionButton 
                     variant="outlined" 
@@ -954,7 +954,7 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                           href={`/nonprofit/${team.selected_nonprofit_id}`}
                           passHref
                         >
-                          <MuiLink underline="hover" color="inherit">
+                          <MuiLink underline="hover" color="primary">
                             {getNonprofitName(team.selected_nonprofit_id)}
                           </MuiLink>
                         </Link>
