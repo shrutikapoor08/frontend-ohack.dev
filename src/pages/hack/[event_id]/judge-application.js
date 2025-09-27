@@ -2035,6 +2035,7 @@ const JudgeApplicationComponent = () => {
           volunteerId={volunteerId}
           isSelected={isSelected}
           volunteerType="judge"
+          name={formData.name}
           isSubmitted={true}
           qrSize={200}
           sx={{ mx: "auto", maxWidth: 500 }}

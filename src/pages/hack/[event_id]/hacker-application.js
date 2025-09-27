@@ -2760,6 +2760,7 @@ const HackerApplicationComponent = () => {
           volunteerId={volunteerId}
           isSelected={isSelected}
           volunteerType="hacker"
+          name={formData.name}
           isSubmitted={true}
           qrSize={200}
           sx={{ mx: "auto", maxWidth: 500 }}

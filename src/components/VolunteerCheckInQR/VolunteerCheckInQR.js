@@ -18,6 +18,7 @@ import QRCode from 'react-qr-code';
  * @param {string} props.eventId - The hackathon event ID (e.g., "2025_fall")
  * @param {string} props.volunteerId - Unique volunteer ID
  * @param {string} props.volunteerType - Type of volunteer ("mentor", "judge", "volunteer", "hacker", "sponsor")
+ * @param {string} props.name - Volunteer's display name
  * @param {boolean} props.isSubmitted - Whether the application has been submitted
  * @param {boolean} props.isSelected - Whether to display the component (default: false)
  * @param {Object} props.sx - Additional MUI sx prop styling
@@ -28,6 +29,7 @@ const VolunteerCheckInQR = ({
   eventId,
   volunteerId,
   volunteerType,
+  name,
   isSubmitted = false,
   isSelected = false,
   sx = {},
@@ -160,6 +162,20 @@ const VolunteerCheckInQR = ({
           textAlign: { xs: 'center', sm: 'left' },
           flex: 1
         }}>
+          {name && (
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                display: 'block', 
+                mb: 1, 
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: isMobile ? '1rem' : '1.1rem'
+              }}
+            >
+              {name}
+            </Typography>
+          )}
           <Typography 
             variant="caption" 
             sx={{ 

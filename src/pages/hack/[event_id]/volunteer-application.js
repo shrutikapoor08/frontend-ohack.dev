@@ -2391,6 +2391,7 @@ const VolunteerApplicationComponent = () => {
           volunteerId={volunteerId}
           isSelected={isSelected}
           volunteerType="volunteer"
+          name={formData.name}
           isSubmitted={true}
           qrSize={200}
           sx={{ mx: "auto", maxWidth: 500 }}
