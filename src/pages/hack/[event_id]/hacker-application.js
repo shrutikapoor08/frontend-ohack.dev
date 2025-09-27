@@ -2886,6 +2886,20 @@ const HackerApplicationComponent = () => {
                       upcoming events for future participation opportunities.
                     </Typography>
                   </Alert>
+
+                  <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
+                    <GiveButterWidget
+                      context="event-ended"
+                      userId={user?.userId}
+                      applicationType="hacker"
+                      size="large"
+                      onDonationEvent={(eventData) => {
+                        // Track hacker application donations when event ended
+                        console.log("Event ended hacker donation event:", eventData);
+                      }}
+                    />
+                  </Box>
+
                   <Box textAlign="center">
                     <Button
                       variant="contained"

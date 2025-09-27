@@ -1962,6 +1962,20 @@ const SponsorApplicationComponent = () => {
                       upcoming events for future sponsorship opportunities.
                     </Typography>
                   </Alert>
+
+                  <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
+                    <GiveButterWidget
+                      context="event-ended"
+                      userId={user?.userId}
+                      applicationType="sponsor"
+                      size="large"
+                      onDonationEvent={(eventData) => {
+                        // Track sponsor application donations when event ended
+                        console.log("Event ended sponsor donation event:", eventData);
+                      }}
+                    />
+                  </Box>
+
                   <Box textAlign="center">
                     <Button
                       variant="contained"

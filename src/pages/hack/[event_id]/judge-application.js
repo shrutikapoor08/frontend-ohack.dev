@@ -2157,6 +2157,20 @@ const JudgeApplicationComponent = () => {
                       upcoming events for future judging opportunities.
                     </Typography>
                   </Alert>
+
+                  <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
+                    <GiveButterWidget
+                      context="event-ended"
+                      userId={user?.userId}
+                      applicationType="judge"
+                      size="large"
+                      onDonationEvent={(eventData) => {
+                        // Track judge application donations when event ended
+                        console.log("Event ended judge donation event:", eventData);
+                      }}
+                    />
+                  </Box>
+
                   <Box textAlign="center">
                     <Button
                       variant="contained"
