@@ -43,6 +43,7 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import CodeIcon from '@mui/icons-material/Code';
 import SendIcon from '@mui/icons-material/Send';
 import CheckIcon from '@mui/icons-material/Check';
+import YouTubeIcon from '@mui/icons-material/YouTube';
 import Link from 'next/link';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -151,6 +152,24 @@ const getStatusLabel = (status) => {
     default:
       return 'Pending';
   }
+};
+
+/* Example github link within team:
+"github_links": [
+    {
+      "link": "https://github.com/2024-Arizona-Opportunity-Hack/NEWRR",
+      "name": "test1111-ControlAltDeleteLLC-TangibleDonations"
+    }
+  ],
+*/
+const getTeamGitHubLink = (team) => {
+  const githubLinks = team?.github_links || [];
+  return githubLinks.length > 0 ? githubLinks[0].link : '';
+};
+
+const getTeamGitHubName = (team) => {
+  const githubLinks = team?.github_links || [];
+  return githubLinks.length > 0 ? githubLinks[0].name : '';
 };
 
 // Function to get the color for header background based on team status
@@ -457,11 +476,14 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
       </Typography>
 
       {sortedTeams.length > 1 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
           <AlertTitle>Multiple Teams</AlertTitle>
           <Typography variant="body1" sx={{ fontSize: "1.05rem" }}>
-            You are part of multiple teams for this hackathon. Your active team
-            will be listed first.
+            <strong>You are part of multiple teams for this hackathon.</strong> Your active team will be listed first.
+            <br /><br />
+            Please coordinate with your teammates to ensure everyone is on the same page.
+            <br /><br />
+            You should only be on <strong>one team per hackathon</strong> to avoid confusion.
           </Typography>
         </Alert>
       )}
@@ -840,6 +862,27 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                       organizers will share important announcements and you'll
                       coordinate with your team.
                     </Typography>
+                    
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.secondary", fontSize: "0.95rem", mt: 1.5 }}
+                    >
+                      <strong>Use your team channel to:</strong><br />
+                      • Chat and coordinate with your teammates throughout the hackathon<br />
+                      • Invite mentors who are helping your team to join the channel<br />
+                      • Start <MuiLink href="https://slack.com/features/huddles" target="_blank" rel="noopener noreferrer">Slack huddles</MuiLink> for quick voice/video calls as needed<br />
+                      • Share code snippets, ideas, and project updates
+                    </Typography>
+                    
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.secondary", fontSize: "0.95rem", mt: 1.5, mb: 1.5 }}
+                    >
+                      <strong>Channel Guide:</strong><br />
+                      • <strong>#{eventId?.replace(/_/g, '-')}</strong> - Open discussions, questions, and team coordination during the hackathon<br />
+                      • <strong>#general</strong> - Official announcements, giveaways, and food/meal updates<br />
+                      • <strong>#ask-a-mentor</strong> - Get help and guidance from experienced mentors throughout the event
+                    </Typography>
                     <Box mt={1.5}>
                       <ActionButton
                         variant="contained"
@@ -854,12 +897,32 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                       <ActionButton
                         variant="outlined"
                         size="small"
+                        href={`https://opportunity-hack.slack.com/app_redirect?channel=${eventId?.replace(/_/g, '-')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ ml: 1 }}
+                      >
+                        Join #{eventId?.replace(/_/g, '-')}
+                      </ActionButton>
+                      <ActionButton
+                        variant="outlined"
+                        size="small"
+                        href="https://opportunity-hack.slack.com/app_redirect?channel=general"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ ml: 1 }}
+                      >
+                        Join #general
+                      </ActionButton>
+                      <ActionButton
+                        variant="outlined"
+                        size="small"
                         href="https://opportunity-hack.slack.com/app_redirect?channel=ask-a-mentor"
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{ ml: 1 }}
                       >
-                        Join #ask-a-mentor for help
+                        Join #ask-a-mentor
                       </ActionButton>
                     </Box>
                   </CardContent>
@@ -907,6 +970,49 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                           </Typography>
                         ) : null;
                       })()}
+
+                      {/* Hackathon Context & Guidance */}
+                      <Box sx={{ 
+                        mt: 2, 
+                        p: 2, 
+                        bgcolor: 'rgba(46, 125, 50, 0.08)', 
+                        borderRadius: 1,
+                        border: '1px solid rgba(46, 125, 50, 0.2)'
+                      }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1.5, color: '#2E7D32' }}>
+                          💡 Building for Your Nonprofit - Key Guidelines
+                        </Typography>
+                        
+                        <Typography variant="body2" paragraph sx={{ mb: 1.5, fontSize: '0.95rem' }}>
+                          <strong>Focus on Impact:</strong> You don't need all the details to get started! Focus on building something that clearly solves the nonprofit's core problem. A working solution that addresses 80% of their needs is better than a perfect solution that's incomplete.
+                        </Typography>
+
+                        <Typography variant="body2" paragraph sx={{ mb: 1.5, fontSize: '0.95rem' }}>
+                          <strong>Research is Your Friend:</strong> Spend 30-60 minutes researching existing solutions in this problem space. Look at what tools, platforms, or approaches already exist - you can often build upon or integrate existing solutions rather than starting from scratch.
+                        </Typography>
+
+                        <Typography variant="body2" paragraph sx={{ mb: 1.5, fontSize: '0.95rem' }}>
+                          <strong>Don't Reinvent the Wheel:</strong> Use existing tools and services! Don't spend hours building a custom login system when you can use{" "}
+                          <MuiLink href="https://auth0.com/" target="_blank" rel="noopener noreferrer">Auth0</MuiLink>,{" "}
+                          <MuiLink href="https://www.propelauth.com/" target="_blank" rel="noopener noreferrer">PropelAuth</MuiLink>,{" "}
+                          <MuiLink href="https://firebase.google.com/products/auth" target="_blank" rel="noopener noreferrer">Firebase Auth</MuiLink>, or similar services. Focus your limited time on the unique problem-solving aspects of your solution.
+                        </Typography>
+
+                        <Typography variant="body2" paragraph sx={{ mb: 1.5, fontSize: '0.95rem' }}>
+                          <strong>Smart Assumptions Are OK:</strong> If you're missing specific details about the nonprofit's workflow or preferences, make reasonable assumptions and document them. You can always validate and adjust these assumptions later.
+                        </Typography>
+
+                        <Typography variant="body2" paragraph sx={{ mb: 1.5, fontSize: '0.95rem' }}>
+                          <strong>MVP Mindset:</strong> Build a Minimum Viable Product that demonstrates the core functionality. A simple, working prototype that solves the main problem will impress{" "}
+                          <MuiLink component={Link} href="/about/judges#judging-criteria" target="_blank" rel="noopener noreferrer">judges</MuiLink>{" "}
+                          more than a complex solution that's partially implemented.
+                        </Typography>
+
+                        <Typography variant="body2" paragraph sx={{ mb: 0, fontSize: '0.95rem' }}>
+                          <strong>Real Industry Experience:</strong> Take note of what this feels like - working with people to build a solution under time pressure, making technical decisions, and delivering results. You're gaining experience over a few days that many people get in industry over a year!
+                        </Typography>
+                      </Box>
+
                       <Box mt={1.5}>
                         <Button
                           variant="outlined"
@@ -915,6 +1021,17 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                           href={`/nonprofit/${team.selected_nonprofit_id}`}
                         >
                           View Nonprofit Details
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          component="a"
+                          href="https://opportunity-hack.slack.com/app_redirect?channel=ask-a-mentor"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ ml: 1 }}
+                        >
+                          Ask Mentors for Guidance
                         </Button>
                       </Box>
                     </CardContent>
@@ -957,9 +1074,30 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                           sx={{ color: "text.secondary", fontSize: "1.05rem" }}
                         >
                           ⚠️ <strong>Important:</strong> Your team should only
-                          use the official hackathon GitHub organization for the
-                          entire event. Do not create separate repositories
-                          outside this organization.
+                          use the official hackathon GitHub repo for the
+                          entire event. <strong>Do not create separate repositories</strong> outside of the official event{" "}
+                          <MuiLink
+                          href={`https://github.com/${event.github_org}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >
+                          GitHub organization
+                          </MuiLink>.
+                        </Typography>
+
+                        <Typography
+                          variant="body2"
+                          paragraph
+                          sx={{ 
+                            color: "text.primary", 
+                            fontSize: "1rem",
+                            bgcolor: "rgba(255, 193, 7, 0.1)",
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: "1px solid rgba(255, 193, 7, 0.3)"
+                          }}
+                        >
+                          📝 <strong>Code Organization:</strong> Ensure all your final code is in the <strong>main branch</strong> of your repository. Avoid having important code scattered across multiple branches - judges and organizers will only review the main branch for final submissions.
                         </Typography>
 
                         {team.github_username && (
@@ -975,7 +1113,7 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                             }}
                           >
                             👉 <strong>Team Lead Action Required:</strong>{" "}
-                            {team.github_username} must create a repository for
+                            {team.github_username} should use the repository automatically created for
                             the team in the{" "}
                             <MuiLink
                               href={`https://github.com/${event.github_org}`}
@@ -993,7 +1131,7 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                             variant="contained"
                             color="inherit"
                             size="small"
-                            href={`https://github.com/${event.github_org}`}
+                            href={getTeamGitHubLink(team)}
                             target="_blank"
                             rel="noopener noreferrer"
                             startIcon={<GitHubIcon />}
@@ -1003,17 +1141,19 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                               "&:hover": { bgcolor: "#2b2b2b" },
                             }}
                           >
-                            GitHub Organization
-                          </ActionButton>
+                            {getTeamGitHubName(team)}
+                          </ActionButton>                            
                           <ActionButton
-                            variant="outlined"
+                            variant="contained"
+                            color="primary"
                             size="small"
-                            href="https://opportunity-hack.slack.com/archives/C1Q6YHXQU/p1605657678139600"
+                            href="https://youtu.be/kHs0jOewVKI"
                             target="_blank"
                             rel="noopener noreferrer"
+                            startIcon={<YouTubeIcon />}
                             sx={{ ml: 1 }}
                           >
-                            Add people to your GitHub Repo
+                            How to add people to your GitHub Repo
                           </ActionButton>
                         </Box>
                       </>
@@ -1073,13 +1213,30 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                         </Typography>
                       </>
                     ) : (
-                      <Typography
-                        variant="body1"
-                        paragraph
-                        sx={{ color: "text.secondary", fontSize: "1.05rem" }}
-                      >
-                        🔗 <strong>Share Your DevPost Link:</strong> Once you've created your DevPost project page, share the link with us here so we can track your team's submission.
-                      </Typography>
+                      <>
+                        <Typography
+                          variant="body1"
+                          paragraph
+                          sx={{ color: "text.secondary", fontSize: "1.05rem" }}
+                        >
+                          🔗 <strong>Share Your DevPost Link:</strong> Once you've created your DevPost project page, share the link with us here so we can track your team's submission.
+                        </Typography>
+
+                        <Typography
+                          variant="body2"
+                          paragraph
+                          sx={{ 
+                            color: "text.primary", 
+                            fontSize: "1rem",
+                            bgcolor: "rgba(255, 87, 34, 0.1)",
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: "1px solid rgba(255, 87, 34, 0.3)"
+                          }}
+                        >
+                          🎥 <strong>Video Demo Requirements:</strong> Your project demo video must be <strong>4 minutes or less</strong>. Don't wait until the last minute to upload - video processing can take time and you don't want technical issues preventing your submission!
+                        </Typography>
+                      </>
                     )}
 
                     <Box sx={{ mt: 2 }}>
@@ -1132,27 +1289,30 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                           rel="noopener noreferrer"
                           startIcon={<CodeIcon />}
                         >
-                          Create DevPost Project
+                          Hackathon DevPost Site
                         </Button>
                         <Button
                           variant="outlined"
                           size="medium"
-                          href="https://youtu.be/vCa7QFFthfU?si=bzMQ91d8j3ZkOD03"
+                          href="https://youtu.be/rsAAd7LXMDE"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          startIcon={<YouTubeIcon />}
+                        >
+                          How to Create a DevPost Project
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="medium"
+                          href="/about/judges#judging-criteria"
                           target="_blank"
                           rel="noopener noreferrer"
                           startIcon={<HelpIcon />}
                         >
-                          How to Create a DevPost Project
+                          Judging Criteria
                         </Button>
                       </Box>
-                    </Box>
-
-                    <Alert severity="info" sx={{ mt: 2 }}>
-                      <Typography variant="body2">
-                        <strong>Important:</strong> Sharing your DevPost link here helps us track your team's progress. 
-                        Don't forget to actually submit your project on DevPost before the hackathon deadline!
-                      </Typography>
-                    </Alert>
+                    </Box>                    
                   </CardContent>
                 </Card>
               </Box>

@@ -332,7 +332,7 @@ const ManageTeamComponent = () => {
     }
   };
 
-  // Get my proifile information and if user.github is set, set it to githubUsername
+  // Get my profile information and if user.github is set, set it to githubUsername
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
