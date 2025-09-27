@@ -64,7 +64,7 @@ const organizationSchema = {
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
-    email: "board@ohack.dev",
+    email: "board@ohack.org",
   },
   founder: [
     {
@@ -1182,7 +1182,7 @@ export const getStaticProps = async () => {
                         "contactPoint": {
                             "@type": "ContactPoint",
                             "contactType": "customer service",
-                            "email": "board@ohack.dev"
+                            "email": "board@ohack.org"
                         },
                         "founder": [
                             {
