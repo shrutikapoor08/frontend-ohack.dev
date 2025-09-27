@@ -84,6 +84,7 @@ const MentorApplicationComponent = () => {
   const [submitting, setSubmitting] = useState(false);
   // Store volunteer ID for QR code generation
   const [volunteerId, setVolunteerId] = useState(null);
+  const [isSelected, setIsSelected] = useState(false);
 
   // Initial form state
   const initialFormData = {
@@ -406,6 +407,7 @@ const MentorApplicationComponent = () => {
             setVolunteerId(
               prevData.volunteer_id || prevData.id || user?.userId,
             );
+            setIsSelected(prevData.isSelected || false);
 
             // If the user has submitted before, ask if they want to load it for editing?
             if (
@@ -1879,6 +1881,17 @@ const MentorApplicationComponent = () => {
             Mentor Application
           </Typography>
 
+          {/* QR Code for Check-in */}
+          <VolunteerCheckInQR
+            eventId={event_id}
+            volunteerId={volunteerId}
+            isSelected={isSelected}
+            volunteerType="mentor"
+            isSubmitted={true}
+            qrSize={200}
+            sx={{ mx: "auto", maxWidth: 500 }}
+          />
+
           {isLoading ? (
             <Box display="flex" justifyContent="center" my={4}>
               <CircularProgress />
@@ -1986,14 +1999,6 @@ const MentorApplicationComponent = () => {
 
               {/* Add ApplicationNav component */}
               <ApplicationNav eventId={event_id} currentType="mentor" />
-
-              {/* QR Code Section - Show early if user has data */}
-              <VolunteerCheckInQR
-                eventId={event_id}
-                volunteerId={volunteerId}
-                volunteerType="mentor"
-                isSubmitted={!!volunteerId}
-              />
 
               <Box sx={{ mb: 4 }}>
                 {eventData && eventData.isEventPast ? (

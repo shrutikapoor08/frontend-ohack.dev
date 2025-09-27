@@ -38,7 +38,7 @@ const VolunteerCheckInQR = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Don't render if not selected
-  if (!isSelected) {
+  if (!isSelected || isSelected == null || isSelected === undefined) {
     return null;
   }
 
@@ -52,6 +52,18 @@ const VolunteerCheckInQR = ({
     return null;
   }
 
+  // Set a background color based on the volunteerType, where judge is red, mentor is black, and hackers are purple
+  const volunteerColors = {
+    judge: theme.palette.error.main,
+    mentor: theme.palette.grey[900],
+    volunteer: theme.palette.primary.main,
+    hacker: theme.palette.secondary.main,
+    sponsor: theme.palette.warning.main
+  };
+
+  // Fallback color if volunteerType is unrecognized
+  const volunteerColor = volunteerColors[volunteerType] || theme.palette.grey[700];
+
   // Generate QR code data
   const qrCodeData = `${eventId}|${volunteerId}|${volunteerType}`;
 
@@ -61,7 +73,7 @@ const VolunteerCheckInQR = ({
   // Determine styling and messaging based on submission status
   const paperProps = isSubmitted 
     ? { 
-        bgcolor: 'success.light', 
+        bgcolor: volunteerColor,
         color: 'white',
         border: `2px solid ${theme.palette.success.main}`
       }

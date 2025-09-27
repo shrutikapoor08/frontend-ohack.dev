@@ -67,6 +67,7 @@ const VolunteerApplicationComponent = () => {
   const [eventData, setEventData] = useState(null);
   // Store volunteer ID for QR code generation
   const [volunteerId, setVolunteerId] = useState(null);
+  const [isSelected, setIsSelected] = useState(false);
 
   // reCAPTCHA integration
   const {
@@ -961,6 +962,7 @@ const VolunteerApplicationComponent = () => {
                   ];
 
                   setVolunteerId(prevData.id || null);
+                  setIsSelected(prevData.isSelected || false);
 
                   const transformedData = {
                     ...initialFormData,
@@ -2383,6 +2385,17 @@ const VolunteerApplicationComponent = () => {
           Volunteer Application
         </Typography>
 
+        {/* QR Code for Check-in */}
+        <VolunteerCheckInQR
+          eventId={event_id}
+          volunteerId={volunteerId}
+          isSelected={isSelected}
+          volunteerType="volunteer"
+          isSubmitted={true}
+          qrSize={200}
+          sx={{ mx: "auto", maxWidth: 500 }}
+        />
+
         {isLoading ? (
           <Box display="flex" justifyContent="center" my={4}>
             <CircularProgress />
@@ -2576,16 +2589,6 @@ const VolunteerApplicationComponent = () => {
                       </Step>
                     ))}
                   </Stepper>
-
-                  {/* QR Code for Check-in */}
-                  <VolunteerCheckInQR
-                    eventId={event_id}
-                    volunteerId={volunteerId}
-                    volunteerType="volunteer"
-                    isSubmitted={true}
-                    qrSize={200}
-                    sx={{ mx: "auto", maxWidth: 500 }}
-                  />
 
                   <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                     <Typography variant="body1" paragraph>

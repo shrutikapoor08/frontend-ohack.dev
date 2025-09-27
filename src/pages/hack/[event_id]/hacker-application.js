@@ -67,6 +67,7 @@ const HackerApplicationComponent = () => {
   const [eventData, setEventData] = useState(null);
   // Store volunteer ID for QR code generation
   const [volunteerId, setVolunteerId] = useState(null);
+  const [isSelected, setIsSelected] = useState(false);
 
   // reCAPTCHA integration
   const {
@@ -803,6 +804,7 @@ const HackerApplicationComponent = () => {
                       prevData.additionalInfo || prevData.comments || "",
                     event_id: event_id,
                   };
+                  setIsSelected(prevData.isSelected || false);
                   setVolunteerId(prevData.id || null);
                   setFormData(transformedData);
                   setPreviouslySubmitted(true);
@@ -2467,11 +2469,11 @@ const HackerApplicationComponent = () => {
 
   // SEO metadata and descriptions
   const pageTitle = eventData
-    ? `Join ${eventData.name} | Build Tech Solutions for Good`
-    : "Join Opportunity Hack | Build Tech Solutions for Good";
+    ? `Hack at ${eventData.name} | Build Tech Solutions for Good`
+    : "Hack at Opportunity Hack | Build Tech Solutions for Good";
   const pageDescription = eventData
-    ? `Apply to participate in ${eventData.name} in ${eventData.location}. Build innovative tech solutions for nonprofits, work with amazing teams, and create real social impact.`
-    : "Apply to participate in our tech for good hackathon. Build innovative solutions for nonprofits, work with amazing teams, and create real social impact.";
+    ? `Apply to participate as a hacker/maker in ${eventData.name} in ${eventData.location}. Build innovative tech solutions for nonprofits, work with amazing teams, and create real social impact.`
+    : "Apply to participate as a hacker/maker in our tech for good hackathon. Build innovative solutions for nonprofits, work with amazing teams, and create real social impact.";
   const canonicalUrl = `https://ohack.dev/hack/${event_id}/hacker-application`;
 
   const imageUrl =
@@ -2752,6 +2754,17 @@ const HackerApplicationComponent = () => {
           Hacker Application
         </Typography>
 
+        {/* QR Code for Check-in */}
+        <VolunteerCheckInQR
+          eventId={event_id}
+          volunteerId={volunteerId}
+          isSelected={isSelected}
+          volunteerType="hacker"
+          isSubmitted={true}
+          qrSize={200}
+          sx={{ mx: "auto", maxWidth: 500 }}
+        />
+
         {isLoading ? (
           <Box display="flex" justifyContent="center" my={4}>
             <CircularProgress />
@@ -2862,18 +2875,7 @@ const HackerApplicationComponent = () => {
               <ApplicationNav eventId={event_id} currentType="hacker" />
             )}
 
-            <Box sx={{ mb: 4 }}>
-              {/* QR Code for Check-in */}
-              <VolunteerCheckInQR
-                eventId={event_id}
-                volunteerId={volunteerId}
-                isSelected={formData.isSelected}
-                volunteerType="hacker"
-                isSubmitted={true}
-                qrSize={200}
-                sx={{ mx: "auto", maxWidth: 500 }}
-              />
-
+            <Box sx={{ mb: 4 }}>                   
               {eventData && eventData.isEventPast ? (
                 <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                   <Alert severity="warning" sx={{ mb: 3 }}>
@@ -3143,9 +3145,10 @@ const HackerApplicationComponent = () => {
                   </Paper>
                 </>
               )}
-            </Box>
+            </Box>            
           </Box>
-        )}
+          
+       )} 
       </Box>
     </Container>
   );

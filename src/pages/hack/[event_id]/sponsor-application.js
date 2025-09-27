@@ -214,6 +214,7 @@ const SponsorApplicationComponent = () => {
   const [eventData, setEventData] = useState(null);
   // Store volunteer ID for QR code generation
   const [volunteerId, setVolunteerId] = useState(null);
+  const [isSelected, setIsSelected] = useState(false);
   // Use ref to store uploaded logo URL to avoid race conditions
   const uploadedLogoUrlRef = useRef("");
   const [error, setError] = useState("");
@@ -413,6 +414,7 @@ const SponsorApplicationComponent = () => {
                 }
 
                 setVolunteerId(prevData.id || null);
+                setIsSelected(prevData.isSelected || false);
 
                 const transformedData = {
                   ...initialFormData,
@@ -1839,6 +1841,17 @@ const SponsorApplicationComponent = () => {
           Sponsor Application
         </Typography>
 
+        {/* QR Code for Check-in */}
+        <VolunteerCheckInQR
+          eventId={event_id}
+          volunteerId={volunteerId}
+          isSelected={isSelected}
+          volunteerType="sponsor"
+          isSubmitted={true}
+          qrSize={200}
+          sx={{ mx: "auto", maxWidth: 500 }}
+        />
+
         {isLoading ? (
           <Box display="flex" justifyContent="center" my={4}>
             <CircularProgress />
@@ -2055,15 +2068,6 @@ const SponsorApplicationComponent = () => {
                       </Step>
                     ))}
                   </Stepper>
-
-                  <VolunteerCheckInQR
-                    eventId={event_id}
-                    volunteerId={volunteerId}
-                    volunteerType="sponsor"
-                    isSubmitted={true}
-                    qrSize={200}
-                    sx={{ mx: "auto", maxWidth: 500 }}
-                  />
 
                   <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
                     {/* QR Code for Check-in */}

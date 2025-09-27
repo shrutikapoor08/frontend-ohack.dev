@@ -385,7 +385,8 @@ const EventLocationPage = () => {
               mx: "auto"
             }}
           >
-            Traveling to support us? You can typically deduct volunteer travel expenses from your taxes since Opportunity Hack is a 501(c)(3) nonprofit organization.
+            Traveling to support us? <br />
+            You can typically deduct volunteer travel expenses from your taxes since Opportunity Hack is a 501c3 nonprofit organization.
           </Typography>
           <Typography variant="body2" sx={{ color: "white", mb: 2, fontWeight: "bold" }}>
             Our EIN: 84-5113049

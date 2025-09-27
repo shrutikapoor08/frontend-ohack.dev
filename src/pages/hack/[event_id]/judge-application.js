@@ -84,6 +84,7 @@ const JudgeApplicationComponent = () => {
   const [dataLoadingStatus, setDataLoadingStatus] = useState("idle"); // 'idle', 'loading-backend', 'loading-localStorage', 'completed', 'error'
   // Store volunteer ID for QR code generation
   const [volunteerId, setVolunteerId] = useState(null);
+  const [isSelected, setIsSelected] = useState(false);
 
   // Application constraints state
   const [applicationConstraints, setApplicationConstraints] = useState({
@@ -253,6 +254,7 @@ const JudgeApplicationComponent = () => {
                 event_id: event_id,
               };
               setVolunteerId(prevData.id || null);
+              setIsSelected(prevData.isSelected || false);
               console.log(
                 "Successfully loaded previous submission from backend API:",
                 transformedData,
@@ -568,15 +570,6 @@ const JudgeApplicationComponent = () => {
       {/* If there's a passcode, show it as the primary interface */}
       {applicationConstraints.passcode ? (
         <>
-          {/* QR Code for Check-in - Show if user has existing data */}
-          <VolunteerCheckInQR
-            eventId={event_id}
-            volunteerId={volunteerId}
-            volunteerType="judge"
-            isSubmitted={!!volunteerId}
-            sx={{ mb: 4 }}
-          />
-
           <Alert severity="warning" sx={{ mb: 4 }}>
             <Typography variant="h6" component="div" sx={{ mb: 2 }}>
               Access Code Required
@@ -2035,6 +2028,17 @@ const JudgeApplicationComponent = () => {
         >
           Judge Application
         </Typography>
+
+        {/* QR Code for Check-in */}
+        <VolunteerCheckInQR
+          eventId={event_id}
+          volunteerId={volunteerId}
+          isSelected={isSelected}
+          volunteerType="judge"
+          isSubmitted={true}
+          qrSize={200}
+          sx={{ mx: "auto", maxWidth: 500 }}
+        />
 
         {isLoading ? (
           <Box display="flex" justifyContent="center" my={4}>
