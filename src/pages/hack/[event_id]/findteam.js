@@ -154,6 +154,13 @@ const FindTeamPage = () => {
 
           console.log("My application data:", appData);
           console.log("socialCauses:", appData.socialCauses);
+          console.log("isSelected:", appData.isSelected);
+
+          // Check if user is selected for the hackathon
+          if (appData.isSelected === false) {
+            setError("Your application for this hackathon was not selected. The team finder is only available to selected participants.");
+            return;
+          }
 
           // Parse interests from social causes and preferred causes
           const interests = [];
@@ -205,7 +212,7 @@ const FindTeamPage = () => {
           });
         } else {
           setMyProfile(response.data);
-          setError("You haven't submitted a hacker application for this event yet. Some features may be limited.");
+          setError("You haven't submitted a hacker application for this event yet. The team finder is only available to participants who have applied and been selected.");
         }
       }
     } catch (err) {
@@ -607,8 +614,120 @@ const FindTeamPage = () => {
           </Alert>
         )}
 
+        {/* Show message for non-selected users or users without applications */}
+        {(myProfile?.application?.isSelected === false || !myProfile?.application) && (
+          <Box sx={{ mt: 3, mb: 4, display: 'flex', justifyContent: 'center' }}>
+            <Paper
+              sx={{
+                p: 4,
+                maxWidth: 600,
+                textAlign: 'center',
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%)',
+                border: '1px solid #ffab91',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+              }}
+            >
+              <Box sx={{ mb: 3 }}>
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: '4rem',
+                    display: 'block',
+                    lineHeight: 1,
+                    mb: 2
+                  }}
+                >
+                  📋
+                </Box>
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#d84315' }}>
+                  Application Status Update
+                </Typography>
+              </Box>
+
+              <Typography variant="h6" paragraph sx={{ mb: 3, color: '#5d4037' }}>
+                Thank you for your interest in participating in {eventDetails?.title || 'this hackathon'}!
+              </Typography>
+
+              <Typography variant="body1" paragraph sx={{ mb: 3, lineHeight: 1.6 }}>
+                {!myProfile?.application
+                  ? "You need to submit a hacker application to access the team finder. Only participants who have applied and been selected can use this feature."
+                  : "Unfortunately, your application for this hackathon was not selected. Due to limited capacity, we were unable to accommodate all applicants, but we encourage you to:"
+                }
+              </Typography>
+
+              {!myProfile?.application ? (
+                <Box sx={{ mt: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    href={`/hack/${event_id}/hacker-application`}
+                    sx={{ flex: 1 }}
+                  >
+                    Submit Hacker Application
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="large"
+                    href={`/hack/${event_id}`}
+                    sx={{ flex: 1 }}
+                  >
+                    Back to Hackathon
+                  </Button>
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{ textAlign: 'left', mb: 3, mx: 2 }}>
+                    <Typography variant="body1" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <Box component="span" sx={{ mr: 2, fontSize: '1.2rem' }}>🎯</Box>
+                      Apply for future Opportunity Hack events
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <Box component="span" sx={{ mr: 2, fontSize: '1.2rem' }}>💻</Box>
+                      Contribute to open-source nonprofit projects year-round
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <Box component="span" sx={{ mr: 2, fontSize: '1.2rem' }}>🤝</Box>
+                      Join our community on Slack for networking and opportunities
+                    </Typography>
+                    <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box component="span" sx={{ mr: 2, fontSize: '1.2rem' }}>🔔</Box>
+                      Follow us on social media for updates on upcoming events
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ mt: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      href="https://opportunity-hack.slack.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ flex: 1 }}
+                    >
+                      Join Our Slack Community
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="large"
+                      href="/hackathons"
+                      sx={{ flex: 1 }}
+                    >
+                      View Upcoming Events
+                    </Button>
+                  </Box>
+                </>
+              )}
+            </Paper>
+          </Box>
+        )}
+
         {/* Link to team creation if they've found their teammates */}
-        {favorites.length > 0 && (
+        {favorites.length > 0 && myProfile?.application?.isSelected !== false && myProfile?.application && (
           <Zoom in={favorites.length > 0}>
             <Box textAlign="center" mt={3} mb={3}>
               <Button
@@ -633,8 +752,9 @@ const FindTeamPage = () => {
         )}
       </Box>
 
-      {/* Main content area */}
-      <Grid container spacing={4}>
+      {/* Main content area - Only show for selected users with applications */}
+      {myProfile?.application?.isSelected !== false && myProfile?.application && (
+        <Grid container spacing={4}>
         {/* Left sidebar - Your profile */}
         <Grid item xs={12} md={4}>
           <StyledPaper>
@@ -1207,6 +1327,7 @@ const FindTeamPage = () => {
           </StyledPaper>
         </Grid>
       </Grid>
+      )}
 
       {/* Contact Dialog */}
       <Dialog
