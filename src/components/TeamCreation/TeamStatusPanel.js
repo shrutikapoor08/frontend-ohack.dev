@@ -1284,7 +1284,7 @@ const TeamStatusPanel = ({ teams, loading, error, nonprofits, event, eventId, ac
                         <Button
                           variant="outlined"
                           size="medium"
-                          href={event.devpost_url}
+                          href={event?.devpost_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           startIcon={<CodeIcon />}

@@ -89,11 +89,11 @@ export default function PublicHackathonList({ hackathons }) {
             )}
 
             {/* DevPost link if available */}
-            {hackathon.devpost_url && (
+            {hackathon?.devpost_url && (
               <Box>
                 <Typography 
                   component="a" 
-                  href={hackathon.devpost_url}
+                  href={hackathon?.devpost_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   variant="body2"
