@@ -19,6 +19,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  useTheme,
+  useMediaQuery,
+  Stack,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
@@ -38,6 +41,9 @@ const VolunteerEditDialog = ({
   isAdding,
 }) => {
   const [bulkData, setBulkData] = useState("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (!volunteer) return null;
 
@@ -55,25 +61,48 @@ const VolunteerEditDialog = ({
 
   // Helper function to render individual fields
   const renderField = (field, volunteer, onChange) => {
+    const fieldSize = isMobile ? "medium" : "medium";
+    const fieldMargin = isMobile ? "normal" : "dense";
+
     if (field.type === "switch") {
       return (
-        <Box key={field.name} display="flex" alignItems="center">
-          <Typography>{field.label}:</Typography>
+        <Box
+          key={field.name}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{
+            py: isMobile ? 1 : 0.5,
+            px: isMobile ? 1 : 0,
+            minHeight: isMobile ? 56 : 'auto',
+          }}
+        >
+          <Typography variant={isMobile ? "body2" : "body2"}>
+            {field.label}:
+          </Typography>
           <Switch
             checked={volunteer[field.name] || false}
             onChange={(e) => onChange(field.name, e.target.checked)}
+            size={isMobile ? "medium" : "small"}
           />
         </Box>
       );
     } else if (field.type === "select") {
       return (
-        <FormControl key={field.name} fullWidth margin="dense">
+        <FormControl key={field.name} fullWidth margin={fieldMargin} size={fieldSize}>
           <InputLabel>{field.label}</InputLabel>
           <Select
             value={volunteer[field.name] || field.defaultValue || ""}
             onChange={(e) => onChange(field.name, e.target.value)}
             label={field.label}
             disabled={field.readOnly}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  maxHeight: isMobile ? 300 : 224,
+                },
+              },
+            }}
           >
             {field.options && field.options.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -87,15 +116,21 @@ const VolunteerEditDialog = ({
       return (
         <TextField
           key={field.name}
-          margin="dense"
+          margin={fieldMargin}
           label={field.label}
           multiline
-          rows={4}
+          rows={isMobile ? 3 : 4}
           fullWidth
+          size={fieldSize}
           value={volunteer[field.name] || ""}
           onChange={(e) => onChange(field.name, e.target.value)}
           InputProps={{
             readOnly: field.readOnly,
+          }}
+          sx={{
+            '& .MuiInputBase-root': {
+              fontSize: isMobile ? '16px' : '14px', // Prevent zoom on iOS
+            },
           }}
         />
       );
@@ -103,16 +138,22 @@ const VolunteerEditDialog = ({
       return (
         <TextField
           key={field.name}
-          margin="dense"
+          margin={fieldMargin}
           label={field.label}
           type={field.type}
           fullWidth
+          size={fieldSize}
           value={volunteer[field.name] || ""}
           onChange={
             field.onChange || ((e) => onChange(field.name, e.target.value))
           }
           InputProps={{
             readOnly: field.readOnly,
+          }}
+          sx={{
+            '& .MuiInputBase-root': {
+              fontSize: isMobile ? '16px' : '14px', // Prevent zoom on iOS
+            },
           }}
         />
       );
@@ -397,25 +438,54 @@ const VolunteerEditDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {isAdding ? `Add ${volunteer.type}` : `Edit ${volunteer.type}`}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth={isMobile ? false : "md"}
+      fullWidth
+      fullScreen={isSmallMobile}
+      sx={{
+        '& .MuiDialog-paper': {
+          ...(isMobile && !isSmallMobile && {
+            margin: theme.spacing(1),
+            width: 'calc(100% - 16px)',
+            maxHeight: 'calc(100% - 16px)',
+          }),
+        },
+      }}
+    >
+      <DialogTitle sx={{ pb: 1 }}>
+        <Typography variant={isMobile ? "h6" : "h5"} component="h2">
+          {isAdding ? `Add ${volunteer.type}` : `Edit ${volunteer.type}`}
+        </Typography>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ pb: 1 }}>
         {isAdding && (
           <Box mb={2}>
-            <Typography variant="h6">Bulk Add from Google Sheets</Typography>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ mb: 1 }}>
+              Bulk Add from Google Sheets
+            </Typography>
             <TextareaAutosize
-              minRows={3}
+              minRows={isMobile ? 2 : 3}
               placeholder="Paste tab-separated data here..."
               value={bulkData}
               onChange={handleBulkDataChange}
-              style={{ width: "100%", marginBottom: "10px" }}
+              style={{
+                width: "100%",
+                marginBottom: "10px",
+                fontSize: isMobile ? '14px' : '16px',
+                fontFamily: theme.typography.fontFamily,
+                padding: theme.spacing(1),
+                borderRadius: theme.spacing(0.5),
+                border: `1px solid ${theme.palette.divider}`,
+              }}
             />
             <Button
               onClick={processBulkData}
               variant="contained"
               color="primary"
+              size={isMobile ? "small" : "medium"}
+              fullWidth={isMobile}
             >
               Process Bulk Data
             </Button>
@@ -428,65 +498,75 @@ const VolunteerEditDialog = ({
         {isJudgeWithSections && (
           <Box mt={2}>
             {/* Basic Information */}
-            <Accordion defaultExpanded>
+            <Accordion defaultExpanded={!isMobile}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Basic Information</Typography>
+                <Typography variant={isMobile ? "subtitle1" : "h6"}>
+                  Basic Information
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Box display="flex" flexDirection="column" gap={2}>
+                <Stack spacing={isMobile ? 1.5 : 2}>
                   {typeSpecificFields.basic.map((field) =>
                     renderField(field, volunteer, onChange)
                   )}
-                </Box>
+                </Stack>
               </AccordionDetails>
             </Accordion>
 
             {/* Experience & Background */}
-            <Accordion defaultExpanded>
+            <Accordion defaultExpanded={!isMobile}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Experience & Background</Typography>
+                <Typography variant={isMobile ? "subtitle1" : "h6"}>
+                  Experience & Background
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Box display="flex" flexDirection="column" gap={2}>
+                <Stack spacing={isMobile ? 1.5 : 2}>
                   {typeSpecificFields.experience.map((field) =>
                     renderField(field, volunteer, onChange)
                   )}
-                </Box>
+                </Stack>
               </AccordionDetails>
             </Accordion>
 
             {/* Biography & Motivation */}
-            <Accordion defaultExpanded>
+            <Accordion defaultExpanded={!isMobile}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Biography & Motivation</Typography>
+                <Typography variant={isMobile ? "subtitle1" : "h6"}>
+                  Biography & Motivation
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Box display="flex" flexDirection="column" gap={2}>
+                <Stack spacing={isMobile ? 1.5 : 2}>
                   {typeSpecificFields.bios.map((field) =>
                     renderField(field, volunteer, onChange)
                   )}
-                </Box>
+                </Stack>
               </AccordionDetails>
             </Accordion>
 
             {/* Availability */}
-            <Accordion defaultExpanded>
+            <Accordion defaultExpanded={!isMobile}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Availability & Additional Info</Typography>
+                <Typography variant={isMobile ? "subtitle1" : "h6"}>
+                  Availability & Additional Info
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Box display="flex" flexDirection="column" gap={2}>
+                <Stack spacing={isMobile ? 1.5 : 2}>
                   {typeSpecificFields.availability.map((field) =>
                     renderField(field, volunteer, onChange)
                   )}
-                </Box>
+                </Stack>
               </AccordionDetails>
             </Accordion>
 
             {/* Agreements */}
             <Accordion>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Agreements & Status</Typography>
+                <Typography variant={isMobile ? "subtitle1" : "h6"}>
+                  Agreements & Status
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Box display="flex" flexDirection="column" gap={2}>
@@ -567,9 +647,31 @@ const VolunteerEditDialog = ({
           </>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={onSave} color="primary">
+      <DialogActions
+        sx={{
+          px: 3,
+          pb: isMobile ? 2 : 1,
+          pt: 1,
+          flexDirection: isMobile ? 'column-reverse' : 'row',
+          gap: isMobile ? 1 : 0.5,
+        }}
+      >
+        <Button
+          onClick={onClose}
+          size={isMobile ? "medium" : "medium"}
+          fullWidth={isMobile}
+          sx={{ order: isMobile ? 2 : 1 }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={onSave}
+          color="primary"
+          variant="contained"
+          size={isMobile ? "medium" : "medium"}
+          fullWidth={isMobile}
+          sx={{ order: isMobile ? 1 : 2 }}
+        >
           {isAdding ? "Add" : "Save"}
         </Button>
       </DialogActions>

@@ -17,6 +17,19 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  useTheme,
+  useMediaQuery,
+  Card,
+  CardContent,
+  CardActions,
+  Divider,
+  Stack,
+  Grid,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  ListItemSecondaryAction,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -35,19 +48,43 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
     tableLayout: "auto", // Allow flexible column sizing
     whiteSpace: "nowrap", // Prevent text wrapping in cells
   },
-  // Ensure scrollbar is visible
+  // Better mobile scrolling
+  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+  // Enhanced scrollbar for better touch interaction
   "&::-webkit-scrollbar": {
-    height: 8,
+    height: theme.breakpoints.down('md') ? 12 : 8, // Larger scrollbar on mobile
   },
   "&::-webkit-scrollbar-track": {
     backgroundColor: theme.palette.grey[200],
-    borderRadius: 4,
+    borderRadius: 6,
   },
   "&::-webkit-scrollbar-thumb": {
     backgroundColor: theme.palette.grey[400],
-    borderRadius: 4,
+    borderRadius: 6,
     "&:hover": {
       backgroundColor: theme.palette.grey[600],
+    },
+    "&:active": {
+      backgroundColor: theme.palette.grey[700],
+    },
+  },
+  // Touch-friendly scrolling area
+  [theme.breakpoints.down('md')]: {
+    '&::after': {
+      content: '"Scroll horizontally to see all columns →"',
+      position: 'sticky',
+      right: 0,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      backgroundColor: theme.palette.info.main,
+      color: theme.palette.info.contrastText,
+      padding: theme.spacing(0.5, 1),
+      borderRadius: theme.spacing(0.5),
+      fontSize: '0.75rem',
+      whiteSpace: 'nowrap',
+      zIndex: 10,
+      opacity: 0.8,
+      pointerEvents: 'none',
     },
   },
 }));
@@ -58,27 +95,35 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
   overflow: "hidden", // Prevent overflow
   textOverflow: "ellipsis", // Add ellipsis for long text
   whiteSpace: "nowrap", // Prevent text wrapping by default
+  // Better touch targets on mobile
   [theme.breakpoints.down("md")]: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    borderBottom: "none",
-    padding: theme.spacing(0.5, 1),
-    whiteSpace: "normal", // Allow wrapping on mobile
-    "&:before": {
-      content: "attr(data-label)",
-      fontWeight: "bold",
-      marginBottom: theme.spacing(0.5),
-      fontSize: "0.75rem",
+    padding: theme.spacing(1, 1.5), // Larger touch targets
+    fontSize: "0.8rem",
+    minHeight: 44, // Minimum touch target size
+    // Ensure interactive elements are accessible
+    '& .MuiIconButton-root': {
+      padding: theme.spacing(1),
+      minWidth: 44,
+      minHeight: 44,
+    },
+    '& .MuiChip-root': {
+      minHeight: 28,
+      fontSize: '0.75rem',
     },
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  // Better hover states for desktop
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  // Touch-friendly mobile styling
   [theme.breakpoints.down("md")]: {
-    display: "flex",
-    flexDirection: "column",
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    borderBottom: `2px solid ${theme.palette.divider}`,
+    '&:active': {
+      backgroundColor: theme.palette.action.selected,
+    },
   },
 }));
 
@@ -147,6 +192,9 @@ const VolunteerTable = ({
   onBatchEmailNotSelected,
 }) => {
   const [copyFeedback, setCopyFeedback] = useState({ open: false, message: '' });
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleCopyToClipboard = async (text, fieldName) => {
     try {
@@ -947,14 +995,200 @@ const VolunteerTable = ({
     }
   };
 
+  // Mobile Card View Component
+  const MobileCardView = ({ volunteers }) => {
+    return (
+      <Stack spacing={1.5}>
+        {volunteers.map((volunteer, index) => {
+          const getStatusColor = (isSelected, checkedIn) => {
+            if (isSelected && checkedIn) return 'success';
+            if (isSelected) return 'primary';
+            return 'default';
+          };
+
+          const primaryText = volunteer.name || 'Unknown';
+          const secondaryTexts = [
+            volunteer.email,
+            volunteer.company,
+            volunteer.title
+          ].filter(Boolean);
+
+          return (
+            <Card
+              key={volunteer.id || `${volunteer.name}-${index}`}
+              sx={{
+                backgroundColor: volunteer.isSelected ? "#e8f5e9" : "inherit",
+                border: volunteer.isSelected ? '1px solid' : 'none',
+                borderColor: volunteer.isSelected ? 'success.light' : 'transparent'
+              }}
+            >
+              <CardContent sx={{ pb: 1 }}>
+                {/* Header Row */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Avatar
+                    src={volunteer.photoUrl}
+                    alt={volunteer.name}
+                    sx={{ width: 40, height: 40, mr: 2 }}
+                  >
+                    {volunteer.name?.charAt(0) || '?'}
+                  </Avatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {primaryText}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: 'block',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {secondaryTexts.slice(0, 2).join(' • ')}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                      minWidth: 'max-content'
+                    }}
+                  >
+                    #{index + 1}
+                  </Typography>
+                </Box>
+
+                {/* Status Chips Row */}
+                <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                  <Chip
+                    label={volunteer.isSelected ? 'Selected' : 'Not Selected'}
+                    size="small"
+                    color={getStatusColor(volunteer.isSelected, volunteer.checkedIn)}
+                    variant={volunteer.isSelected ? 'filled' : 'outlined'}
+                  />
+                  {volunteer.isInPerson && (
+                    <Chip label="In Person" size="small" color="info" variant="outlined" />
+                  )}
+                  {volunteer.checkedIn && (
+                    <Chip label="Checked In" size="small" color="success" variant="outlined" />
+                  )}
+                  {volunteer.slack_user_id && (
+                    <Chip
+                      icon={<FaSlack size={12} />}
+                      label="Slack"
+                      size="small"
+                      variant="outlined"
+                      sx={{ '& .MuiChip-icon': { mr: 0.5 } }}
+                    />
+                  )}
+                  {Array.isArray(volunteer.messages_sent) && volunteer.messages_sent.length > 0 && (
+                    <Chip
+                      label={`${volunteer.messages_sent.length} msgs`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                  )}
+                </Box>
+
+                {/* Key Info for Specific Types */}
+                {type === 'volunteers' && volunteer.availability && (
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                      Availability:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {volunteer.availability.includes('Saturday') && (
+                        <Chip label="Saturday" size="small" variant="outlined" color="primary" />
+                      )}
+                      {volunteer.availability.includes('Sunday') && (
+                        <Chip label="Sunday" size="small" variant="outlined" color="primary" />
+                      )}
+                      {volunteer.experienceLevel && (
+                        <Chip
+                          label={volunteer.experienceLevel.includes('First time') ? 'First Timer' : 'Experienced'}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                )}
+
+                {type === 'judges' && volunteer.background && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    Background: {volunteer.background.substring(0, 60)}{volunteer.background.length > 60 ? '...' : ''}
+                  </Typography>
+                )}
+
+                {type === 'mentors' && volunteer.expertise && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    Expertise: {volunteer.expertise.substring(0, 60)}{volunteer.expertise.length > 60 ? '...' : ''}
+                  </Typography>
+                )}
+              </CardContent>
+
+              {/* Actions */}
+              <CardActions sx={{ pt: 0, px: 2, pb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 0.5, width: '100%' }}>
+                  <Tooltip title="Edit">
+                    <IconButton
+                      onClick={() => onEditVolunteer(volunteer)}
+                      size="small"
+                      color="primary"
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  {onMessageVolunteer && (
+                    <Tooltip title="Send Message">
+                      <IconButton
+                        onClick={() => onMessageVolunteer(volunteer)}
+                        size="small"
+                        color="secondary"
+                      >
+                        <FaPaperPlane size={12} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  <Box sx={{ flex: 1 }} /> {/* Spacer */}
+                  {volunteer.email && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleCopyToClipboard(volunteer.email, 'Email')}
+                      sx={{ minWidth: 'auto', px: 1 }}
+                    >
+                      Copy Email
+                    </Button>
+                  )}
+                </Box>
+              </CardActions>
+            </Card>
+          );
+        })}
+      </Stack>
+    );
+  };
+
   return (
     <>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
         <Box>
-          <Typography variant="subtitle1" sx={{ fontSize: '0.95rem' }}>
+          <Typography variant="subtitle1" sx={{ fontSize: isMobile ? '0.9rem' : '0.95rem' }}>
             {type}: {volunteers.length} | Selected: {selectedCount}
           </Typography>
-          {type === 'volunteers' && (
+          {type === 'volunteers' && !isMobile && (
             <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
               📅 Availability column is highlighted - scroll horizontally to see all columns
             </Typography>
@@ -967,7 +1201,7 @@ const VolunteerTable = ({
                 variant="contained"
                 color="secondary"
                 onClick={() => onBatchEmail(volunteers, type, true)}
-                size="small"
+                size={isMobile ? 'small' : 'small'}
                 sx={{ minWidth: 'auto', px: 1 }}
               >
                 <EmailIcon fontSize="small" />
@@ -983,7 +1217,7 @@ const VolunteerTable = ({
                 variant="contained"
                 color="primary"
                 onClick={() => onSlackInvite(volunteers, type)}
-                size="small"
+                size={isMobile ? 'small' : 'small'}
                 sx={{ minWidth: 'auto', px: 1 }}
               >
                 <FaSlack size={14} />
@@ -999,7 +1233,7 @@ const VolunteerTable = ({
                 variant="outlined"
                 color="warning"
                 onClick={() => onBatchEmailNotSelected(volunteers, type, false)}
-                size="small"
+                size={isMobile ? 'small' : 'small'}
                 sx={{ minWidth: 'auto', px: 1 }}
               >
                 <EmailIcon fontSize="small" />
@@ -1011,7 +1245,11 @@ const VolunteerTable = ({
           )}
         </Box>
       </Box>
-      <StyledTableContainer component={Paper}>
+
+      {isMobile ? (
+        <MobileCardView volunteers={volunteers} />
+      ) : (
+        <StyledTableContainer component={Paper}>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
@@ -1191,17 +1429,18 @@ const VolunteerTable = ({
             ))}
           </TableBody>
         </Table>
-      </StyledTableContainer>
-      
-      <Snackbar 
-        open={copyFeedback.open} 
-        autoHideDuration={2000} 
+        </StyledTableContainer>
+      )}
+
+      <Snackbar
+        open={copyFeedback.open}
+        autoHideDuration={2000}
         onClose={handleCloseFeedback}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleCloseFeedback} 
-          severity="success" 
+        <Alert
+          onClose={handleCloseFeedback}
+          severity="success"
           variant="filled"
           sx={{ fontSize: '0.875rem' }}
         >

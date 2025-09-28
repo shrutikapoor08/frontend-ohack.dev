@@ -22,6 +22,12 @@ import {
   Alert,
   Snackbar as MuiSnackbar,
   Typography,
+  useTheme,
+  useMediaQuery,
+  Stack,
+  Collapse,
+  Card,
+  CardContent,
 } from "@mui/material";
 import { Share as ShareIcon, ContentCopy as CopyIcon } from "@mui/icons-material";
 
@@ -94,6 +100,9 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
 
   const { accessToken } = useAuthInfo();
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Defensive hook usage with fallbacks
   const { hackathons = [] } = useHackathonEvents(false) || {};
@@ -1101,51 +1110,36 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         isAdmin={isAdmin}
       >
       <Box sx={{ mb: 3, width: "100%" }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item>
-            <Button 
-              onClick={() => {
-                // Force data refresh by resetting the flag
-                dataLoadedRef.current = false;
-                savedScrollPositionRef.current = 0; // Reset scroll position for fresh data
-                fetchVolunteers();
-              }} 
-              variant="outlined"
-            >
-              Refresh Data
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              onClick={handleAddSingleVolunteer}
-              variant="outlined"
-              color="primary"
-            >
-              Add Single Volunteer
-            </Button>
-          </Grid>
-          <Grid item>
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(event, newViewMode) => {
-                if (newViewMode !== null) {
-                  setViewMode(newViewMode);
-                }
-              }}
-              aria-label="view mode"
-              size="small"
-            >
-              <ToggleButton value="table" aria-label="table view">
-                Table View
-              </ToggleButton>
-              <ToggleButton value="review" aria-label="review view">
-                Review Mode
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Grid>
-          <Grid item xs={3}>
-            <FormControl fullWidth>
+        {isMobile ? (
+          // Mobile layout - stacked vertically
+          <Stack spacing={2}>
+            {/* Primary Actions Row */}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                onClick={() => {
+                  dataLoadedRef.current = false;
+                  savedScrollPositionRef.current = 0;
+                  fetchVolunteers();
+                }}
+                variant="outlined"
+                size={isSmallMobile ? 'small' : 'medium'}
+                sx={{ flex: '1 1 auto', minWidth: 'max-content' }}
+              >
+                {isSmallMobile ? 'Refresh' : 'Refresh Data'}
+              </Button>
+              <Button
+                onClick={handleAddSingleVolunteer}
+                variant="outlined"
+                color="primary"
+                size={isSmallMobile ? 'small' : 'medium'}
+                sx={{ flex: '1 1 auto', minWidth: 'max-content' }}
+              >
+                {isSmallMobile ? 'Add' : 'Add Volunteer'}
+              </Button>
+            </Box>
+
+            {/* Event Selector - Full Width */}
+            <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
               <InputLabel id="hackathon-select-label">
                 Hackathon Event
               </InputLabel>
@@ -1158,35 +1152,64 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
               >
                 {Array.isArray(hackathons) &&
                   hackathons
-                    .filter(hackathon => hackathon?.event_id) // Filter out invalid entries
+                    .filter(hackathon => hackathon?.event_id)
                     .map((hackathon) => (
                       <MenuItem
                         key={hackathon.event_id}
                         value={hackathon.event_id}
                       >
-                        {hackathon.event_id} - {hackathon.start_date || 'Unknown Date'}
+                        {isSmallMobile
+                          ? hackathon.event_id
+                          : `${hackathon.event_id} - ${hackathon.start_date || 'Unknown Date'}`
+                        }
                       </MenuItem>
                     ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item>
-            <Tooltip title="Share link to this hackathon">
-              <IconButton
-                onClick={handleShareLink}
-                color="primary"
-                disabled={!selectedEventId}
+
+            {/* View Mode & Share Row */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={(event, newViewMode) => {
+                  if (newViewMode !== null) {
+                    setViewMode(newViewMode);
+                  }
+                }}
+                aria-label="view mode"
+                size="small"
+                sx={{ flex: '1 1 auto' }}
               >
-                <ShareIcon />
-              </IconButton>
-            </Tooltip>
-          </Grid>
-          {viewMode === "table" && (
-            <Grid item xs>
+                <ToggleButton value="table" aria-label="table view" sx={{ flex: 1 }}>
+                  {isSmallMobile ? 'Table' : 'Table View'}
+                </ToggleButton>
+                <ToggleButton value="review" aria-label="review view" sx={{ flex: 1 }}>
+                  {isSmallMobile ? 'Review' : 'Review Mode'}
+                </ToggleButton>
+              </ToggleButtonGroup>
+              <Tooltip title="Share link to this hackathon">
+                <IconButton
+                  onClick={handleShareLink}
+                  color="primary"
+                  disabled={!selectedEventId}
+                  size={isSmallMobile ? 'small' : 'medium'}
+                >
+                  <ShareIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {/* Search Field - Only show in table mode */}
+            {viewMode === "table" && (
               <TextField
                 fullWidth
+                size={isMobile ? 'small' : 'medium'}
                 label={(() => {
                   const currentType = getCurrentVolunteerType(tabValue);
+                  if (isSmallMobile) {
+                    return `Search ${currentType}`;
+                  }
                   switch (currentType) {
                     case "judges":
                       return "Search all fields (name, email, company, bio, background, etc.)";
@@ -1204,10 +1227,119 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
                 })()}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
+                variant="outlined"
               />
+            )}
+          </Stack>
+        ) : (
+          // Desktop layout - horizontal
+          <Grid container spacing={2} alignItems="center">
+            <Grid item>
+              <Button
+                onClick={() => {
+                  dataLoadedRef.current = false;
+                  savedScrollPositionRef.current = 0;
+                  fetchVolunteers();
+                }}
+                variant="outlined"
+              >
+                Refresh Data
+              </Button>
             </Grid>
-          )}
-        </Grid>
+            <Grid item>
+              <Button
+                onClick={handleAddSingleVolunteer}
+                variant="outlined"
+                color="primary"
+              >
+                Add Single Volunteer
+              </Button>
+            </Grid>
+            <Grid item>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={(event, newViewMode) => {
+                  if (newViewMode !== null) {
+                    setViewMode(newViewMode);
+                  }
+                }}
+                aria-label="view mode"
+                size="small"
+              >
+                <ToggleButton value="table" aria-label="table view">
+                  Table View
+                </ToggleButton>
+                <ToggleButton value="review" aria-label="review view">
+                  Review Mode
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Grid>
+            <Grid item xs={3}>
+              <FormControl fullWidth>
+                <InputLabel id="hackathon-select-label">
+                  Hackathon Event
+                </InputLabel>
+                <Select
+                  labelId="hackathon-select-label"
+                  id="hackathon-select"
+                  value={selectedEventId || ""}
+                  label="Hackathon Event"
+                  onChange={(e) => handleEventChange(e.target.value)}
+                >
+                  {Array.isArray(hackathons) &&
+                    hackathons
+                      .filter(hackathon => hackathon?.event_id)
+                      .map((hackathon) => (
+                        <MenuItem
+                          key={hackathon.event_id}
+                          value={hackathon.event_id}
+                        >
+                          {hackathon.event_id} - {hackathon.start_date || 'Unknown Date'}
+                        </MenuItem>
+                      ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item>
+              <Tooltip title="Share link to this hackathon">
+                <IconButton
+                  onClick={handleShareLink}
+                  color="primary"
+                  disabled={!selectedEventId}
+                >
+                  <ShareIcon />
+                </IconButton>
+              </Tooltip>
+            </Grid>
+            {viewMode === "table" && (
+              <Grid item xs>
+                <TextField
+                  fullWidth
+                  label={(() => {
+                    const currentType = getCurrentVolunteerType(tabValue);
+                    switch (currentType) {
+                      case "judges":
+                        return "Search all fields (name, email, company, bio, background, etc.)";
+                      case "mentors":
+                        return "Search all fields (name, email, company, expertise, etc.)";
+                      case "hackers":
+                        return "Search all fields (name, email, skills, experience, etc.)";
+                      case "volunteers":
+                        return "Search all fields (name, email, role, skills, etc.)";
+                      case "sponsors":
+                        return "Search all fields (company, contact, tier, industry, etc.)";
+                      default:
+                        return "Search all available fields";
+                    }
+                  })()}
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+              </Grid>
+            )}
+          </Grid>
+        )}
       </Box>
 
       <Tabs
@@ -1216,41 +1348,62 @@ const AdminVolunteerPage = withRequiredAuthInfo(({ userClass }) => {
         aria-label="volunteer tabs"
         variant="scrollable"
         scrollButtons="auto"
+        allowScrollButtonsMobile
+        sx={{
+          '& .MuiTabs-scrollButtons': {
+            '&.Mui-disabled': {
+              opacity: 0.3,
+            },
+          },
+          // Better mobile tab sizing
+          ...(isMobile && {
+            '& .MuiTab-root': {
+              minWidth: 'auto',
+              fontSize: '0.875rem',
+              padding: theme.spacing(1, 0.5),
+            },
+            '& .MuiBadge-badge': {
+              fontSize: '0.65rem',
+              minWidth: 16,
+              height: 16,
+            },
+          }),
+        }}
       >
-        <Tab 
+        <Tab
           label={
-            <Badge color="primary" badgeContent={volunteers.mentors.length} max={999}>
-              Mentors
+            <Badge color="primary" badgeContent={volunteers.mentors.length} max={isMobile ? 99 : 999}>
+              {isMobile ? 'Mentors' : 'Mentors'}
             </Badge>
-          } 
+          }
         />
-        <Tab 
+        <Tab
           label={
-            <Badge color="primary" badgeContent={volunteers.judges.length} max={999}>
-              Judges
+            <Badge color="primary" badgeContent={volunteers.judges.length} max={isMobile ? 99 : 999}>
+              {isMobile ? 'Judges' : 'Judges'}
             </Badge>
-          } 
+          }
         />
-        <Tab 
+        <Tab
           label={
-            <Badge color="primary" badgeContent={volunteers.volunteers.length} max={999}>
-              Volunteers
+            <Badge color="primary" badgeContent={volunteers.volunteers.length} max={isMobile ? 99 : 999}>
+              {isMobile ? 'Vol.' : 'Volunteers'}
             </Badge>
-          } 
+          }
         />
-        <Tab 
+        <Tab
           label={
-            <Badge color="primary" badgeContent={volunteers.hackers.length} max={999}>
-              Hackers
+            <Badge color="primary" badgeContent={volunteers.hackers.length} max={isMobile ? 99 : 999}>
+              {isMobile ? 'Hackers' : 'Hackers'}
             </Badge>
-          } 
+          }
         />
-        <Tab 
+        <Tab
           label={
-            <Badge color="primary" badgeContent={volunteers.sponsors.length} max={999}>
-              Sponsors
+            <Badge color="primary" badgeContent={volunteers.sponsors.length} max={isMobile ? 99 : 999}>
+              {isMobile ? 'Sponsors' : 'Sponsors'}
             </Badge>
-          } 
+          }
         />
       </Tabs>
 
