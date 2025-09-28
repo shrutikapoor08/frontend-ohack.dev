@@ -11,6 +11,8 @@ import GavelIcon from "@mui/icons-material/Gavel";
 import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import SocialProofIndicator from './SocialProofIndicator';
+import useParticipantCounts from '../../hooks/use-participant-counts';
 
 const LinksContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -58,11 +60,34 @@ const ApplicationButton = styled(Button)(({ theme }) => ({
 const EventLinks = ({ links, variant = "full", constraints = {} }) => {
   const router = useRouter();
   const { event_id } = router.query;
-  
+
+  // Fetch participant counts for psychological nudging
+  const { counts, loading: countsLoading } = useParticipantCounts(event_id);
+
   if (!links) {
     links = [];
   }
+
+  // Get counts for social proof
+  const getCountsForType = (type) => {
+    const pluralType = type === 'hacker' ? 'hackers' : `${type}s`;
+    return counts[pluralType] || { accepted: 0, total: 0 };
+  };
   
+  // 🎯 SOCIAL PROOF CONFIGURATION - Easily customizable urgency settings
+  // showUrgency: true/false - whether to show "Filling up fast!" and "Popular choice" messages
+  // urgencyThreshold: number - minimum accepted participants before showing urgency messages
+  const socialProofConfig = {
+    hacker: { showUrgency: true, urgencyThreshold: 10 }, // Most competitive, show urgency
+    mentor: { showUrgency: false, urgencyThreshold: 15 }, // No urgency messaging
+    judge: { showUrgency: false, urgencyThreshold: 10 }, // No urgency messaging
+    volunteer: { showUrgency: false, urgencyThreshold: 20 }, // No urgency messaging
+    sponsor: { showUrgency: false, urgencyThreshold: 5 }, // No urgency messaging
+    nonprofit: { showUrgency: false, urgencyThreshold: 8 }, // No urgency messaging
+  };
+  // To enable urgency for other roles: change showUrgency to true
+  // To adjust when urgency appears: modify urgencyThreshold value
+
   const applicationTypes = [
     {
       type: "hacker",
@@ -72,6 +97,8 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
       color: "primary",
       link: `/hack/${event_id}/hacker-application`,
       enabled: constraints.application_hacker_enabled !== false,
+      roleType: "hackers",
+      socialProof: socialProofConfig.hacker,
     },
     {
       type: "mentor",
@@ -81,6 +108,8 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
       color: "secondary",
       link: `/hack/${event_id}/mentor-application`,
       enabled: constraints.application_mentor_enabled !== false,
+      roleType: "mentors",
+      socialProof: socialProofConfig.mentor,
     },
     {
       type: "judge",
@@ -90,6 +119,8 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
       color: "success",
       link: `/hack/${event_id}/judge-application`,
       enabled: constraints.application_judge_enabled !== false,
+      roleType: "judges",
+      socialProof: socialProofConfig.judge,
     },
     {
       type: "volunteer",
@@ -99,6 +130,8 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
       color: "info",
       link: `/hack/${event_id}/volunteer-application`,
       enabled: true, // Always enabled since there's no constraint for this
+      roleType: "volunteers",
+      socialProof: socialProofConfig.volunteer,
     },
     {
       type: "sponsor",
@@ -108,6 +141,8 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
       color: "warning",
       link: `/hack/${event_id}/sponsor-application`,
       enabled: constraints.application_sponsor_enabled !== false,
+      roleType: "sponsors",
+      socialProof: socialProofConfig.sponsor,
     },
     {
       type: "nonprofit",
@@ -117,6 +152,8 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
       color: "error",
       link: `/nonprofits/apply`,
       enabled: constraints.application_nonprofit_enabled !== false,
+      roleType: "nonprofits",
+      socialProof: socialProofConfig.nonprofit,
     },
   ];
 
@@ -161,8 +198,51 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
             Step 1. Apply to Participate
           </Typography>
           <Typography variant="body2" color="textSecondary" paragraph>
-            Select the role that best matches how you'd like to contribute to this hackathon
+            Join the community! Select the role that best matches how you'd like to contribute to this hackathon.
           </Typography>
+
+          {/* Overall Social Proof Summary */}
+          {!countsLoading && Object.values(counts).some(c => c.accepted > 0) && (
+            <Box sx={{
+              mb: 2,
+              p: 1.5,
+              backgroundColor: 'primary.main',
+              borderRadius: 2,
+              border: '2px solid',
+              borderColor: 'primary.dark',
+              boxShadow: 2,
+              background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.9) 0%, rgba(21, 101, 192, 0.9) 100%)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.1) 75%)',
+                backgroundSize: '20px 20px',
+                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                opacity: 0.1,
+                pointerEvents: 'none'
+              }
+            }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  color: 'common.white',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                  position: 'relative',
+                  zIndex: 1
+                }}
+              >
+                🎉 Join {Object.values(counts).reduce((sum, c) => sum + c.accepted, 0)}+ participants already confirmed for this hackathon!
+              </Typography>
+            </Box>
+          )}
           
           <Grid container spacing={2}>
             {applicationTypes.map((app) => (
@@ -175,14 +255,16 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
                   href={app.enabled ? app.link : undefined}
                   disabled={!app.enabled}
                   component={app.enabled ? "a" : "button"}
-                  sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'flex-start',
                     height: '100%',
-                    minHeight: '80px',
+                    minHeight: '100px', // Increased to accommodate social proof
                     opacity: app.enabled ? 1 : 0.6,
-                    cursor: app.enabled ? 'pointer' : 'not-allowed'
+                    cursor: app.enabled ? 'pointer' : 'not-allowed',
+                    position: 'relative',
+                    overflow: 'visible'
                   }}
                 >
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
@@ -193,6 +275,19 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
                       {app.description}
                       {!app.enabled && " (Disabled)"}
                     </Typography>
+
+                    {/* Social Proof Indicator */}
+                    {app.enabled && !countsLoading && app.roleType && (
+                      <SocialProofIndicator
+                        accepted={getCountsForType(app.type).accepted}
+                        total={getCountsForType(app.type).total}
+                        roleType={app.roleType}
+                        showUrgency={app.socialProof?.showUrgency || false}
+                        urgencyThreshold={app.socialProof?.urgencyThreshold || 10}
+                        variant="compact"
+                        buttonColor={app.color}
+                      />
+                    )}
                   </Box>
                 </ApplicationButton>
               </Grid>
@@ -229,8 +324,51 @@ const EventLinks = ({ links, variant = "full", constraints = {} }) => {
           Apply to Participate
         </Typography>
         <Typography variant="body2" color="textSecondary" paragraph>
-          Select the role that best matches how you'd like to contribute to this hackathon
+          Join the community! Select the role that best matches how you'd like to contribute to this hackathon.
         </Typography>
+
+        {/* Overall Social Proof Summary */}
+        {!countsLoading && Object.values(counts).some(c => c.accepted > 0) && (
+          <Box sx={{
+            mb: 2,
+            p: 1.5,
+            backgroundColor: 'primary.main',
+            borderRadius: 2,
+            border: '2px solid',
+            borderColor: 'primary.dark',
+            boxShadow: 2,
+            background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.9) 0%, rgba(21, 101, 192, 0.9) 100%)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.1) 75%)',
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+              opacity: 0.1,
+              pointerEvents: 'none'
+            }
+          }}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                color: 'common.white',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                position: 'relative',
+                zIndex: 1
+              }}
+            >
+              🎉 Join {Object.values(counts).reduce((sum, c) => sum + c.accepted, 0)}+ participants already confirmed for this hackathon!
+            </Typography>
+          </Box>
+        )}
         
         <Grid container spacing={2} mb={3}>
           {applicationTypes.map((app) => (
