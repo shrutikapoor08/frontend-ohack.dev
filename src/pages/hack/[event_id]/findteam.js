@@ -343,8 +343,9 @@ const FindTeamPage = () => {
           };
         });
 
-        // Only show users who are looking for a team or want to be matched
+        // Only show users who are selected, looking for a team or want to be matched
         const lookingForTeamHackers = processedHackers.filter(hacker =>
+          hacker.application.isSelected === true && // Only show selected users
           hacker.application.teamStatus &&
           (hacker.application.teamStatus.includes('match') ||
            hacker.application.teamStatus.includes('looking for')) &&
@@ -491,12 +492,13 @@ const FindTeamPage = () => {
       );
     }
     
-    // Only show users who are looking for a team or to be matched
-    result = result.filter(mate => 
-      mate.application?.team_formation === 'looking_for_members' || 
-      mate.application?.team_formation === 'want_to_be_matched'
+    // Only show users who are selected and looking for a team or to be matched
+    result = result.filter(mate =>
+      mate.application?.isSelected === true && // Only selected users
+      (mate.application?.team_formation === 'looking_for_members' ||
+       mate.application?.team_formation === 'want_to_be_matched')
     );
-    
+
     // Don't show self
     result = result.filter(mate => mate.user_id !== user?.userId);
     
