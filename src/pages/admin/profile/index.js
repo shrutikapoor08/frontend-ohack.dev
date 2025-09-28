@@ -225,7 +225,15 @@ const AdminProfilePage = withRequiredAuthInfo(({ userClass }) => {
       (profile) =>
         profile.email_address?.toLowerCase().includes(filter.toLowerCase()) ||
         profile.name?.toLowerCase().includes(filter.toLowerCase()) ||
-        profile.last_login?.toLowerCase().includes(filter.toLowerCase())
+        profile.last_login?.toLowerCase().includes(filter.toLowerCase()) ||
+        profile.github?.toLowerCase().includes(filter.toLowerCase()) || 
+        profile.company?.toLowerCase().includes(filter.toLowerCase()) || 
+        profile.education?.toLowerCase().includes(filter.toLowerCase()) || 
+        profile.role?.toLowerCase().includes(filter.toLowerCase()) || 
+        profile.expertise?.some((exp) => exp.toLowerCase().includes(filter.toLowerCase())) || 
+        profile.shirt_size?.toLowerCase().includes(filter.toLowerCase()) || 
+        profile.why?.toLowerCase().includes(filter.toLowerCase())        
+
     );
 
   const handleSnackbarClose = () => {
