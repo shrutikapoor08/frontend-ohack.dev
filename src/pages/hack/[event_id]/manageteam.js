@@ -969,6 +969,35 @@ const ManageTeamComponent = () => {
           accessToken={accessToken}
         />
 
+        {/* Show loading state while checking application */}
+        {isLoadingApplication && (
+          <Box sx={{ mt: 4, mb: 4, display: 'flex', justifyContent: 'center' }}>
+            <Paper
+              sx={{
+                p: 4,
+                maxWidth: 500,
+                textAlign: 'center',
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+                border: '1px solid #90caf9',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <CircularProgress size={60} thickness={4} />
+                <Box>
+                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                    Checking Your Application
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Verifying your participation status for {event?.title || 'this hackathon'}...
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Box>
+        )}
+
         {/* Show message for non-selected users or users without applications */}
         {!isLoadingApplication && (hackerApplication?.isSelected === false || !hackerApplication) && (
           <Box sx={{ mt: 4, mb: 4, display: 'flex', justifyContent: 'center' }}>

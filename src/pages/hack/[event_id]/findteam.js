@@ -102,6 +102,7 @@ const FindTeamPage = () => {
 
   // State variables
   const [loading, setLoading] = useState(true);
+  const [isCheckingApplication, setIsCheckingApplication] = useState(true);
   const [myProfile, setMyProfile] = useState(null);
   const [potentialTeammates, setPotentialTeammates] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -124,6 +125,7 @@ const FindTeamPage = () => {
   // Fetch current user's profile and application data
   const fetchMyProfile = useCallback(async () => {
     try {
+      setIsCheckingApplication(true);
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/users/profile`,
         {
@@ -159,6 +161,7 @@ const FindTeamPage = () => {
           // Check if user is selected for the hackathon
           if (appData.isSelected === false) {
             setError("Your application for this hackathon was not selected. The team finder is only available to selected participants.");
+            setIsCheckingApplication(false);
             return;
           }
 
@@ -218,6 +221,8 @@ const FindTeamPage = () => {
     } catch (err) {
       console.error("Error fetching profile:", err);
       setError("Failed to fetch your profile. Please try again later.");
+    } finally {
+      setIsCheckingApplication(false);
     }
   }, [accessToken, orgId, event_id]);
 
@@ -324,6 +329,7 @@ const FindTeamPage = () => {
             participantType: appData.participantType,
             schoolOrganization: appData.schoolOrganization,
             linkedin: appData.linkedin || appData.linkedinProfile,
+            photoUrl: appData.photoUrl || null,
             portfolio: appData.portfolio,
             willContinue: appData.willContinue,
             inPerson: appData.inPerson === 'Yes' || appData.isInPerson,
@@ -616,8 +622,37 @@ const FindTeamPage = () => {
           </Alert>
         )}
 
+        {/* Show loading state while checking application */}
+        {isCheckingApplication && (
+          <Box sx={{ mt: 4, mb: 4, display: 'flex', justifyContent: 'center' }}>
+            <Paper
+              sx={{
+                p: 4,
+                maxWidth: 500,
+                textAlign: 'center',
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+                border: '1px solid #90caf9',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <CircularProgress size={60} thickness={4} />
+                <Box>
+                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                    Checking Your Application
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Verifying your participation status for {eventDetails?.title || 'this hackathon'}...
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Box>
+        )}
+
         {/* Show message for non-selected users or users without applications */}
-        {(myProfile?.application?.isSelected === false || !myProfile?.application) && (
+        {!isCheckingApplication && (myProfile?.application?.isSelected === false || !myProfile?.application) && (
           <Box sx={{ mt: 3, mb: 4, display: 'flex', justifyContent: 'center' }}>
             <Paper
               sx={{
@@ -729,7 +764,7 @@ const FindTeamPage = () => {
         )}
 
         {/* Link to team creation if they've found their teammates */}
-        {favorites.length > 0 && myProfile?.application?.isSelected !== false && myProfile?.application && (
+        {!isCheckingApplication && favorites.length > 0 && myProfile?.application?.isSelected !== false && myProfile?.application && (
           <Zoom in={favorites.length > 0}>
             <Box textAlign="center" mt={3} mb={3}>
               <Button
@@ -755,7 +790,7 @@ const FindTeamPage = () => {
       </Box>
 
       {/* Main content area - Only show for selected users with applications */}
-      {myProfile?.application?.isSelected !== false && myProfile?.application && (
+      {!isCheckingApplication && myProfile?.application?.isSelected !== false && myProfile?.application && (
         <Grid container spacing={4}>
         {/* Left sidebar - Your profile */}
         <Grid item xs={12} md={4}>
@@ -785,7 +820,7 @@ const FindTeamPage = () => {
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar 
-                    src={myProfile?.picture} 
+                    src={myProfile?.profile_image} 
                     alt={myProfile?.name}
                     sx={{ width: 60, height: 60, mr: 2 }}
                   />
@@ -1051,7 +1086,7 @@ const FindTeamPage = () => {
                           
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                             <Avatar
-                              src={teammate.picture}
+                              src={teammate?.photoUrl}
                               alt={teammate.name || 'User'}
                               sx={{ width: 50, height: 50, mr: 2 }}
                             />
@@ -1346,7 +1381,7 @@ const FindTeamPage = () => {
             <>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Avatar
-                  src={selectedUser.picture}
+                  src={selectedUser?.photoUrl}
                   alt={selectedUser.name}
                   sx={{ width: 60, height: 60, mr: 2 }}
                 />
