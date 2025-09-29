@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import ProjectCard from './ProjectCard';
 import FeaturedProjects from './FeaturedProjects/FeaturedProjects';
-import { ProjectSearch, FilterBar } from './filters';
+import { ProjectSearch, FilterBar } from './filters'; //Capitalize F of Filters to match naming convention of the parent
 import { useAuthInfo } from "@propelauth/react";
 import LoginOrRegister from '../LoginOrRegister/LoginOrRegister';
 import InfoIcon from '@mui/icons-material/Info';
@@ -21,7 +21,7 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 export default function ProjectList({ initialProjects, events }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const projectsPerPage = 9;
+  const projectsPerPage = 9; //rename to PROJECT_PER_PAGE and move to a constants file. 
   const [filters, setFilters] = useState({
     status: null,
     skills: [],
@@ -30,15 +30,17 @@ export default function ProjectList({ initialProjects, events }) {
     highImpact: false,
     featured: false,
     sortBy: 'rank'
-  });
+  }); //Keep state object simple. 
   
   const { user } = useAuthInfo();
 
-  const filteredProjects = useMemo(() => {
+  //This should go into a utility file - utils.js so you can reuse this. 
+  //With React compiler, you can automatically memoize without havign to memoize yourself. 
+  const filteredProjects = useMemo(() => { // name should reflect the return type of data. rename to hasFilteredProjects
     return initialProjects.filter(project => {
       // Apply search filter
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
+      if (searchQuery) { //searchQuery.length and searchQuery.trim() is a better check.
+        const searchLower = searchQuery.toLowerCase(); // make sure you trim searchQuery. 
         const matchesTitle = project.title?.toLowerCase().includes(searchLower);
         const matchesDesc = project.description?.toLowerCase().includes(searchLower);
         const matchesSkills = project.skills?.some(skill => skill.toLowerCase().includes(searchLower));
@@ -66,7 +68,7 @@ export default function ProjectList({ initialProjects, events }) {
       
       // Apply beginner friendly filter (based on tags or complexity field)
       if (filters.beginnerFriendly && 
-          !(project.tags?.includes('beginner-friendly') || project.complexity === 'easy')) {
+          !(project.tags?.includes('beginner-friendly') || project.complexity === 'easy')) { // these constant strings should go outside the file in a cosntants file. 
         return false;
       }
       
@@ -74,7 +76,7 @@ export default function ProjectList({ initialProjects, events }) {
       if (filters.highImpact && 
           !(project.tags?.includes('high-impact') || project.impact === 'high')) {
         return false;
-      }
+      } 
       
       // Apply featured filter
       if (filters.featured && !project.featured) {
@@ -83,9 +85,12 @@ export default function ProjectList({ initialProjects, events }) {
       
       return true;
     });
-  }, [initialProjects, searchQuery, filters]);
+  }, [initialProjects, searchQuery, filters]); 
+  // initialProjects will always cause this function to run again because it is not a stable check. objects are new references. instead check initialProjects.length
 
   // Apply sorting to filtered projects
+
+  //needs to go in a utils.js file. 
   const sortedProjects = useMemo(() => {
     return [...filteredProjects].sort((a, b) => {
       switch(filters.sortBy) {
@@ -106,14 +111,16 @@ export default function ProjectList({ initialProjects, events }) {
           return (b.rank || 0) - (a.rank || 0);
       }
     });
-  }, [filteredProjects, filters.sortBy]);
+  }, [filteredProjects, filters.sortBy]); -> //same problem with filteredProjects because of being an object. unstable reference check. 
 
+
+    // shoudl go into util.ts
   // Get current page projects
   const currentProjects = useMemo(() => {
     const indexOfLastProject = currentPage * projectsPerPage;
     const indexOfFirstProject = indexOfLastProject - projectsPerPage;
     return sortedProjects.slice(indexOfFirstProject, indexOfLastProject);
-  }, [sortedProjects, currentPage, projectsPerPage]);
+  }, [sortedProjects, currentPage, projectsPerPage]); //same problem with sortedProjects because of being an object. unstable reference check. 
 
   // Calculate pages
   const totalPages = Math.ceil(sortedProjects.length / projectsPerPage);
@@ -126,6 +133,7 @@ export default function ProjectList({ initialProjects, events }) {
   };
 
   // Get featured projects
+  // need sto go to a utils.ts 
   const featuredProjects = useMemo(() => {
     // First look for projects explicitly marked as featured
     const explicitlyFeatured = initialProjects.filter(p => p.featured);
@@ -142,7 +150,7 @@ export default function ProjectList({ initialProjects, events }) {
     return activeProjects
       .sort((a, b) => (b.rank || 0) - (a.rank || 0))
       .slice(0, 3);
-  }, [initialProjects]);
+  }, [initialProjects]); //unstable reference check. 
 
   // Get skill options from all projects
   const skillOptions = useMemo(() => {
