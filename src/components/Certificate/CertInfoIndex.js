@@ -7,7 +7,7 @@ import LoginOrRegister from '../LoginOrRegister/LoginOrRegister';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 import Link from 'next/link';
- 
+
 
 const CertInfoIndex = () => {
     const router = useRouter()
@@ -17,7 +17,7 @@ const CertInfoIndex = () => {
 
     const [certInfo, setCertInfo] = useState({});
 
-    // certInfo will have 
+    // certInfo will have
     /*
     {
         "author_email": "123714233+aitzeng@users.noreply.github.com",
@@ -42,90 +42,90 @@ const CertInfoIndex = () => {
         }
         */
 
+        //correct ussage of useEffect on load.
     // Use useEffect to make call to backend /api/certificates/:cert_id to get certificate info
     useEffect(() => {
         // Make call to backend to get certificate info
-        fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/certificates/${cert_id}`)        
+        fetch(`${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/certificates/${cert_id}`)
         .then(response => response.json())
-        .then(data => setCertInfo(data));     
+        .then(data => setCertInfo(data));
     }
     , [cert_id]);
 
-        
+
 
     return (
     <LayoutContainer key="certificate" container>
-      
-        <TitleContainer container padding={0} margin={0} style={{margin: '0px', padding:'1em'}}>  
+
+        <TitleContainer container padding={0} margin={0} style={{margin: '0px', padding:'1em'}}>
             <Typography variant="h3" component="h1">
             Opportunity Hack Certificate
             </Typography>
-                    
-            <Grid container spacing={0} margin={0}>        
+
+            <Grid container spacing={0} margin={0}>
                 <Grid item xs={12} sm={12} md={12} padding={0} margin={0}>
                     <Typography style={style} marginTop={1}>
-                        Congratulations <b>{certInfo.author_name}</b>! You've earned a certificate for your contributions. 
+                        Congratulations <b>{certInfo.author_name}</b>! You've earned a certificate for your contributions.
                         <br/>
                         Your dedication and hard work have made a meaningful impact on the project and the community. We appreciate your commitment to creating positive change through technology.
-                    </Typography>                                                        
-                </Grid>                   
-            </Grid>            
+                    </Typography>
+                </Grid>
+            </Grid>
         </TitleContainer>
-                
-        <ProjectsContainer container style={{ marginTop: '2em'}}>                    
-            <Grid item xs={12} sm={6} md={6} style={{margin: '0.5em'}}>                            
-                    { certInfo && certInfo.certificate_url && <Link href={certInfo.certificate_url}><Image 
+
+        <ProjectsContainer container style={{ marginTop: '2em'}}>
+            <Grid item xs={12} sm={6} md={6} style={{margin: '0.5em'}}>
+                    { certInfo && certInfo.certificate_url && <Link href={certInfo.certificate_url}><Image
                         src={certInfo.certificate_url}
                         width={1024/3}
                         height={1024/3}
                         alt="Your certificate"
-                    />            
+                    />
                     </Link>
-                    }                                                                    
-            </Grid>  
-            
-            { certInfo && certInfo.stats && 
+                    }
+            </Grid>
+
+            { certInfo && certInfo.stats &&
             <Grid item xs={12} sm={6} md={6}>
                 <Card style={{ border: '1px solid lightblue', marginBottom: '10px' }}>
                     <CardContent>
                         <Typography variant="h5" component="h3" gutterBottom>
                             GitHub Repository: <LinkStyled href={certInfo.repository_url}>{certInfo.repository_url}</LinkStyled>
-                        </Typography>                        
-                        <Typography variant="body1" paragraph style={style}>                                                    
+                        </Typography>
+                        <Typography variant="body1" paragraph style={style}>
                         <b>Certificate created:</b> { certInfo.date }
                         </Typography>
-                        <Typography variant="body1" paragraph style={style}>                            
+                        <Typography variant="body1" paragraph style={style}>
                             <strong>{ certInfo.author_name }'s Contributions</strong>
-                            <ul>                 
+                            <ul>
                                 <li>Hours: { certInfo.stats.hours }</li>
-                                <li>Commits: { certInfo.stats.commits }</li>                                               
-                                <li>Lines of Code: { certInfo.stats.lines_of_code }</li>   
-                                <li>Files: { certInfo.stats.files }</li>                                                                                             
+                                <li>Commits: { certInfo.stats.commits }</li>
+                                <li>Lines of Code: { certInfo.stats.lines_of_code }</li>
+                                <li>Files: { certInfo.stats.files }</li>
                             </ul>
                             <strong>Team Totals</strong>
                             <ul>
                                 <li>Hours: { certInfo.totals.hours }</li>
-                                <li>Commits: { certInfo.totals.commits }</li>                                
-                                <li>Lines of Code: { certInfo.totals.lines_of_code }</li>                                
-                                <li>Files: { certInfo.totals.files }</li>                                
+                                <li>Commits: { certInfo.totals.commits }</li>
+                                <li>Lines of Code: { certInfo.totals.lines_of_code }</li>
+                                <li>Files: { certInfo.totals.files }</li>
                             </ul>
                         </Typography>
                     </CardContent>
-                </Card>                
-            </Grid>                                
-        }          
-        
+                </Card>
+            </Grid>
+        }
+
         <Grid item xs={12} sm={12} md={12} style={{margin: '0.5em'}}>
             <LoginOrRegister introText="Ready to join us?" previousPage={"/about/hearts"} />
         </Grid>
         </ProjectsContainer>
-      </LayoutContainer> 
-    
+      </LayoutContainer>
+
 
     );
 
 };
 
 export default CertInfoIndex;
-    
-    
+

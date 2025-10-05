@@ -20,7 +20,7 @@ const BlogHeader = styled(Box)(({ theme }) => ({
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
-    
+
     '&::before': {
         content: '""',
         position: 'absolute',
@@ -33,7 +33,7 @@ const BlogHeader = styled(Box)(({ theme }) => ({
     },
     [theme.breakpoints.down('sm')]: {
         padding: theme.spacing(3, 1.5),
-        marginBottom: theme.spacing(3),        
+        marginBottom: theme.spacing(3),
         '& h1': {
             fontSize: '1.75rem',
             margin: '0 0 8px 0',
@@ -79,21 +79,21 @@ const BlogPage = ({ posts }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
     const [loading, setLoading] = useState(true);
-    
+
     // Extract all unique tags from blog posts
     const getAllTags = (data) => {
         if (!data) return [];
-        
+
         const tagsSet = new Set();
         data.forEach(post => {
             // Extract hashtags from the description
             const hashtagRegex = /#(\w+)/g;
             const matches = post.description?.match(hashtagRegex) || [];
-            
+
             matches.forEach(tag => {
                 tagsSet.add(tag.substring(1)); // Remove the # character
             });
-            
+
             // Also include any Slack channels as tags
             post.links?.forEach(link => {
                 if (link.url.startsWith('#')) {
@@ -101,10 +101,11 @@ const BlogPage = ({ posts }) => {
                 }
             });
         });
-        
+
         return Array.from(tagsSet);
     };
 
+// useEffect data leak probelm - add clean up function
     useEffect(() => {
         // Use posts from props if available (for SSR/ISR) or fetch if not
         if (posts && posts.length > 0) {
@@ -128,18 +129,19 @@ const BlogPage = ({ posts }) => {
         }
     }, [posts]);
 
+    //useEffect problem - dont compute dervied state in useEffect. Use memoization or compute directly in render. Add to a click handler if needed.
     useEffect(() => {
         // Filter data based on search term and selected tag
         if (newsData) {
             let filtered = [...newsData];
-            
+
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
-                filtered = filtered.filter(post => 
-                    post.title?.toLowerCase().includes(term) || 
+                filtered = filtered.filter(post =>
+                    post.title?.toLowerCase().includes(term) ||
                     post.description?.toLowerCase().includes(term)
                 );
-                
+
                 // Track search event
                 ga.trackStructuredEvent(
                     ga.EventCategory.CONTENT,
@@ -149,20 +151,20 @@ const BlogPage = ({ posts }) => {
                     { search_term: searchTerm }
                 );
             }
-            
+
             if (selectedTag) {
                 filtered = filtered.filter(post => {
                     // Check description for hashtags
                     const hasTagInDescription = post.description?.toLowerCase().includes(`#${selectedTag.toLowerCase()}`);
-                    
+
                     // Check if any Slack channel matches the tag
-                    const hasTagInLinks = post.links?.some(link => 
+                    const hasTagInLinks = post.links?.some(link =>
                         link.url.startsWith('#') && link.name.toLowerCase() === selectedTag.toLowerCase()
                     );
-                    
+
                     return hasTagInDescription || hasTagInLinks;
                 });
-                
+
                 // Track tag selection event
                 ga.trackStructuredEvent(
                     ga.EventCategory.CONTENT,
@@ -172,7 +174,7 @@ const BlogPage = ({ posts }) => {
                     { selected_tag: selectedTag }
                 );
             }
-            
+
             setFilteredData(filtered);
         }
     }, [searchTerm, selectedTag, newsData]);
@@ -180,11 +182,11 @@ const BlogPage = ({ posts }) => {
     const handleSearch = (event) => {
         setSearchTerm(event.target.value);
     };
-    
+
     const handleTagClick = (tag) => {
         setSelectedTag(tag === selectedTag ? '' : tag);
     };
-    
+
     const tags = getAllTags(newsData);
 
     return (
@@ -216,7 +218,7 @@ const BlogPage = ({ posts }) => {
                     }}
                     sx={{ mb: 2 }}
                 />
-                
+
                 <Box display="flex" flexWrap="wrap" gap={1} justifyContent="center">
                     {tags.map(tag => (
                         <Chip
@@ -233,19 +235,19 @@ const BlogPage = ({ posts }) => {
             <Grid container spacing={3}>
                 <Grid item xs={12} md={8}>
                     <Typography variant="h4" component="h2" gutterBottom>
-                        {selectedTag ? `Posts tagged with #${selectedTag}` : 
-                         searchTerm ? `Search results for "${searchTerm}"` : 
+                        {selectedTag ? `Posts tagged with #${selectedTag}` :
+                         searchTerm ? `Search results for "${searchTerm}"` :
                          "Latest Updates"}
                     </Typography>
-                    
+
                     {filteredData?.length === 0 && !loading && (
                         <Box py={4} textAlign="center">
                             <Typography variant="h6">
                                 No blog posts found matching your criteria.
                             </Typography>
-                            <Button 
-                                variant="contained" 
-                                color="primary" 
+                            <Button
+                                variant="contained"
+                                color="primary"
                                 onClick={() => {
                                     setSearchTerm('');
                                     setSelectedTag('');
@@ -256,10 +258,10 @@ const BlogPage = ({ posts }) => {
                             </Button>
                         </Box>
                     )}
-                    
+
                     <News newsData={filteredData} loading={loading} />
                 </Grid>
-                
+
                 <Grid item xs={12} md={4}>
                     <Box position="sticky" top={20}>
                         <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
@@ -270,9 +272,9 @@ const BlogPage = ({ posts }) => {
                                 Our blog features AI-summarized content from the Opportunity Hack community Slack.
                                 Discover valuable insights, project updates, and success stories from our volunteers.
                             </Typography>
-                            <Button 
-                                variant="outlined" 
-                                href="https://github.com/opportunity-hack/ohack-slack-bot" 
+                            <Button
+                                variant="outlined"
+                                href="https://github.com/opportunity-hack/ohack-slack-bot"
                                 target="_blank"
                                 startIcon={<GitHubIcon />}
                                 fullWidth
@@ -287,7 +289,7 @@ const BlogPage = ({ posts }) => {
                                 View Blog Code
                             </Button>
                         </Paper>
-                        
+
                         <Paper elevation={1} sx={{ p: 3 }}>
                             <Typography variant="h5" component="h3" gutterBottom>
                                 Get Involved
@@ -295,10 +297,10 @@ const BlogPage = ({ posts }) => {
                             <Typography paragraph>
                                 Join our Slack community to contribute to the conversation and be featured in our blog.
                             </Typography>
-                            <Button 
-                                variant="contained" 
-                                color="primary" 
-                                href="/signup"                                 
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                href="/signup"
                                 fullWidth
                                 onClick={() => {
                                     ga.trackStructuredEvent(
@@ -309,7 +311,7 @@ const BlogPage = ({ posts }) => {
                                 }}
                             >
                                 Join Slack
-                            </Button>                                                        
+                            </Button>
                         </Paper>
                     </Box>
                 </Grid>

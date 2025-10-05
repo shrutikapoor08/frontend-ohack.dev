@@ -5,6 +5,7 @@ import mermaid from "mermaid";
 const MermaidDiagram = ({ chart }) => {
   const ref = useRef(null);
 
+  //useEffect problem - this should happen at App level.
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: true,

@@ -31,6 +31,7 @@ const trackOnClickButtonClickWithGoogleAndFacebook = (buttonName) => {
   trackEvent("click_project_completion_button", buttonName);
 };
 
+// initalize once. use later. move to index.js or app.js
 const ProjectCompletion = () => {
   useEffect(() => {
     initFacebookPixel();
@@ -235,7 +236,7 @@ const ProjectCompletion = () => {
                 <Typography variant="body1" sx={{ fontSize: "1.25rem" }}>
                   All code developed during Opportunity Hack is open-sourced
                   under the MIT license. This allows free use, modification, and
-                  distribution, even for commercial purposes. 
+                  distribution, even for commercial purposes.
                 </Typography>
               </CardContent>
             </Card>
@@ -250,7 +251,7 @@ const ProjectCompletion = () => {
                 <Typography variant="body1" sx={{ fontSize: "1.25rem" }}>
                   Opportunity Hack covers initial hosting costs up to $15/month
                   and up to $250 to cover one-time costs. Nonprofits may need to
-                  cover additional expenses as the project grows. 
+                  cover additional expenses as the project grows.
                 </Typography>
               </CardContent>
             </Card>
@@ -280,7 +281,7 @@ const ProjectCompletion = () => {
                 <Typography variant="body1" sx={{ fontSize: "1.25rem" }}>
                   If the solution generates profit, 50% will be shared with the
                   nonprofit organization. This encourages sustainability and
-                  continued development. 
+                  continued development.
                 </Typography>
               </CardContent>
             </Card>

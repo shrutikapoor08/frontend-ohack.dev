@@ -1,6 +1,6 @@
-import { 
-    useState, 
-    // useMemo, 
+import {
+    useState,
+    // useMemo,
     useEffect } from "react";
 
 import Tooltip from '@mui/material/Tooltip';
@@ -33,20 +33,26 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
 
 
 
-export default function EventTeam({ team, userDetails, _isOnTeam, _isOnAnyTeam, onJoin, onDelete, isHelping }) {    
+export default function EventTeam({ team, userDetails, _isOnTeam, _isOnAnyTeam, onJoin, onDelete, isHelping }) {
     const countOfPeopleOnTeam = team.users.length;
-    
+
     const [isOnTeam, setOnTeam] = useState(_isOnTeam);
     const [isOnAnyTeam, setOnAnyTeam] = useState(_isOnAnyTeam);
     const [joinOrLeaveTeam, setJoinOrLeaveTeam] = useState();
 
+
+    //useEffect problem - infinite re-renders
     useEffect( () => {
+        console.log('EventTeam: isOnAnyTeam useEffect _isOnAnyTeam=', _isOnAnyTeam);
         setOnAnyTeam(_isOnAnyTeam);
-    }, [_isOnAnyTeam, isHelping])
+    }, [_isOnAnyTeam])
+
+
+//derived value from prop. doesnt need a useEffect
 
     useEffect(() => {
         setOnTeam(_isOnTeam);
-    }, [_isOnTeam, isHelping])    
+    }, [_isOnTeam, isHelping])
 
     var peoplePersonString = "hacker";
     if (countOfPeopleOnTeam === 0 || countOfPeopleOnTeam >= 2) {
@@ -56,7 +62,7 @@ export default function EventTeam({ team, userDetails, _isOnTeam, _isOnAnyTeam, 
     const handleJoin = () => {
         onJoin(team);
         setOnAnyTeam(true);
-        setOnTeam(true);        
+        setOnTeam(true);
     }
 
     const handleLeave = () => {
@@ -65,48 +71,48 @@ export default function EventTeam({ team, userDetails, _isOnTeam, _isOnAnyTeam, 
         setOnTeam(false);
     }
 
-    useEffect(() => {                    
+    useEffect(() => {
 
-        // TODO: Why are we caching markup here? We should probably disabling/enabling hiding/showing these buttons based on the values of isOnAnyTeam, isHelping, and isOnTeam
+        // TODO: Why are we caching markup here? We should probably disabling/enabling hiding/showing these buttons based on the values of isOnAnyTeam, isHelping, and isOnTeam - CORRECT. This is anti-pattern. move to render method directly.
         if (!isOnAnyTeam )
-        {        
+        {
             if (isHelping)
             {
                 setJoinOrLeaveTeam(
                 <Tooltip placeholder="bottom-end" title={<span style={{ fontSize: "15px" }}>Join a team (only join one team please)</span>}>
-                    <Button style={{padding:3, margin:2}} onClick={handleJoin} variant="outlined" color="success"><PersonAddIcon fontSize="medium" color="success" />&nbsp;Join Team</Button>              
+                    <Button style={{padding:3, margin:2}} onClick={handleJoin} variant="outlined" color="success"><PersonAddIcon fontSize="medium" color="success" />&nbsp;Join Team</Button>
                 </Tooltip>
                 );
             }
-                
-            
+
+
         }
         else if (isOnTeam) {
             if (isHelping) {
             setJoinOrLeaveTeam(
             <Tooltip placeholder="bottom-end" title={<span style={{ fontSize: "15px" }}>Leave this team</span>}>
-                <Button value={team} style={{padding:3, margin:2}} onClick={handleLeave} variant="outlined" color="success"><PersonRemoveIcon fontSize="medium" color="error" />&nbsp;Leave Team</Button>              
-            
+                <Button value={team} style={{padding:3, margin:2}} onClick={handleLeave} variant="outlined" color="success"><PersonRemoveIcon fontSize="medium" color="error" />&nbsp;Leave Team</Button>
+
             </Tooltip>
             );
             }
         }
-    
+
     }, [team, isOnTeam, isOnAnyTeam, isHelping]);
 
     const userIcons = team.users.map(auser => {
         var extendedDetails = {};
-        if (userDetails != null && auser != null) {                
-            extendedDetails = userDetails[auser];            
-        }        
+        if (userDetails != null && auser != null) {
+            extendedDetails = userDetails[auser];
+        }
 
         return (
-            <Stack             
+            <Stack
              direction="row" alignItems="center" spacing={1}
                 key={auser}
              >
                 { extendedDetails && <Image className="ohack-feature__icon"
-                    alt={extendedDetails.name}                    
+                    alt={extendedDetails.name}
                     src={extendedDetails.profile_image}
                     width={50}
                     height={50} />
@@ -135,30 +141,30 @@ export default function EventTeam({ team, userDetails, _isOnTeam, _isOnAnyTeam, 
                         return "Team " + team.team_number + " ";
                     }
                 })()}
-                
+
                 {(() => {
                     if (team.github_links.length > 0) {
                         return team.github_links.map((link) => {
                             if (link.link != null && link.link !== "")
                             {
-                                return <Link 
+                                return <Link
                                 key={link.name}
                                 href={link.link} target="_blank"  ><GitHubIcon style={{ color: "black", marginLeft: 2, marginRight: 2 }} /></Link>
-                            }                            
+                            }
                         });
-                                                
+
                     }
                 })()}
-                
+
 
                     <Typography style={{ fontSize: 18 }} variant="caption">{team.name} <font face="Courier"><Link href={`https://opportunity-hack.slack.com/app_redirect?channel=${team.slack_channel}`} target="_blank">#{team.slack_channel}</Link></font> {joinOrLeaveTeam}</Typography>
                 <div>
                         {isOnTeam && <b><CheckCircleIcon sx={{color: 'green'}}/>You are on this team</b>}
-                        {userIcons}                        
+                        {userIcons}
                 </div>
             </li>
         </ul>
-    
+
 )
 
 }

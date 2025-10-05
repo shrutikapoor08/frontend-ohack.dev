@@ -1,4 +1,11 @@
 module.exports = {
+  // Disable React Fast Refresh in development when supported.
+  // Use the experimental flag `reactRefresh: false` which some Next.js
+  // versions support. If your Next.js version doesn't support this,
+  // remove or adjust accordingly.
+  experimental: {
+    reactRefresh: false,
+  },
   // Enable production optimizations in development
   // This will help with more accurate performance testing
   productionBrowserSourceMaps: false,
@@ -12,6 +19,12 @@ module.exports = {
   // Rewrites configuration
   async rewrites() {
     return [
+      // Proxy API requests in development to avoid CORS issues when
+      // running the frontend on localhost against the production API.
+      {
+        source: '/api/:path*',
+        destination: 'https://api.ohack.dev/api/:path*',
+      },
       {
         source: "/hack/:path*/sponsor",
         destination: "/sponsor",

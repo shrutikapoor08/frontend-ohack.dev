@@ -41,10 +41,10 @@ const OnboardingDialog = dynamic(() => import('../components/Onboarding/Onboardi
 export default function MyApp({ Component, pageProps }) {
   const { openGraphData = [] } = pageProps;
   const router = useRouter();
-  
+
   // Check if this is the print-timeline page
   const isPrintTimelinePage = router.pathname === '/hack/[event_id]/print-timeline';
-  
+
   return (
     <>
       <Head>
@@ -53,7 +53,7 @@ export default function MyApp({ Component, pageProps }) {
         {/* TODO: Better meta tags for SEO: https://developers.google.com/search/docs/crawling-indexing/special-tags */}
 
         {openGraphData.map((og, index) => (
-          <meta key={index} {...og} />
+          <meta key={index}  />
         ))}
 
         <title>{pageProps.title}</title>
@@ -63,9 +63,9 @@ export default function MyApp({ Component, pageProps }) {
           <ThemeProvider theme={theme}>
             <CssBaseline>
               <Box className="page-layout" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                {!isPrintTimelinePage && <NavBar />}                
-                <Component {...pageProps} />                
-                {!isPrintTimelinePage && <Footer />}              
+                {!isPrintTimelinePage && <NavBar />}
+                <Component {...pageProps} />
+                {!isPrintTimelinePage && <Footer />}
               </Box>
             </CssBaseline>
             <OnboardingDialog />

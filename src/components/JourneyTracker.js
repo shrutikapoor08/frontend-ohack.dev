@@ -4,20 +4,21 @@ import * as ga from '../lib/ga';
 
 /**
  * JourneyTracker component
- * 
+ *
  * Tracks user progress through defined conversion funnels.
  * This enables analysis of drop-off points and optimization opportunities.
- * 
+ *
  * Usage:
  * <JourneyTracker journey="volunteer" step="view_projects" metadata={{ projectId: "123" }} />
  */
-const JourneyTracker = ({ 
-  journey, 
-  step, 
+const JourneyTracker = ({
+  journey,
+  step,
   metadata = {}
 }) => {
   const router = useRouter();
-  
+
+  //same comment on useEffectEvent - React 19.2
   useEffect(() => {
     const trackStep = () => {
       // Add page context for better journey analysis
@@ -26,14 +27,14 @@ const JourneyTracker = ({
         current_page: router.pathname,
         journey_timestamp: new Date().toISOString()
       };
-      
+
       // Track the journey step
       ga.trackJourneyStep(journey, step, enhancedMetadata);
     };
-    
+
     trackStep();
   }, [journey, step, metadata, router.pathname]);
-  
+
   // This component doesn't render anything visible
   return null;
 };
@@ -53,7 +54,7 @@ export const JourneyTypes = {
       CONTRIBUTE: 'contribute'
     }
   },
-  
+
   NONPROFIT: {
     name: 'nonprofit',
     steps: {
@@ -65,7 +66,7 @@ export const JourneyTypes = {
       PROJECT_PUBLISHED: 'project_published'
     }
   },
-  
+
   HACKATHON: {
     name: 'hackathon',
     steps: {
@@ -76,7 +77,7 @@ export const JourneyTypes = {
       REQUEST_APPROVED: 'request_approved'
     }
   },
-  
+
   DONATION: {
     name: 'donation',
     steps: {

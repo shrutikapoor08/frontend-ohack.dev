@@ -55,6 +55,7 @@ const MentorChecklist = ({ hackathonStart, hackathonEnd }) => {
   }, []);
 
   const initializeChecklist = () => {
+    //move constants out of the component to avoid re-creation on each render
     const initialChecklist = {
       before: [
         {
@@ -237,12 +238,13 @@ const MentorChecklist = ({ hackathonStart, hackathonEnd }) => {
     });
   };
 
+
   useEffect(() => {
     const updateCurrentSection = () => {
       const now = Moment();
       const start = Moment(hackathonStart);
       const end = Moment(hackathonEnd);
-      
+
       if (now.isBefore(start)) {
         setCurrentSection("before");
       } else if (
@@ -324,7 +326,7 @@ const MentorChecklist = ({ hackathonStart, hackathonEnd }) => {
               </ListItemIcon>
               <ListItemText
                 primary={item.title}
-                secondary={item.details}                
+                secondary={item.details}
                 primaryTypographyProps={{ fontWeight: "bold", fontSize: "16px" }}
                 secondaryTypographyProps={{ style: { whiteSpace: "normal", fontSize: "14px" } }}
               />

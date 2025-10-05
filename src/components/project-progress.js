@@ -4,6 +4,7 @@ import PendingOutlinedIcon from "@mui/icons-material/PendingOutlined";
 import Tooltip from "@mui/material/Tooltip";
 
 export default function ProjectProgress({ state }) {
+  // move all constants out of the component into a cosntants file to avoid re-creation on each render
   const stateMapping = {
     concept: [2, 0, 0, 0, 0],
     hackathon: [1, 2, 0, 0, 0],

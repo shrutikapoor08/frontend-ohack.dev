@@ -54,10 +54,14 @@ const IconWrapper = styled('div')({
   alignItems: 'center',
   marginBottom: '1rem',
 });
-
+let didInitPixel = false;
 export default function OpportunityHackProcess() {
   useEffect(() => {
+    //check for didInitPixel.
+    if (didInitPixel) return;
+    didInitPixel = true;
     initFacebookPixel();
+    //load mermaid script here
   }, []);
 
   const trackButtonClick = (buttonName) => {
@@ -67,7 +71,7 @@ export default function OpportunityHackProcess() {
         event_category: "button",
         event_label: buttonName,
       },
-    });    
+    });
   };
 
   return (
